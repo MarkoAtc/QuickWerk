@@ -1,30 +1,16 @@
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 
 import { productAppShell } from '../src/shared/app-shell';
+import { ProductRouteLink } from '../src/shared/product-route-link';
+import { ProductScreenShell } from '../src/shared/product-screen-shell';
 
 export default function ProductHomeScreen() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        padding: 24,
-        backgroundColor: productAppShell.theme.color.surface,
-      }}
+    <ProductScreenShell
+      subtitle="Shared product shell for web, iOS, and Android."
+      contentContainerStyle={{ justifyContent: 'center', paddingTop: 24, paddingBottom: 24 }}
+      testID="product-home-screen"
     >
-      <Text
-        style={{
-          fontSize: 24,
-          fontWeight: '600',
-          marginBottom: 12,
-          color: productAppShell.theme.color.primary,
-        }}
-      >
-        {productAppShell.appName}
-      </Text>
-      <Text style={{ color: productAppShell.theme.color.text }}>
-        Shared product shell for web, iOS, and Android.
-      </Text>
       <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
         Shared domain role: {productAppShell.onboardingRoles[0]} · Initial booking state:{' '}
         {productAppShell.initialBookingStatus}
@@ -37,6 +23,19 @@ export default function ProductHomeScreen() {
         Session: {productAppShell.sessionState} · Auth entry: {productAppShell.authEntryStep.label} · Public
         routes: {productAppShell.publicAuthRoutes.length}
       </Text>
-    </View>
+      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+        Session bootstrap: {productAppShell.sessionBootstrapRequest.method}{' '}
+        {productAppShell.sessionBootstrapRoute}
+      </Text>
+      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+        Shared auth route: /auth · Public auth actions: {productAppShell.publicAuthRoutes.join(', ')}
+      </Text>
+      <ProductRouteLink
+        href="/auth"
+        title="Open auth entry preview"
+        description="Local sign-in, sign-up, recovery, and continuation stubs now live behind their own shared route."
+        testID="product-home-open-auth-link"
+      />
+    </ProductScreenShell>
   );
 }

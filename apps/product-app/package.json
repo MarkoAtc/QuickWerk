@@ -8,9 +8,11 @@
     "dev": "expo start",
     "dev:web": "expo start --web",
     "start": "expo start",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@quickwerk/api-client": "workspace:^",
     "@quickwerk/auth": "workspace:^",
     "@quickwerk/domain": "workspace:^",
     "@quickwerk/ui": "workspace:^",
@@ -19,5 +21,8 @@
     "react": "^19.2.4",
     "react-native": "^0.84.1",
     "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
   }
 }

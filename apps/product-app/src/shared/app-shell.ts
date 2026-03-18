@@ -1,6 +1,9 @@
+import { authApiRoutes, createSessionBootstrapRequest } from '@quickwerk/api-client';
 import { authBoundaries, authFlowSteps, sessionStates } from '@quickwerk/auth';
 import { bookingStatuses, providerOnboardingSteps, userRoles } from '@quickwerk/domain';
 import { designTokens } from '@quickwerk/ui';
+
+import { runtimeConfig } from './runtime-config';
 
 export const productAppShell = {
   appName: 'QuickWerk',
@@ -11,6 +14,9 @@ export const productAppShell = {
   onboardingSteps: providerOnboardingSteps,
   sessionState: sessionStates[0],
   authEntryStep: authFlowSteps[0],
+  sessionBootstrapBaseUrl: runtimeConfig.platformApiBaseUrl,
+  sessionBootstrapRoute: authApiRoutes.session,
+  sessionBootstrapRequest: createSessionBootstrapRequest(),
   publicAuthRoutes: authBoundaries.publicRoutes,
   initialBookingStatus: bookingStatuses[0],
   theme: designTokens,
