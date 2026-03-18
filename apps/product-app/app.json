@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "QuickWerk",
+    "slug": "quickwerk-product-app",
+    "scheme": "quickwerk",
+    "plugins": ["expo-router"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

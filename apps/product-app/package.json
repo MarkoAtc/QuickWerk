@@ -1,0 +1,23 @@
+{
+  "name": "@quickwerk/product-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "dev:web": "expo start --web",
+    "start": "expo start",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@quickwerk/auth": "workspace:^",
+    "@quickwerk/domain": "workspace:^",
+    "@quickwerk/ui": "workspace:^",
+    "expo": "^55.0.7",
+    "expo-router": "^55.0.6",
+    "react": "^19.2.4",
+    "react-native": "^0.84.1",
+    "react-native-web": "^0.21.2"
+  }
+}

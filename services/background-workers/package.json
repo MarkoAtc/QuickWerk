@@ -1,0 +1,12 @@
+{
+  "name": "@quickwerk/background-workers",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "pnpm run build && pnpm run start",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

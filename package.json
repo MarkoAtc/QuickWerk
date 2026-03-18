@@ -1,0 +1,23 @@
+{
+  "name": "quickwerk-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.6.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "check": "turbo run typecheck",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev --parallel",
+    "dev:product": "pnpm --filter @quickwerk/product-app dev",
+    "dev:admin": "pnpm --filter @quickwerk/admin-web dev",
+    "dev:api": "pnpm --filter @quickwerk/platform-api dev",
+    "dev:workers": "pnpm --filter @quickwerk/background-workers dev"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "turbo": "^2.8.18",
+    "typescript": "^5.9.3"
+  }
+}
