@@ -163,6 +163,10 @@ export function MarketplacePreviewScreen() {
           Preview health: {previewResult.previewHealth.level}
         </Text>
         <Text style={{ marginTop: 4, color: productAppShell.theme.color.text }}>{previewResult.previewHealth.summary}</Text>
+        <Text testID="marketplace-preview-health-counts" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
+          Sections → good: {previewResult.previewHealth.goodSections} · watch: {previewResult.previewHealth.watchSections} · critical:{' '}
+          {previewResult.previewHealth.criticalSections}
+        </Text>
       </View>
       {previewResult.errorMessage ? (
         <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>

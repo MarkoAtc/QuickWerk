@@ -35,8 +35,11 @@ type MarketplacePreviewPayload = {
 };
 
 export type PreviewHealthIndicator = {
+  criticalSections: number;
+  goodSections: number;
   level: 'critical' | 'good' | 'watch';
   summary: string;
+  watchSections: number;
 };
 
 export type MarketplacePreviewResult = {
@@ -58,6 +61,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
     dataFreshnessMinutes: 12,
     payloadCompletenessPercent: 92,
+    sectionHealthLevel: 'good',
     ctaLabel: 'Open provider card',
   },
   {
@@ -71,6 +75,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
     dataFreshnessMinutes: 5,
     payloadCompletenessPercent: 88,
+    sectionHealthLevel: 'watch',
     ctaLabel: 'Start booking flow',
   },
   {
@@ -79,6 +84,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'The first shared onboarding checkpoints are surfaced as read-only status pills so stakeholders can see trust-layer direction before backend wiring.',
     highlights: ['account setup', 'business profile', 'verification docs'],
+    sectionHealthLevel: 'good',
     ctaLabel: 'Continue provider onboarding',
   },
 ];
@@ -93,28 +99,36 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       ? completenessValues.reduce((sum, value) => sum + value, 0) / completenessValues.length
       : undefined;
 
-  const hasStaleSection = sections.some((section) => section.dataFreshnessLabel === 'stale');
-  const hasLowCompletenessSection = sections.some(
-    (section) => typeof section.payloadCompletenessPercent === 'number' && section.payloadCompletenessPercent < 80,
-  );
+  const criticalSections = sections.filter((section) => section.sectionHealthLevel === 'critical').length;
+  const watchSections = sections.filter((section) => section.sectionHealthLevel === 'watch').length;
+  const goodSections = sections.filter((section) => section.sectionHealthLevel === 'good').length;
 
-  if (hasLowCompletenessSection) {
+  if (criticalSections > 0) {
     return {
       level: 'critical',
       summary: 'Preview payload completeness is below target in at least one section.',
+      criticalSections,
+      watchSections,
+      goodSections,
     };
   }
 
-  if (hasStaleSection || (typeof averageCompleteness === 'number' && averageCompleteness < 90)) {
+  if (watchSections > 0 || (typeof averageCompleteness === 'number' && averageCompleteness < 90)) {
     return {
       level: 'watch',
       summary: 'Preview quality is acceptable but one or more sections should be monitored.',
+      criticalSections,
+      watchSections,
+      goodSections,
     };
   }
 
   return {
     level: 'good',
     summary: 'Preview quality indicators are healthy for the current demo slice.',
+    criticalSections,
+    watchSections,
+    goodSections,
   };
 };
 

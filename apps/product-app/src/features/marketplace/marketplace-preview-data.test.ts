@@ -188,6 +188,11 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result.previewHealth.level).toBe('good');
+    expect(result.previewHealth).toMatchObject({
+      goodSections: 1,
+      watchSections: 0,
+      criticalSections: 0,
+    });
   });
 
   it('marks preview health as critical when one section has low payload completeness', async () => {
@@ -212,6 +217,11 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result.previewHealth.level).toBe('critical');
+    expect(result.previewHealth).toMatchObject({
+      goodSections: 0,
+      watchSections: 0,
+      criticalSections: 1,
+    });
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
   });
 
@@ -237,6 +247,11 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result.previewHealth.level).toBe('watch');
+    expect(result.previewHealth).toMatchObject({
+      goodSections: 0,
+      watchSections: 1,
+      criticalSections: 0,
+    });
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
   });
 });

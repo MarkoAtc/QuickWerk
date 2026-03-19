@@ -239,17 +239,37 @@ One small section/route consistency signal was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - includes explicit section-level `critical` and `watch` assertions and keeps `good` coverage in valid mapping checks
 
-## 17. Updated Exact Next Docking Point
+## 17. Eleventh Minimal Docking Increment (Completed)
+
+One small route-level summary count was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - route-level preview health now includes section distribution counters:
+    - `goodSections`
+    - `watchSections`
+    - `criticalSections`
+- fallback alignment:
+  - fallback sections now include consistent section-health defaults where appropriate
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - route health panel now renders the section distribution summary
+  - stable test hook added: `marketplace-preview-health-counts`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests now assert section distribution counts
+
+## 18. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one small route-level summary count (e.g. watched/critical sections) without broad section expansion
+2. add exactly one tiny data-coverage hint when optional fields are absent (without broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 18. Acceptance Criteria for the Next Contributor
+## 19. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
