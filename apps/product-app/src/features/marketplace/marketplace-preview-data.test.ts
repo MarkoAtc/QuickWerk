@@ -148,6 +148,7 @@ describe('loadMarketplacePreview', () => {
       source: 'platform-api',
     });
     expect(result.previewHealth.coverageBandToken).toBe('coverage-high');
+    expect(result.previewHealth.alignmentToken).toBe('align-strong');
   });
 
   it('derives stable freshness label for mid-range freshness minutes', async () => {
@@ -207,6 +208,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.narrative).toContain('Healthy baseline');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-good');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
+    expect(result.previewHealth.alignmentToken).toBe('align-mixed');
   });
 
   it('marks preview health as critical when one section has low payload completeness', async () => {
@@ -243,6 +245,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.narrative).toContain('Critical preview risk');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-critical');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
+    expect(result.previewHealth.alignmentToken).toBe('align-risk');
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-critical');
     expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
@@ -282,6 +285,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.narrative).toContain('Watch state');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-watch');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
+    expect(result.previewHealth.alignmentToken).toBe('align-mixed');
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-watch');
     expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');

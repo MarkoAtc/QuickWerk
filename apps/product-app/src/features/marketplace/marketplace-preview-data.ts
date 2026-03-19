@@ -38,6 +38,7 @@ type MarketplacePreviewPayload = {
 };
 
 export type PreviewHealthIndicator = {
+  alignmentToken: 'align-mixed' | 'align-risk' | 'align-strong';
   coverageBandToken: 'coverage-high' | 'coverage-low' | 'coverage-medium';
   coverageMinimalSections: number;
   coveragePartialSections: number;
@@ -117,6 +118,12 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   const coverageWellSections = sections.filter((section) => section.dataCoverageHint?.includes('well-covered')).length;
   const coverageBandToken =
     coverageMinimalSections > 0 ? 'coverage-low' : coveragePartialSections > 0 ? 'coverage-medium' : 'coverage-high';
+  const alignmentToken =
+    criticalSections > 0 || coverageBandToken === 'coverage-low'
+      ? 'align-risk'
+      : watchSections > 0 || coverageBandToken === 'coverage-medium'
+        ? 'align-mixed'
+        : 'align-strong';
 
   if (criticalSections > 0) {
     return {
@@ -129,6 +136,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       riskHeadline: `Critical risk in ${criticalSections} section(s); watch ${watchSections} more.`,
       severityBadgeToken: 'badge-critical',
       coverageBandToken,
+      alignmentToken,
       criticalSections,
       watchSections,
       goodSections,
@@ -149,6 +157,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       riskHeadline: `Watch state across ${watchSections} section(s); no critical sections currently.`,
       severityBadgeToken: 'badge-watch',
       coverageBandToken,
+      alignmentToken,
       criticalSections,
       watchSections,
       goodSections,
@@ -168,6 +177,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
     riskHeadline: `No critical/watch sections; ${goodSections} section(s) currently healthy.`,
     severityBadgeToken: 'badge-good',
     coverageBandToken,
+    alignmentToken,
     criticalSections,
     watchSections,
     goodSections,

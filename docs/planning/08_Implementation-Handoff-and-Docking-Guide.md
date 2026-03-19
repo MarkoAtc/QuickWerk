@@ -380,17 +380,36 @@ One tiny deterministic section-level coverage band token was added without widen
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - sparse, rich, watch, and critical section cases now assert deterministic section coverage band token behavior
 
-## 26. Updated Exact Next Docking Point
+## 26. Twentieth Minimal Docking Increment (Completed)
+
+One tiny deterministic route-level alignment token was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.alignmentToken` derived from severity + coverage signals
+  - mapping:
+    - risk conditions -> `align-risk`
+    - mixed monitoring conditions -> `align-mixed`
+    - stable healthy conditions -> `align-strong`
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - health panel now renders alignment token via `marketplace-preview-alignment-token`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests now assert alignment token behavior
+  - rich metadata mapping test asserts `align-strong`
+
+## 27. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny route-level alignment token derived from severity+coverage tokens for deterministic snapshot baselines
+2. add exactly one tiny route-level normalized status digest string for deterministic compact logging/debug snapshots
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 27. Acceptance Criteria for the Next Contributor
+## 28. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
