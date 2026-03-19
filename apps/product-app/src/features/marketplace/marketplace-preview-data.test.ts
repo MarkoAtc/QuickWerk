@@ -88,6 +88,7 @@ describe('loadMarketplacePreview', () => {
           sectionHealthLevel: 'good',
           sectionSeverityBadgeToken: 'badge-good',
           dataCoverageHint: 'Optional preview metadata is minimal for this section.',
+          dataCoverageBandToken: 'coverage-low',
           ctaLabel: 'Open API card',
         },
       ],
@@ -140,6 +141,7 @@ describe('loadMarketplacePreview', () => {
           sectionHealthLevel: 'good',
           sectionSeverityBadgeToken: 'badge-good',
           dataCoverageHint: 'Optional preview metadata is well-covered for this section.',
+          dataCoverageBandToken: 'coverage-high',
           ctaLabel: 'Open API card',
         },
       ],
@@ -243,6 +245,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-critical');
+    expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
   });
 
   it('marks preview health as watch when stale freshness appears without critical completeness drop', async () => {
@@ -281,5 +284,6 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-watch');
+    expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
   });
 });

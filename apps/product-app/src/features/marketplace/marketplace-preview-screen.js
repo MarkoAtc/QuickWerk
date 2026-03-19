@@ -82,6 +82,11 @@ function PreviewSectionCard({ section }) {
           Data coverage: {section.dataCoverageHint}
         </Text>
       ) : null}
+      {section.dataCoverageBandToken ? (
+        <Text testID={`marketplace-preview-section-coverage-${section.id}`} style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Coverage band token: {section.dataCoverageBandToken}
+        </Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={section.ctaLabel}

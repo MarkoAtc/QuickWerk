@@ -120,8 +120,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one tiny deterministic section badge token (`sectionSeverityBadgeToken`) derived from `sectionHealthLevel` for section-level visual consistency checks
   - added one tiny route-level risk headline (`previewHealth.riskHeadline`) derived from critical/watch counts
   - added one tiny deterministic route-level coverage band token (`previewHealth.coverageBandToken`) derived from coverage counters
+  - added one tiny deterministic section coverage band token (`dataCoverageBandToken`) for section-level coverage consistency checks
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny deterministic section coverage band token for section-level coverage consistency checks
+  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny route-level alignment token derived from severity+coverage tokens for deterministic snapshot baselines
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

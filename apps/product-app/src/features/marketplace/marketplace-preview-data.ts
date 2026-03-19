@@ -4,6 +4,7 @@ import { runtimeConfig } from '../../shared/runtime-config';
 
 export type MarketplacePreviewSection = {
   ctaLabel: string;
+  dataCoverageBandToken?: 'coverage-high' | 'coverage-low' | 'coverage-medium';
   dataCoverageHint?: string;
   dataFreshnessLabel?: 'fresh' | 'stable' | 'stale';
   dataFreshnessMinutes?: number;
@@ -242,6 +243,13 @@ const normalizeMarketplacePreviewSection = (
         ? 'Optional preview metadata is partially covered for this section.'
         : 'Optional preview metadata is minimal for this section.';
 
+  const dataCoverageBandToken =
+    optionalFieldPresenceCount >= 4
+      ? 'coverage-high'
+      : optionalFieldPresenceCount >= 2
+        ? 'coverage-medium'
+        : 'coverage-low';
+
   const sectionSeverityBadgeToken =
     sectionHealthLevel === 'critical'
       ? 'badge-critical'
@@ -256,6 +264,7 @@ const normalizeMarketplacePreviewSection = (
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
     dataCoverageHint,
+    dataCoverageBandToken,
     dataFreshnessMinutes,
     dataFreshnessLabel,
     payloadCompletenessPercent,

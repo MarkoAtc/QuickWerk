@@ -365,17 +365,32 @@ One tiny deterministic route-level coverage band token was added without widenin
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - good/watch/critical tests assert `coverage-medium`; rich metadata mapping test asserts `coverage-high`
 
-## 25. Updated Exact Next Docking Point
+## 25. Nineteenth Minimal Docking Increment (Completed)
+
+One tiny deterministic section-level coverage band token was added without widening scope:
+
+- section enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `dataCoverageBandToken` derived from section optional-metadata presence
+  - mapping: `well-covered -> coverage-high`, `partially -> coverage-medium`, `minimal -> coverage-low`
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - each section now renders coverage band token via `marketplace-preview-section-coverage-<section-id>`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - sparse, rich, watch, and critical section cases now assert deterministic section coverage band token behavior
+
+## 26. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny deterministic section coverage band token for section-level coverage consistency checks
+2. add exactly one tiny route-level alignment token derived from severity+coverage tokens for deterministic snapshot baselines
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 26. Acceptance Criteria for the Next Contributor
+## 27. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
