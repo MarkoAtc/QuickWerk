@@ -67,6 +67,7 @@ describe('loadMarketplacePreview', () => {
               responseSlaHint: 123,
               readinessNote: 404,
               dataFreshnessMinutes: 'stale',
+              payloadCompletenessPercent: 180,
               trustBadges: ['ID verified', 99],
               ctaLabel: 'Open API card',
             },
@@ -92,6 +93,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.sections[0]?.responseSlaHint).toBeUndefined();
     expect(result.sections[0]?.readinessNote).toBeUndefined();
     expect(result.sections[0]?.dataFreshnessMinutes).toBeUndefined();
+    expect(result.sections[0]?.payloadCompletenessPercent).toBeUndefined();
   });
 
   it('returns validated api sections when payload is structurally correct', async () => {
@@ -109,6 +111,7 @@ describe('loadMarketplacePreview', () => {
               responseSlaHint: 'Median response under 7 minutes',
               readinessNote: 'Read-only provider detail loaded from API fixture.',
               dataFreshnessMinutes: 3,
+              payloadCompletenessPercent: 95,
               ctaLabel: 'Open API card',
             },
           ],
@@ -128,6 +131,7 @@ describe('loadMarketplacePreview', () => {
           responseSlaHint: 'Median response under 7 minutes',
           readinessNote: 'Read-only provider detail loaded from API fixture.',
           dataFreshnessMinutes: 3,
+          payloadCompletenessPercent: 95,
           ctaLabel: 'Open API card',
         },
       ],

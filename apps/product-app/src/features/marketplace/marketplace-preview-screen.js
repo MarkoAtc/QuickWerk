@@ -56,6 +56,11 @@ function PreviewSectionCard({ section }) {
           Data freshness: ~{section.dataFreshnessMinutes} min
         </Text>
       ) : null}
+      {typeof section.payloadCompletenessPercent === 'number' ? (
+        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Payload completeness: {section.payloadCompletenessPercent}%
+        </Text>
+      ) : null}
       {section.readinessNote ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
           Readiness note: {section.readinessNote}

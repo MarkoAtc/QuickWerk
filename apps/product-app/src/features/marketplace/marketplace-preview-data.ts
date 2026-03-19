@@ -8,6 +8,7 @@ export type MarketplacePreviewSection = {
   description: string;
   highlights: string[];
   id: string;
+  payloadCompletenessPercent?: number;
   readinessNote?: string;
   responseSlaHint?: string;
   title: string;
@@ -20,6 +21,7 @@ type RawMarketplacePreviewSection = {
   description?: string;
   highlights?: string[];
   id?: string;
+  payloadCompletenessPercent?: number;
   readinessNote?: string;
   responseSlaHint?: string;
   title?: string;
@@ -47,6 +49,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
     readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
     dataFreshnessMinutes: 12,
+    payloadCompletenessPercent: 92,
     ctaLabel: 'Open provider card',
   },
   {
@@ -59,6 +62,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
     readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
     dataFreshnessMinutes: 5,
+    payloadCompletenessPercent: 88,
     ctaLabel: 'Start booking flow',
   },
   {
@@ -101,6 +105,13 @@ const normalizeMarketplacePreviewSection = (
     dataFreshnessMinutes:
       typeof value.dataFreshnessMinutes === 'number' && Number.isFinite(value.dataFreshnessMinutes)
         ? value.dataFreshnessMinutes
+        : undefined,
+    payloadCompletenessPercent:
+      typeof value.payloadCompletenessPercent === 'number' &&
+      Number.isFinite(value.payloadCompletenessPercent) &&
+      value.payloadCompletenessPercent >= 0 &&
+      value.payloadCompletenessPercent <= 100
+        ? value.payloadCompletenessPercent
         : undefined,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
     readinessNote: typeof value.readinessNote === 'string' ? value.readinessNote : undefined,
