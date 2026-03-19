@@ -14,6 +14,7 @@ export type MarketplacePreviewSection = {
   readinessNote?: string;
   responseSlaHint?: string;
   sectionHealthLevel?: 'critical' | 'good' | 'watch';
+  sectionSeverityBadgeToken?: 'badge-critical' | 'badge-good' | 'badge-watch';
   title: string;
   trustBadges?: string[];
 };
@@ -231,6 +232,13 @@ const normalizeMarketplacePreviewSection = (
         ? 'Optional preview metadata is partially covered for this section.'
         : 'Optional preview metadata is minimal for this section.';
 
+  const sectionSeverityBadgeToken =
+    sectionHealthLevel === 'critical'
+      ? 'badge-critical'
+      : sectionHealthLevel === 'watch'
+        ? 'badge-watch'
+        : 'badge-good';
+
   return {
     id: value.id,
     title: value.title,
@@ -242,6 +250,7 @@ const normalizeMarketplacePreviewSection = (
     dataFreshnessLabel,
     payloadCompletenessPercent,
     sectionHealthLevel,
+    sectionSeverityBadgeToken,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
     readinessNote: typeof value.readinessNote === 'string' ? value.readinessNote : undefined,
     trustBadges: trustBadges && trustBadges.length > 0 ? trustBadges : undefined,

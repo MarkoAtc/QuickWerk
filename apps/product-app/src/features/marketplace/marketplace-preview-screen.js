@@ -67,6 +67,11 @@ function PreviewSectionCard({ section }) {
           Section health: {section.sectionHealthLevel}
         </Text>
       ) : null}
+      {section.sectionSeverityBadgeToken ? (
+        <Text testID={`marketplace-preview-section-badge-${section.id}`} style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Section badge token: {section.sectionSeverityBadgeToken}
+        </Text>
+      ) : null}
       {section.readinessNote ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
           Readiness note: {section.readinessNote}
