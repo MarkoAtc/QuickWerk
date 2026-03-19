@@ -125,6 +125,9 @@ export function MarketplacePreviewScreen() {
       <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
         This route now supports one read-only preview API slice with explicit fallback behavior to local fixtures.
       </Text>
+      <Text testID="marketplace-preview-health" style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+        Preview health: {previewResult.previewHealth.level} · {previewResult.previewHealth.summary}
+      </Text>
       {previewResult.errorMessage ? (
         <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
           Preview fallback: {previewResult.errorMessage}

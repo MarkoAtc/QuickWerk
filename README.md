@@ -109,8 +109,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one tiny data-quality signal (`dataFreshnessMinutes`) with numeric sanitization and read-only UI rendering
   - added one payload confidence signal (`payloadCompletenessPercent`) with range sanitization (0-100) and read-only UI rendering
   - added one cross-field derived indicator (`dataFreshnessLabel`) derived from `dataFreshnessMinutes` and rendered read-only
+  - added one minimal route-level aggregate indicator (`previewHealth`) derived from section freshness/completeness signals
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one minimal aggregate preview-health indicator at route level (not a broad section expansion)
+  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny route-level visual severity treatment based on `previewHealth.level` (not a broad section expansion)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

@@ -33,8 +33,14 @@ type MarketplacePreviewPayload = {
   sections?: RawMarketplacePreviewSection[];
 };
 
+export type PreviewHealthIndicator = {
+  level: 'critical' | 'good' | 'watch';
+  summary: string;
+};
+
 export type MarketplacePreviewResult = {
   errorMessage?: string;
+  previewHealth: PreviewHealthIndicator;
   sections: readonly MarketplacePreviewSection[];
   source: 'fallback' | 'platform-api';
 };
@@ -76,8 +82,44 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
   },
 ];
 
+const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): PreviewHealthIndicator => {
+  const completenessValues = sections
+    .map((section) => section.payloadCompletenessPercent)
+    .filter((value): value is number => typeof value === 'number');
+
+  const averageCompleteness =
+    completenessValues.length > 0
+      ? completenessValues.reduce((sum, value) => sum + value, 0) / completenessValues.length
+      : undefined;
+
+  const hasStaleSection = sections.some((section) => section.dataFreshnessLabel === 'stale');
+  const hasLowCompletenessSection = sections.some(
+    (section) => typeof section.payloadCompletenessPercent === 'number' && section.payloadCompletenessPercent < 80,
+  );
+
+  if (hasLowCompletenessSection) {
+    return {
+      level: 'critical',
+      summary: 'Preview payload completeness is below target in at least one section.',
+    };
+  }
+
+  if (hasStaleSection || (typeof averageCompleteness === 'number' && averageCompleteness < 90)) {
+    return {
+      level: 'watch',
+      summary: 'Preview quality is acceptable but one or more sections should be monitored.',
+    };
+  }
+
+  return {
+    level: 'good',
+    summary: 'Preview quality indicators are healthy for the current demo slice.',
+  };
+};
+
 export const defaultMarketplacePreviewResult = {
   sections: fallbackMarketplacePreviewSections,
+  previewHealth: derivePreviewHealth(fallbackMarketplacePreviewSections),
   source: 'fallback',
 } as const satisfies MarketplacePreviewResult;
 
@@ -158,8 +200,11 @@ export async function loadMarketplacePreview(fetchImpl: typeof fetch = fetch): P
         ?.map((section) => normalizeMarketplacePreviewSection(section))
         .filter((section): section is MarketplacePreviewSection => section !== null) ?? [];
 
+    const resolvedSections = sections.length > 0 ? sections : fallbackMarketplacePreviewSections;
+
     return {
-      sections: sections.length > 0 ? sections : fallbackMarketplacePreviewSections,
+      sections: resolvedSections,
+      previewHealth: derivePreviewHealth(resolvedSections),
       source: 'platform-api',
     };
   } catch (error) {

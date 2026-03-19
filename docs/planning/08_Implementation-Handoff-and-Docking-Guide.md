@@ -193,17 +193,36 @@ One minimal cross-field derived indicator was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - includes derived label assertions (`fresh` and `stable`) plus existing optional-field sanitization checks
 
-## 14. Updated Exact Next Docking Point
+## 14. Eighth Minimal Docking Increment (Completed)
+
+One minimal route-level aggregate indicator was added without widening scope:
+
+- field added: `previewHealth` on marketplace preview result
+- derivation and logic:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - derived from per-section freshness/completeness signals
+  - current policy:
+    - `critical` if any section has payload completeness below 80
+    - `watch` if stale freshness exists or average completeness drops below 90
+    - `good` otherwise
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - route now renders `Preview health: <level> · <summary>`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - includes explicit health-level assertions (`good` and `critical`) in addition to existing sanitization/derivation checks
+
+## 15. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one minimal aggregate preview-health indicator at route level (not a broad section expansion)
+2. add exactly one tiny route-level visual severity treatment based on `previewHealth.level` (not a broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 15. Acceptance Criteria for the Next Contributor
+## 16. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

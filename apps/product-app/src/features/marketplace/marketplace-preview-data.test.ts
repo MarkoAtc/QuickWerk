@@ -163,4 +163,52 @@ describe('loadMarketplacePreview', () => {
 
     expect(result.sections[0]?.dataFreshnessLabel).toBe('stable');
   });
+
+  it('marks preview health as good when freshness and completeness are healthy', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: [
+            {
+              id: 'api-health-good',
+              title: 'API health good',
+              description: 'Read-only API-backed fixture section.',
+              highlights: ['alpha', 'beta'],
+              dataFreshnessMinutes: 4,
+              payloadCompletenessPercent: 96,
+              ctaLabel: 'Open API card',
+            },
+          ],
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result.previewHealth.level).toBe('good');
+  });
+
+  it('marks preview health as critical when one section has low payload completeness', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: [
+            {
+              id: 'api-health-critical',
+              title: 'API health critical',
+              description: 'Read-only API-backed fixture section.',
+              highlights: ['alpha', 'beta'],
+              dataFreshnessMinutes: 4,
+              payloadCompletenessPercent: 74,
+              ctaLabel: 'Open API card',
+            },
+          ],
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result.previewHealth.level).toBe('critical');
+  });
 });
