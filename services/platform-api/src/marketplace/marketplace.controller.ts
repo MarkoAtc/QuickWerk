@@ -15,6 +15,7 @@ export class MarketplaceController {
           description:
             'Read-only fixture feed for comparing response speed, trust signals, and first-visit availability.',
           highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
+          responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
           ctaLabel: 'Open provider card',
         },
         {
@@ -24,6 +25,7 @@ export class MarketplaceController {
           description:
             'Read-only fixture slice showing urgent and scheduled handoff states after auth continuation.',
           highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
+          responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
           ctaLabel: 'Start booking flow',
         },
       ],

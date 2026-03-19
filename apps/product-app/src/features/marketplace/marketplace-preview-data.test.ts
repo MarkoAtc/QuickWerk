@@ -53,7 +53,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.errorMessage).toBeUndefined();
   });
 
-  it('returns validated api sections when payload is structurally correct', async () => {
+  it('sanitizes invalid optional responseSlaHint while preserving an otherwise valid section', async () => {
     const fetchMock = async () =>
       ({
         ok: true,
@@ -64,6 +64,7 @@ describe('loadMarketplacePreview', () => {
               title: 'API provider discovery',
               description: 'Read-only API-backed fixture section.',
               highlights: ['alpha', 'beta'],
+              responseSlaHint: 123,
               ctaLabel: 'Open API card',
             },
           ],
@@ -79,6 +80,42 @@ describe('loadMarketplacePreview', () => {
           title: 'API provider discovery',
           description: 'Read-only API-backed fixture section.',
           highlights: ['alpha', 'beta'],
+          ctaLabel: 'Open API card',
+        },
+      ],
+      source: 'platform-api',
+    });
+    expect(result.sections[0]?.responseSlaHint).toBeUndefined();
+  });
+
+  it('returns validated api sections when payload is structurally correct', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: [
+            {
+              id: 'api-provider-discovery',
+              title: 'API provider discovery',
+              description: 'Read-only API-backed fixture section.',
+              highlights: ['alpha', 'beta'],
+              responseSlaHint: 'Median response under 7 minutes',
+              ctaLabel: 'Open API card',
+            },
+          ],
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      sections: [
+        {
+          id: 'api-provider-discovery',
+          title: 'API provider discovery',
+          description: 'Read-only API-backed fixture section.',
+          highlights: ['alpha', 'beta'],
+          responseSlaHint: 'Median response under 7 minutes',
           ctaLabel: 'Open API card',
         },
       ],

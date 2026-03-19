@@ -7,6 +7,7 @@ export type MarketplacePreviewSection = {
   description: string;
   highlights: string[];
   id: string;
+  responseSlaHint?: string;
   title: string;
 };
 
@@ -15,6 +16,7 @@ type RawMarketplacePreviewSection = {
   description?: string;
   highlights?: string[];
   id?: string;
+  responseSlaHint?: string;
   title?: string;
 };
 
@@ -35,6 +37,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'Local fixture cards show how customers can compare response speed, trust signals, and first-visit availability without loading real marketplace data.',
     highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
+    responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
     ctaLabel: 'Open provider card',
   },
   {
@@ -43,6 +46,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'A tiny post-auth continuation panel previews urgent and scheduled handoff states to keep the customer story visible during the meeting.',
     highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
+    responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
     ctaLabel: 'Start booking flow',
   },
   {
@@ -60,15 +64,28 @@ export const defaultMarketplacePreviewResult = {
   source: 'fallback',
 } as const satisfies MarketplacePreviewResult;
 
-const isMarketplacePreviewSection = (value: RawMarketplacePreviewSection): value is MarketplacePreviewSection => {
-  return Boolean(
-    value.id &&
-      value.title &&
-      value.description &&
-      value.ctaLabel &&
-      value.highlights &&
-      value.highlights.every((highlight: string) => typeof highlight === 'string'),
-  );
+const normalizeMarketplacePreviewSection = (
+  value: RawMarketplacePreviewSection,
+): MarketplacePreviewSection | null => {
+  if (
+    !value.id ||
+    !value.title ||
+    !value.description ||
+    !value.ctaLabel ||
+    !value.highlights ||
+    !value.highlights.every((highlight: string) => typeof highlight === 'string')
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    title: value.title,
+    description: value.description,
+    highlights: value.highlights,
+    ctaLabel: value.ctaLabel,
+    responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
+  };
 };
 
 const createMarketplacePreviewUrl = () => {
@@ -93,7 +110,10 @@ export async function loadMarketplacePreview(fetchImpl: typeof fetch = fetch): P
     }
 
     const payload = (await response.json()) as MarketplacePreviewPayload;
-    const sections = payload.sections?.filter(isMarketplacePreviewSection) ?? [];
+    const sections =
+      payload.sections
+        ?.map((section) => normalizeMarketplacePreviewSection(section))
+        .filter((section): section is MarketplacePreviewSection => section !== null) ?? [];
 
     return {
       sections: sections.length > 0 ? sections : fallbackMarketplacePreviewSections,

@@ -93,22 +93,32 @@ The recommended first follow-up slice has now been implemented in the same style
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - covers non-OK response fallback, thrown error fallback, invalid payload sanitization, and valid payload mapping
 
-## 8. Updated Exact Next Docking Point
+## 8. Second Minimal Docking Increment (Completed)
+
+One richer read-model field was added without broadening scope:
+
+- field added: `responseSlaHint` on marketplace preview sections
+- backend payload update:
+  - `services/platform-api/src/marketplace/marketplace.controller.ts`
+- product-app read-model update and sanitization:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - invalid `responseSlaHint` values are dropped while preserving otherwise valid sections
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - response SLA hint rendered as read-only guidance text
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - includes valid mapping and invalid optional-field sanitization coverage
+
+## 9. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one additional API-backed section or one richer read-model field (not both at once)
+2. add exactly one additional trust/read-model field (not a broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
-
-## 9. Suggested Next Follow-up Slice
-
-- module target: `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
-- backend touchpoint: extend preview payload with one explicit data group (for example, trust badges or response SLA hints)
-- risk control: maintain local fallback rendering when API is unavailable or payload is partial
-- validation: targeted unit test for new field sanitization/state mapping plus existing workspace typecheck
 
 ## 10. Acceptance Criteria for the Next Contributor
 

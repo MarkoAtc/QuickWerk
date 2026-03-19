@@ -102,8 +102,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 ## Exact next docking point
 
 - continue auth/session hardening and marketplace read models in small slices without widening scope
+- latest increment completed: added one richer read-model field (`responseSlaHint`) to marketplace preview sections from platform API, with sanitization + fallback in product-app
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe, but add one additional read-only section sourced from platform API (still no persistence)
+  - keep `/marketplace-preview` demo-safe and read-only, but add one additional trust/read-model field (not a broad section expansion)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

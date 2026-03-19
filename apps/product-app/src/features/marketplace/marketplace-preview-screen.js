@@ -26,6 +26,11 @@ function PreviewSectionCard({ section }) {
           • {highlight}
         </Text>
       ))}
+      {section.responseSlaHint ? (
+        <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
+          Response SLA hint: {section.responseSlaHint}
+        </Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={section.ctaLabel}
