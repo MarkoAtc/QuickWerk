@@ -36,6 +36,9 @@ type MarketplacePreviewPayload = {
 };
 
 export type PreviewHealthIndicator = {
+  coverageMinimalSections: number;
+  coveragePartialSections: number;
+  coverageWellSections: number;
   criticalSections: number;
   goodSections: number;
   level: 'critical' | 'good' | 'watch';
@@ -103,6 +106,9 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   const criticalSections = sections.filter((section) => section.sectionHealthLevel === 'critical').length;
   const watchSections = sections.filter((section) => section.sectionHealthLevel === 'watch').length;
   const goodSections = sections.filter((section) => section.sectionHealthLevel === 'good').length;
+  const coverageMinimalSections = sections.filter((section) => section.dataCoverageHint?.includes('minimal')).length;
+  const coveragePartialSections = sections.filter((section) => section.dataCoverageHint?.includes('partially')).length;
+  const coverageWellSections = sections.filter((section) => section.dataCoverageHint?.includes('well-covered')).length;
 
   if (criticalSections > 0) {
     return {
@@ -111,6 +117,9 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       criticalSections,
       watchSections,
       goodSections,
+      coverageMinimalSections,
+      coveragePartialSections,
+      coverageWellSections,
     };
   }
 
@@ -121,6 +130,9 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       criticalSections,
       watchSections,
       goodSections,
+      coverageMinimalSections,
+      coveragePartialSections,
+      coverageWellSections,
     };
   }
 
@@ -130,6 +142,9 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
     criticalSections,
     watchSections,
     goodSections,
+    coverageMinimalSections,
+    coveragePartialSections,
+    coverageWellSections,
   };
 };
 

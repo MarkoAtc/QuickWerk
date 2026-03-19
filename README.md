@@ -114,8 +114,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one small consistency signal (`sectionHealthLevel`) derived per section to align section-level and route-level status language
   - added one small route-level summary count for section health distribution (`good/watch/critical`)
   - added one tiny data-coverage hint (`dataCoverageHint`) when optional fields are sparse on a section
+  - added one tiny route-level rollup over section coverage hints (`coverageWell/Partial/Minimal` counters)
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny route-level rollup over section data coverage hints (without broad section expansion)
+  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny derived route-level narrative summary combining health + coverage signals (without broad section expansion)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

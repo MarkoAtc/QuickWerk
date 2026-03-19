@@ -194,6 +194,9 @@ describe('loadMarketplacePreview', () => {
       goodSections: 1,
       watchSections: 0,
       criticalSections: 0,
+      coverageWellSections: 0,
+      coveragePartialSections: 1,
+      coverageMinimalSections: 0,
     });
   });
 
@@ -223,6 +226,9 @@ describe('loadMarketplacePreview', () => {
       goodSections: 0,
       watchSections: 0,
       criticalSections: 1,
+      coverageWellSections: 0,
+      coveragePartialSections: 1,
+      coverageMinimalSections: 0,
     });
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
   });
@@ -253,6 +259,9 @@ describe('loadMarketplacePreview', () => {
       goodSections: 0,
       watchSections: 1,
       criticalSections: 0,
+      coverageWellSections: 0,
+      coveragePartialSections: 1,
+      coverageMinimalSections: 0,
     });
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
   });
