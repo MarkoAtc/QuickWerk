@@ -212,17 +212,29 @@ One minimal route-level aggregate indicator was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - includes explicit health-level assertions (`good` and `critical`) in addition to existing sanitization/derivation checks
 
-## 15. Updated Exact Next Docking Point
+## 15. Ninth Minimal Docking Increment (Completed)
+
+One tiny route-level visual severity treatment was added without widening scope:
+
+- UI treatment added for `previewHealth.level`:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - route-level health panel now varies border/text treatment for `good`, `watch`, and `critical`
+  - includes stable test hooks (`marketplace-preview-health`, `marketplace-preview-health-level`)
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - added explicit `watch` health-level assertion while retaining `good` and `critical` coverage
+
+## 16. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny route-level visual severity treatment based on `previewHealth.level` (not a broad section expansion)
+2. add exactly one small consistency signal between section-level and route-level status (not a broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 16. Acceptance Criteria for the Next Contributor
+## 17. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

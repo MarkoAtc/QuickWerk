@@ -89,6 +89,21 @@ function PreviewSectionCard({ section }) {
   );
 }
 
+const healthLevelStyles = {
+  good: {
+    borderColor: productAppShell.theme.color.primary,
+    textColor: productAppShell.theme.color.primary,
+  },
+  watch: {
+    borderColor: productAppShell.theme.color.accent,
+    textColor: productAppShell.theme.color.accent,
+  },
+  critical: {
+    borderColor: '#B22222',
+    textColor: '#B22222',
+  },
+};
+
 export function MarketplacePreviewScreen() {
   const [previewResult, setPreviewResult] = useState(defaultMarketplacePreviewResult);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,9 +140,25 @@ export function MarketplacePreviewScreen() {
       <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
         This route now supports one read-only preview API slice with explicit fallback behavior to local fixtures.
       </Text>
-      <Text testID="marketplace-preview-health" style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-        Preview health: {previewResult.previewHealth.level} · {previewResult.previewHealth.summary}
-      </Text>
+      <View
+        testID="marketplace-preview-health"
+        style={{
+          marginTop: 8,
+          borderWidth: 1,
+          borderColor: healthLevelStyles[previewResult.previewHealth.level].borderColor,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+        }}
+      >
+        <Text
+          testID="marketplace-preview-health-level"
+          style={{ color: healthLevelStyles[previewResult.previewHealth.level].textColor, fontWeight: '600' }}
+        >
+          Preview health: {previewResult.previewHealth.level}
+        </Text>
+        <Text style={{ marginTop: 4, color: productAppShell.theme.color.text }}>{previewResult.previewHealth.summary}</Text>
+      </View>
       {previewResult.errorMessage ? (
         <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
           Preview fallback: {previewResult.errorMessage}

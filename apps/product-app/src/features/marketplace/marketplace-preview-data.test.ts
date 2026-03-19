@@ -211,4 +211,28 @@ describe('loadMarketplacePreview', () => {
 
     expect(result.previewHealth.level).toBe('critical');
   });
+
+  it('marks preview health as watch when stale freshness appears without critical completeness drop', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: [
+            {
+              id: 'api-health-watch',
+              title: 'API health watch',
+              description: 'Read-only API-backed fixture section.',
+              highlights: ['alpha', 'beta'],
+              dataFreshnessMinutes: 18,
+              payloadCompletenessPercent: 91,
+              ctaLabel: 'Open API card',
+            },
+          ],
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result.previewHealth.level).toBe('watch');
+  });
 });
