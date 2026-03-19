@@ -350,17 +350,32 @@ One tiny route-level risk headline was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - good/watch/critical tests now assert risk headline intent markers
 
-## 24. Updated Exact Next Docking Point
+## 24. Eighteenth Minimal Docking Increment (Completed)
+
+One tiny deterministic route-level coverage band token was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.coverageBandToken` derived deterministically from coverage counters
+  - mapping: `minimal>0 -> coverage-low`, else `partial>0 -> coverage-medium`, else `coverage-high`
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - health panel now renders coverage band token via `marketplace-preview-coverage-band-token`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests assert `coverage-medium`; rich metadata mapping test asserts `coverage-high`
+
+## 25. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny deterministic route-level confidence band token derived from coverage counters (without broad section expansion)
+2. add exactly one tiny deterministic section coverage band token for section-level coverage consistency checks
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 25. Acceptance Criteria for the Next Contributor
+## 26. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

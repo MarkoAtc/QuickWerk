@@ -37,6 +37,7 @@ type MarketplacePreviewPayload = {
 };
 
 export type PreviewHealthIndicator = {
+  coverageBandToken: 'coverage-high' | 'coverage-low' | 'coverage-medium';
   coverageMinimalSections: number;
   coveragePartialSections: number;
   coverageWellSections: number;
@@ -113,6 +114,8 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   const coverageMinimalSections = sections.filter((section) => section.dataCoverageHint?.includes('minimal')).length;
   const coveragePartialSections = sections.filter((section) => section.dataCoverageHint?.includes('partially')).length;
   const coverageWellSections = sections.filter((section) => section.dataCoverageHint?.includes('well-covered')).length;
+  const coverageBandToken =
+    coverageMinimalSections > 0 ? 'coverage-low' : coveragePartialSections > 0 ? 'coverage-medium' : 'coverage-high';
 
   if (criticalSections > 0) {
     return {
@@ -124,6 +127,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
           : 'Critical preview risk: at least one section is low-completeness and should be corrected before demos.',
       riskHeadline: `Critical risk in ${criticalSections} section(s); watch ${watchSections} more.`,
       severityBadgeToken: 'badge-critical',
+      coverageBandToken,
       criticalSections,
       watchSections,
       goodSections,
@@ -143,6 +147,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
           : 'Watch state: quality is usable, with a few sections needing closer monitoring.',
       riskHeadline: `Watch state across ${watchSections} section(s); no critical sections currently.`,
       severityBadgeToken: 'badge-watch',
+      coverageBandToken,
       criticalSections,
       watchSections,
       goodSections,
@@ -161,6 +166,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
         : 'Healthy baseline: section quality and metadata coverage are aligned for demos.',
     riskHeadline: `No critical/watch sections; ${goodSections} section(s) currently healthy.`,
     severityBadgeToken: 'badge-good',
+    coverageBandToken,
     criticalSections,
     watchSections,
     goodSections,
