@@ -42,6 +42,7 @@ export type PreviewHealthIndicator = {
   criticalSections: number;
   goodSections: number;
   level: 'critical' | 'good' | 'watch';
+  narrative: string;
   summary: string;
   watchSections: number;
 };
@@ -114,6 +115,10 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
     return {
       level: 'critical',
       summary: 'Preview payload completeness is below target in at least one section.',
+      narrative:
+        coverageMinimalSections > 0
+          ? 'Critical preview risk: at least one section is low-completeness and metadata coverage is minimal.'
+          : 'Critical preview risk: at least one section is low-completeness and should be corrected before demos.',
       criticalSections,
       watchSections,
       goodSections,
@@ -127,6 +132,10 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
     return {
       level: 'watch',
       summary: 'Preview quality is acceptable but one or more sections should be monitored.',
+      narrative:
+        coverageMinimalSections > 0
+          ? 'Watch state: quality is usable, but sparse metadata in some sections may weaken stakeholder confidence.'
+          : 'Watch state: quality is usable, with a few sections needing closer monitoring.',
       criticalSections,
       watchSections,
       goodSections,
@@ -139,6 +148,10 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   return {
     level: 'good',
     summary: 'Preview quality indicators are healthy for the current demo slice.',
+    narrative:
+      coverageMinimalSections > 0
+        ? 'Healthy baseline with minor metadata gaps that can be filled in subsequent slices.'
+        : 'Healthy baseline: section quality and metadata coverage are aligned for demos.',
     criticalSections,
     watchSections,
     goodSections,

@@ -176,6 +176,9 @@ export function MarketplacePreviewScreen() {
           Coverage → well: {previewResult.previewHealth.coverageWellSections} · partial:{' '}
           {previewResult.previewHealth.coveragePartialSections} · minimal: {previewResult.previewHealth.coverageMinimalSections}
         </Text>
+        <Text testID="marketplace-preview-health-narrative" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
+          {previewResult.previewHealth.narrative}
+        </Text>
       </View>
       {previewResult.errorMessage ? (
         <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>

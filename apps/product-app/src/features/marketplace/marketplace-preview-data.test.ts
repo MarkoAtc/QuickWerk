@@ -198,6 +198,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.narrative).toContain('Healthy baseline');
   });
 
   it('marks preview health as critical when one section has low payload completeness', async () => {
@@ -230,6 +231,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.narrative).toContain('Critical preview risk');
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
   });
 
@@ -263,6 +265,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.narrative).toContain('Watch state');
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
   });
 });

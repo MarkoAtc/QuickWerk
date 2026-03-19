@@ -292,17 +292,31 @@ One tiny route-level data-coverage rollup was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - good/watch/critical health tests now also assert coverage distribution counters
 
-## 20. Updated Exact Next Docking Point
+## 20. Fourteenth Minimal Docking Increment (Completed)
+
+One tiny derived route-level narrative summary was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.narrative` derived from health level and coverage distribution
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - health panel now renders the narrative via `marketplace-preview-health-narrative`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests now assert narrative intent markers
+
+## 21. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny derived route-level narrative summary combining health + coverage signals (without broad section expansion)
+2. add exactly one tiny deterministic severity badge token derived from `previewHealth.level` for stable visual snapshot checks
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 21. Acceptance Criteria for the Next Contributor
+## 22. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
