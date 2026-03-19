@@ -53,7 +53,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.errorMessage).toBeUndefined();
   });
 
-  it('sanitizes invalid optional responseSlaHint while preserving an otherwise valid section', async () => {
+  it('sanitizes invalid optional fields while preserving an otherwise valid section', async () => {
     const fetchMock = async () =>
       ({
         ok: true,
@@ -65,6 +65,7 @@ describe('loadMarketplacePreview', () => {
               description: 'Read-only API-backed fixture section.',
               highlights: ['alpha', 'beta'],
               responseSlaHint: 123,
+              trustBadges: ['ID verified', 99],
               ctaLabel: 'Open API card',
             },
           ],
@@ -80,6 +81,7 @@ describe('loadMarketplacePreview', () => {
           title: 'API provider discovery',
           description: 'Read-only API-backed fixture section.',
           highlights: ['alpha', 'beta'],
+          trustBadges: ['ID verified'],
           ctaLabel: 'Open API card',
         },
       ],
@@ -99,6 +101,7 @@ describe('loadMarketplacePreview', () => {
               title: 'API provider discovery',
               description: 'Read-only API-backed fixture section.',
               highlights: ['alpha', 'beta'],
+              trustBadges: ['ID verified', 'Top-rated'],
               responseSlaHint: 'Median response under 7 minutes',
               ctaLabel: 'Open API card',
             },
@@ -115,6 +118,7 @@ describe('loadMarketplacePreview', () => {
           title: 'API provider discovery',
           description: 'Read-only API-backed fixture section.',
           highlights: ['alpha', 'beta'],
+          trustBadges: ['ID verified', 'Top-rated'],
           responseSlaHint: 'Median response under 7 minutes',
           ctaLabel: 'Open API card',
         },

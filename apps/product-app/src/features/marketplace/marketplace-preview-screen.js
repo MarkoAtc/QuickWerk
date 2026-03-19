@@ -26,6 +26,26 @@ function PreviewSectionCard({ section }) {
           • {highlight}
         </Text>
       ))}
+      {section.trustBadges?.length ? (
+        <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {section.trustBadges.map((badge) => (
+            <Text
+              key={badge}
+              style={{
+                color: productAppShell.theme.color.primary,
+                borderWidth: 1,
+                borderColor: productAppShell.theme.color.primary,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                fontSize: 12,
+              }}
+            >
+              {badge}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       {section.responseSlaHint ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
           Response SLA hint: {section.responseSlaHint}

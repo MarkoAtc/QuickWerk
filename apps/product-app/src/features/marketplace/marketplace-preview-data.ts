@@ -9,6 +9,7 @@ export type MarketplacePreviewSection = {
   id: string;
   responseSlaHint?: string;
   title: string;
+  trustBadges?: string[];
 };
 
 type RawMarketplacePreviewSection = {
@@ -18,6 +19,7 @@ type RawMarketplacePreviewSection = {
   id?: string;
   responseSlaHint?: string;
   title?: string;
+  trustBadges?: string[];
 };
 
 type MarketplacePreviewPayload = {
@@ -37,6 +39,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'Local fixture cards show how customers can compare response speed, trust signals, and first-visit availability without loading real marketplace data.',
     highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
+    trustBadges: ['ID verified', 'Business docs reviewed'],
     responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
     ctaLabel: 'Open provider card',
   },
@@ -46,6 +49,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'A tiny post-auth continuation panel previews urgent and scheduled handoff states to keep the customer story visible during the meeting.',
     highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
+    trustBadges: ['SLA monitored', 'Status transitions audited'],
     responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
     ctaLabel: 'Start booking flow',
   },
@@ -78,6 +82,8 @@ const normalizeMarketplacePreviewSection = (
     return null;
   }
 
+  const trustBadges = value.trustBadges?.filter((badge: string) => typeof badge === 'string');
+
   return {
     id: value.id,
     title: value.title,
@@ -85,6 +91,7 @@ const normalizeMarketplacePreviewSection = (
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
+    trustBadges: trustBadges && trustBadges.length > 0 ? trustBadges : undefined,
   };
 };
 
