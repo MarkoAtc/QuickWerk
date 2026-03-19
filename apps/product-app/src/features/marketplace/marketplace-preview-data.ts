@@ -4,6 +4,7 @@ import { runtimeConfig } from '../../shared/runtime-config';
 
 export type MarketplacePreviewSection = {
   ctaLabel: string;
+  dataCoverageHint?: string;
   dataFreshnessLabel?: 'fresh' | 'stable' | 'stale';
   dataFreshnessMinutes?: number;
   description: string;
@@ -183,12 +184,28 @@ const normalizeMarketplacePreviewSection = (
         ? 'watch'
         : 'good';
 
+  const optionalFieldPresenceCount = [
+    typeof value.responseSlaHint === 'string',
+    typeof value.readinessNote === 'string',
+    typeof dataFreshnessMinutes === 'number',
+    typeof payloadCompletenessPercent === 'number',
+    trustBadges && trustBadges.length > 0,
+  ].filter(Boolean).length;
+
+  const dataCoverageHint =
+    optionalFieldPresenceCount >= 4
+      ? 'Optional preview metadata is well-covered for this section.'
+      : optionalFieldPresenceCount >= 2
+        ? 'Optional preview metadata is partially covered for this section.'
+        : 'Optional preview metadata is minimal for this section.';
+
   return {
     id: value.id,
     title: value.title,
     description: value.description,
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
+    dataCoverageHint,
     dataFreshnessMinutes,
     dataFreshnessLabel,
     payloadCompletenessPercent,

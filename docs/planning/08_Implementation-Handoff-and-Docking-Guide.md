@@ -259,17 +259,33 @@ One small route-level summary count was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - good/watch/critical tests now assert section distribution counts
 
-## 18. Updated Exact Next Docking Point
+## 18. Twelfth Minimal Docking Increment (Completed)
+
+One tiny data-coverage hint was added without widening scope:
+
+- field added: `dataCoverageHint` on marketplace preview sections
+- derivation and logic:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - computed from optional metadata presence count per section
+  - emits small categorical hint copy (`well-covered` / `partially covered` / `minimal`)
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - each section now renders `Data coverage: <hint>`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - validates both sparse and rich optional-field coverage hints in mapped sections
+
+## 19. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny data-coverage hint when optional fields are absent (without broad section expansion)
+2. add exactly one tiny route-level rollup over section data-coverage hints (without broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 19. Acceptance Criteria for the Next Contributor
+## 20. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

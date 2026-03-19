@@ -72,6 +72,11 @@ function PreviewSectionCard({ section }) {
           Readiness note: {section.readinessNote}
         </Text>
       ) : null}
+      {section.dataCoverageHint ? (
+        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Data coverage: {section.dataCoverageHint}
+        </Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={section.ctaLabel}
