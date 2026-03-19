@@ -53,17 +53,41 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 
 ## Current handoff point
 
-- current focus: take a short-term, presentation-focused UI detour for tomorrow's customer meeting by building one visible demo-safe slice inside the existing shared `apps/product-app`, without changing the agreed architecture or long-term roadmap
+- current focus: continue from the completed temporary UI-first detour and resume the auth/session hardening track without changing agreed architecture boundaries
 
-## Temporary UI-first meeting detour
+## Temporary UI-first meeting detour (implemented)
 
-- what we are switching to right now: build one shared post-auth preview slice inside `apps/product-app`, using the existing route/shell/auth-entry direction as the base
-- why we are doing it: create visible progress for the customer meeting without introducing a parallel architecture or misleading the team about delivery priorities
-- exact scope: one new presentation-focused route/screen in the shared product app, likely showing a post-auth marketplace/onboarding continuation with local preview cards/sections
-- explicitly in scope: shared `apps/product-app`, Expo Router route wiring, existing shared screen shell/route-link components, local demo fixtures, preview copy, and disabled or no-op CTA placeholders
-- explicitly out of scope: `apps/admin-web`, real backend wiring, persistent data, production auth expansion, package boundary changes, or broad new feature work beyond the single demo slice
-- demo-safe / stub-only: local mocked data, placeholder state, preview labels, non-functional CTA actions, and any content needed only to present the intended cross-platform UX
-- structurally important work not being skipped: shared package boundaries, one shared product-app codebase for web/iOS/Android, current auth/session bootstrap direction, Expo Router route structure, accessibility/testability hardening, and focused unit testing
-- exact handoff point for continuing the UI-first demo slice: add one route-level preview screen in `apps/product-app` that represents the next step after auth, keep it clearly marked as preview/demo-safe, and reuse the existing shared shell and route-link primitives rather than inventing new structure
-- exact return point after the meeting: resume the pending engineering path with one focused test for `apps/product-app/src/shared/session-bootstrap.ts` fallback behavior, then continue the auth/session hardening track from there
-- follow-up after returning: if needed, add one small UI-focused test around the auth-entry screen once a minimal React Native-compatible render path is chosen
+- what was implemented: one shared post-auth preview route inside `apps/product-app` at `/marketplace-preview`, using the existing route/shell/auth-entry direction as the base
+- why this was done: create visible progress for the customer meeting without introducing a parallel architecture or misleading delivery priorities
+- exact implemented scope: one presentation-focused route/screen showing post-auth marketplace/onboarding continuation with local preview cards/sections
+- implementation details:
+  - new route: `apps/product-app/app/marketplace-preview.js`
+  - new screen module: `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - route wiring reuse: `ProductScreenShell` + `ProductRouteLink`
+  - navigation entry points:
+    - home route (`app/index.js`) now links to `/marketplace-preview`
+    - auth route (`auth-entry-screen.js`) now links to `/marketplace-preview` when the session state resolves to authenticated continuation
+- explicitly in scope (kept): shared `apps/product-app`, Expo Router route wiring, existing shared screen shell/route-link components, local demo fixtures, preview copy, and disabled CTA placeholders
+- explicitly out of scope (kept): `apps/admin-web`, real backend wiring, persistent data, production auth expansion, package boundary changes, and broad feature work beyond the single demo slice
+- demo-safe / stub-only guarantee maintained: local mocked content, placeholder state labels, non-functional CTA actions, no write-side backend behavior
+
+## Engineering return track (implemented next)
+
+- completed return-point task: added focused fallback-behavior coverage for `apps/product-app/src/shared/session-bootstrap.ts`
+- test file: `apps/product-app/src/shared/session-bootstrap.test.ts`
+- added coverage:
+  - non-OK HTTP response fallback with explicit error message
+  - thrown fetch error fallback with propagated error message
+  - invalid payload sanitization for session state, next step, and available action routes
+- verification snapshot:
+  - `pnpm check` passes across workspace packages
+  - `pnpm --filter @quickwerk/product-app test` passes (auth-entry-state + session-bootstrap coverage)
+
+## Exact next docking point
+
+- continue auth/session hardening in `apps/product-app` and `services/platform-api` from the now-documented baseline
+- recommended first increment:
+  - keep `/marketplace-preview` as demo-safe but start replacing one section with real read-only API-backed data behind explicit fallback handling
+  - keep route/shell reuse intact; do not fork platform-specific structure
+  - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
+- follow-up after this docking increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

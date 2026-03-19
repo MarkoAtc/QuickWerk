@@ -49,6 +49,14 @@ export function AuthEntryScreen() {
         Primary action: {authEntryState.primaryActionLabel} · Session: {authEntryState.sessionState}
       </Text>
       <AuthEntrySection authEntryState={authEntryState} />
+      {authEntryState.primaryActionId === 'continue-to-marketplace' ? (
+        <ProductRouteLink
+          href="/marketplace-preview"
+          title="Open marketplace continuation preview"
+          description="Presentation-focused post-auth route for tomorrow's meeting (demo-safe)."
+          testID="auth-entry-open-marketplace-preview-link"
+        />
+      ) : null}
       <ProductRouteLink
         href="/"
         title="Back to product home"

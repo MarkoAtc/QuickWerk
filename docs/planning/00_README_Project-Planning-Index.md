@@ -45,6 +45,7 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 2. `03_Technical-Specifications.md`
 3. `04_Team-Guidelines-and-Engineering-Workflow.md`
 4. `05_AI-Agent-Instructions-and-Automation-Workflows.md`
+5. `08_Implementation-Handoff-and-Docking-Guide.md`
 
 ### For AI assistants and automation owners
 
@@ -52,6 +53,7 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 2. `04_Team-Guidelines-and-Engineering-Workflow.md`
 3. `03_Technical-Specifications.md`
 4. `07_Risks-Assumptions-Issues-and-Plan-Corrections.md`
+5. `08_Implementation-Handoff-and-Docking-Guide.md`
 
 ## Document Map
 
@@ -101,6 +103,13 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 - delivery and business risks
 - corrective recommendations
 - open questions requiring sponsor decisions
+
+### `08_Implementation-Handoff-and-Docking-Guide.md`
+
+- latest implementation pass summary
+- exact changed files and rationale
+- validation evidence snapshot
+- explicit next docking point for contributors
 
 ## Global Delivery Assumptions
 

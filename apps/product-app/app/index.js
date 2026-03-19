@@ -36,6 +36,12 @@ export default function ProductHomeScreen() {
         description="Local sign-in, sign-up, recovery, and continuation stubs now live behind their own shared route."
         testID="product-home-open-auth-link"
       />
+      <ProductRouteLink
+        href="/marketplace-preview"
+        title="Open marketplace preview"
+        description="Presentation-focused post-auth preview slice for tomorrow's meeting (demo-safe and local only)."
+        testID="product-home-open-marketplace-preview-link"
+      />
     </ProductScreenShell>
   );
 }
