@@ -7,6 +7,7 @@ export type MarketplacePreviewSection = {
   description: string;
   highlights: string[];
   id: string;
+  readinessNote?: string;
   responseSlaHint?: string;
   title: string;
   trustBadges?: string[];
@@ -17,6 +18,7 @@ type RawMarketplacePreviewSection = {
   description?: string;
   highlights?: string[];
   id?: string;
+  readinessNote?: string;
   responseSlaHint?: string;
   title?: string;
   trustBadges?: string[];
@@ -41,6 +43,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
     trustBadges: ['ID verified', 'Business docs reviewed'],
     responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
+    readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
     ctaLabel: 'Open provider card',
   },
   {
@@ -51,6 +54,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
     trustBadges: ['SLA monitored', 'Status transitions audited'],
     responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
+    readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
     ctaLabel: 'Start booking flow',
   },
   {
@@ -91,6 +95,7 @@ const normalizeMarketplacePreviewSection = (
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
+    readinessNote: typeof value.readinessNote === 'string' ? value.readinessNote : undefined,
     trustBadges: trustBadges && trustBadges.length > 0 ? trustBadges : undefined,
   };
 };

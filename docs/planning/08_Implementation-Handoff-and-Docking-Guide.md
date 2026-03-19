@@ -127,17 +127,34 @@ One additional trust/read-model field was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - includes optional-field sanitization for `responseSlaHint` and `trustBadges`
 
-## 10. Updated Exact Next Docking Point
+## 10. Fourth Minimal Docking Increment (Completed)
+
+One additional quality/read-model field was added without widening scope:
+
+- field added: `readinessNote` on marketplace preview sections
+- backend payload update:
+  - `services/platform-api/src/marketplace/marketplace.controller.ts`
+- product-app read-model update and sanitization:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - invalid optional readiness notes are dropped while preserving valid sections
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - readiness note rendered as read-only supporting copy
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - includes optional-field sanitization coverage for `responseSlaHint`, `trustBadges`, and `readinessNote`
+
+## 11. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one additional quality/readiness field (not a broad section expansion)
+2. add exactly one small data-quality signal per section (not a broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 11. Acceptance Criteria for the Next Contributor
+## 12. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

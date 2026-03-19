@@ -17,6 +17,7 @@ export class MarketplaceController {
           highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
           trustBadges: ['ID verified', 'Business docs reviewed'],
           responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
+          readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
           ctaLabel: 'Open provider card',
         },
         {
@@ -28,6 +29,7 @@ export class MarketplaceController {
           highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
           trustBadges: ['SLA monitored', 'Status transitions audited'],
           responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
+          readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
           ctaLabel: 'Start booking flow',
         },
       ],
