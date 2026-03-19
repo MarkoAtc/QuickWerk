@@ -51,6 +51,11 @@ function PreviewSectionCard({ section }) {
           Response SLA hint: {section.responseSlaHint}
         </Text>
       ) : null}
+      {typeof section.dataFreshnessMinutes === 'number' ? (
+        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Data freshness: ~{section.dataFreshnessMinutes} min
+        </Text>
+      ) : null}
       {section.readinessNote ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
           Readiness note: {section.readinessNote}

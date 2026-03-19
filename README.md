@@ -106,8 +106,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one richer read-model field (`responseSlaHint`) to marketplace preview sections from platform API, with sanitization + fallback in product-app
   - added one additional trust field (`trustBadges`) with optional-field sanitization and read-only UI rendering
   - added one quality/readiness field (`readinessNote`) with optional-field sanitization and read-only UI rendering
+  - added one tiny data-quality signal (`dataFreshnessMinutes`) with numeric sanitization and read-only UI rendering
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny data-quality signal per section (not a broad section expansion)
+  - keep `/marketplace-preview` demo-safe and read-only, but add one small confidence signal for payload completeness (not a broad section expansion)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

@@ -4,6 +4,7 @@ import { runtimeConfig } from '../../shared/runtime-config';
 
 export type MarketplacePreviewSection = {
   ctaLabel: string;
+  dataFreshnessMinutes?: number;
   description: string;
   highlights: string[];
   id: string;
@@ -15,6 +16,7 @@ export type MarketplacePreviewSection = {
 
 type RawMarketplacePreviewSection = {
   ctaLabel?: string;
+  dataFreshnessMinutes?: number;
   description?: string;
   highlights?: string[];
   id?: string;
@@ -44,6 +46,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     trustBadges: ['ID verified', 'Business docs reviewed'],
     responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
     readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
+    dataFreshnessMinutes: 12,
     ctaLabel: 'Open provider card',
   },
   {
@@ -55,6 +58,7 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     trustBadges: ['SLA monitored', 'Status transitions audited'],
     responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
     readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
+    dataFreshnessMinutes: 5,
     ctaLabel: 'Start booking flow',
   },
   {
@@ -94,6 +98,10 @@ const normalizeMarketplacePreviewSection = (
     description: value.description,
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
+    dataFreshnessMinutes:
+      typeof value.dataFreshnessMinutes === 'number' && Number.isFinite(value.dataFreshnessMinutes)
+        ? value.dataFreshnessMinutes
+        : undefined,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
     readinessNote: typeof value.readinessNote === 'string' ? value.readinessNote : undefined,
     trustBadges: trustBadges && trustBadges.length > 0 ? trustBadges : undefined,

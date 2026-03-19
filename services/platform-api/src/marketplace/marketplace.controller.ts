@@ -18,6 +18,7 @@ export class MarketplaceController {
           trustBadges: ['ID verified', 'Business docs reviewed'],
           responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
           readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
+          dataFreshnessMinutes: 12,
           ctaLabel: 'Open provider card',
         },
         {
@@ -30,6 +31,7 @@ export class MarketplaceController {
           trustBadges: ['SLA monitored', 'Status transitions audited'],
           responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
           readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
+          dataFreshnessMinutes: 5,
           ctaLabel: 'Start booking flow',
         },
       ],
