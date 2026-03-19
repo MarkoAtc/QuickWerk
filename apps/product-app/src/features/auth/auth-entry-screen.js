@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { AuthEntrySection } from './auth-entry-section';
 import { createAuthEntryState, initialAuthEntryState } from './auth-entry-state';
@@ -38,25 +38,40 @@ export function AuthEntryScreen() {
 
   return (
     <ProductScreenShell
-      title="Shared auth entry"
-      subtitle="Local sign-in, sign-up, and recovery route for the shared product app shell."
+      title="Welcome to QuickWerk"
+      subtitle="A polished shared auth entry for client demos — sign in, create account, or recover access in one clean flow."
       testID="auth-entry-screen"
+      contentContainerStyle={{ maxWidth: 920, alignSelf: 'center', width: '100%' }}
     >
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
-        Session bootstrap: {productAppShell.sessionBootstrapRequest.method} {productAppShell.sessionBootstrapRoute}
-      </Text>
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-        Primary action: {authEntryState.primaryActionLabel} · Session: {authEntryState.sessionState}
-      </Text>
+      <View
+        style={{
+          marginTop: 10,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: '#D7DFEA',
+          backgroundColor: '#FFFFFF',
+          padding: 16,
+        }}
+      >
+        <Text style={{ color: productAppShell.theme.color.accent }}>
+          Session bootstrap: {productAppShell.sessionBootstrapRequest.method} {productAppShell.sessionBootstrapRoute}
+        </Text>
+        <Text style={{ marginTop: 6, color: '#334155' }}>
+          Current state: {authEntryState.sessionState} · Primary action: {authEntryState.primaryActionLabel}
+        </Text>
+      </View>
+
       <AuthEntrySection authEntryState={authEntryState} />
+
       {authEntryState.primaryActionId === 'continue-to-marketplace' ? (
         <ProductRouteLink
           href="/marketplace-preview"
-          title="Open marketplace continuation preview"
-          description="Presentation-focused post-auth route for tomorrow's meeting (demo-safe)."
+          title="Continue to marketplace preview"
+          description="Open the client-facing post-auth marketplace surface."
           testID="auth-entry-open-marketplace-preview-link"
         />
       ) : null}
+
       <ProductRouteLink
         href="/"
         title="Back to product home"

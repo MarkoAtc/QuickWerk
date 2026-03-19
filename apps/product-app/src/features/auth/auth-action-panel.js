@@ -5,7 +5,7 @@ import { productAppShell } from '../../shared/app-shell';
 function FieldPreview({ label, value }) {
   return (
     <View style={{ marginTop: 10 }}>
-      <Text style={{ color: productAppShell.theme.color.primary, fontSize: 12, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ color: '#475569', fontSize: 12, fontWeight: '600' }}>{label}</Text>
       <View
         style={{
           marginTop: 4,
@@ -13,7 +13,8 @@ function FieldPreview({ label, value }) {
           paddingVertical: 10,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: productAppShell.theme.color.primary,
+          borderColor: '#D7DFEA',
+          backgroundColor: '#FFFFFF',
         }}
       >
         <Text style={{ color: productAppShell.theme.color.text }}>{value}</Text>
@@ -26,45 +27,45 @@ const createPanelContent = (actionId, authEntryState) => {
   switch (actionId) {
     case 'sign-in':
       return {
-        title: 'Sign in screen stub',
-        description: 'A tiny local sign-in surface keeps the shared product app mobile-first without adding real auth wiring yet.',
+        title: 'Sign in',
+        description: 'Fast returning-customer entry, optimized for quick mobile access.',
         fields: [
           ['Email address', 'marko@quickwerk.local'],
           ['Password', '••••••••'],
         ],
         buttonLabel: 'Continue with sign in',
-        footerNote: 'Need recovery instead? Switch to Password Reset below.',
+        footerNote: 'Need recovery instead? Switch to Password Reset.',
       };
     case 'sign-up':
       return {
-        title: 'Sign up screen stub',
-        description: 'This local account creation state reserves space for provider onboarding without expanding into a full registration flow.',
+        title: 'Create account',
+        description: 'Shared registration surface reserved for future onboarding integration.',
         fields: [
           ['Full name', 'Marta Meister'],
           ['Email address', 'team@quickwerk.local'],
           ['Password', '••••••••'],
         ],
-        buttonLabel: 'Create shared account',
-        footerNote: `After account creation, continue into ${authEntryState.recommendedOnboardingStep}.`,
+        buttonLabel: 'Create account',
+        footerNote: `Next step after account creation: ${authEntryState.recommendedOnboardingStep}.`,
       };
     case 'password-reset':
       return {
-        title: 'Password reset screen stub',
-        description: 'This local recovery state keeps the auth boundary visible while the real reset flow is still out of scope.',
+        title: 'Reset password',
+        description: 'Recovery surface for users who lost access credentials.',
         fields: [['Email address', 'marko@quickwerk.local']],
         buttonLabel: 'Send reset link',
-        footerNote: 'Keep recovery local for now; real delivery can come with later auth routing.',
+        footerNote: 'Real delivery wiring can be connected in a later auth slice.',
       };
     default:
       return {
-        title: 'Marketplace continuation stub',
-        description: 'Authenticated users can continue into the shared marketplace shell from this client-local state.',
+        title: 'Continue to marketplace',
+        description: 'Authenticated users continue into provider discovery and booking preview.',
         fields: [
           ['Session state', authEntryState.sessionState],
           ['Recommended onboarding step', authEntryState.recommendedOnboardingStep],
         ],
-        buttonLabel: 'Open marketplace shell',
-        footerNote: 'Real marketplace routing can replace this stub later without reworking the auth entry state.',
+        buttonLabel: 'Open marketplace',
+        footerNote: 'This remains demo-safe and can be swapped to real routing later.',
       };
   }
 };
@@ -76,17 +77,21 @@ export function AuthActionPanel({ actionId, authEntryState }) {
     <View
       testID={`auth-action-panel-${actionId}`}
       style={{
-        marginTop: 12,
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: productAppShell.theme.color.surface,
+        marginTop: 14,
+        padding: 14,
+        borderRadius: 14,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#D7DFEA',
       }}
     >
-      <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '600' }}>{panelContent.title}</Text>
-      <Text style={{ marginTop: 6, color: productAppShell.theme.color.text }}>{panelContent.description}</Text>
+      <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '700', fontSize: 17 }}>{panelContent.title}</Text>
+      <Text style={{ marginTop: 6, color: '#334155' }}>{panelContent.description}</Text>
+
       {panelContent.fields.map(([label, value]) => (
         <FieldPreview key={label} label={label} value={value} />
       ))}
+
       <Pressable
         accessibilityHint="Disabled placeholder for a future auth submission action."
         accessibilityLabel={panelContent.buttonLabel}
@@ -95,17 +100,18 @@ export function AuthActionPanel({ actionId, authEntryState }) {
         disabled
         testID={`auth-action-panel-cta-${actionId}`}
         style={{
-          marginTop: 12,
+          marginTop: 14,
           paddingHorizontal: 14,
           paddingVertical: 12,
           borderRadius: 12,
           backgroundColor: productAppShell.theme.color.primary,
-          opacity: authEntryState.isLoading ? 0.7 : 1,
+          opacity: authEntryState.isLoading ? 0.7 : 0.8,
         }}
       >
-        <Text style={{ color: productAppShell.theme.color.surface, fontWeight: '600' }}>{panelContent.buttonLabel}</Text>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{panelContent.buttonLabel}</Text>
       </Pressable>
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>{panelContent.footerNote}</Text>
+
+      <Text style={{ marginTop: 8, color: '#475569' }}>{panelContent.footerNote}</Text>
     </View>
   );
 }
