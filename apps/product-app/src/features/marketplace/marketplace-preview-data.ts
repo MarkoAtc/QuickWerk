@@ -43,6 +43,7 @@ export type PreviewHealthIndicator = {
   goodSections: number;
   level: 'critical' | 'good' | 'watch';
   narrative: string;
+  severityBadgeToken: 'badge-critical' | 'badge-good' | 'badge-watch';
   summary: string;
   watchSections: number;
 };
@@ -119,6 +120,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
         coverageMinimalSections > 0
           ? 'Critical preview risk: at least one section is low-completeness and metadata coverage is minimal.'
           : 'Critical preview risk: at least one section is low-completeness and should be corrected before demos.',
+      severityBadgeToken: 'badge-critical',
       criticalSections,
       watchSections,
       goodSections,
@@ -136,6 +138,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
         coverageMinimalSections > 0
           ? 'Watch state: quality is usable, but sparse metadata in some sections may weaken stakeholder confidence.'
           : 'Watch state: quality is usable, with a few sections needing closer monitoring.',
+      severityBadgeToken: 'badge-watch',
       criticalSections,
       watchSections,
       goodSections,
@@ -152,6 +155,7 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
       coverageMinimalSections > 0
         ? 'Healthy baseline with minor metadata gaps that can be filled in subsequent slices.'
         : 'Healthy baseline: section quality and metadata coverage are aligned for demos.',
+    severityBadgeToken: 'badge-good',
     criticalSections,
     watchSections,
     goodSections,

@@ -167,6 +167,9 @@ export function MarketplacePreviewScreen() {
         >
           Preview health: {previewResult.previewHealth.level}
         </Text>
+        <Text testID="marketplace-preview-health-badge-token" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
+          Severity badge token: {previewResult.previewHealth.severityBadgeToken}
+        </Text>
         <Text style={{ marginTop: 4, color: productAppShell.theme.color.text }}>{previewResult.previewHealth.summary}</Text>
         <Text testID="marketplace-preview-health-counts" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
           Sections → good: {previewResult.previewHealth.goodSections} · watch: {previewResult.previewHealth.watchSections} · critical:{' '}

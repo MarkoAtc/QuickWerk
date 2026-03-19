@@ -306,17 +306,32 @@ One tiny derived route-level narrative summary was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - good/watch/critical tests now assert narrative intent markers
 
-## 21. Updated Exact Next Docking Point
+## 21. Fifteenth Minimal Docking Increment (Completed)
+
+One tiny deterministic route-level severity token was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.severityBadgeToken` derived deterministically from `previewHealth.level`
+  - mapping: `good -> badge-good`, `watch -> badge-watch`, `critical -> badge-critical`
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - health panel now renders severity badge token via `marketplace-preview-health-badge-token`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests now assert the expected deterministic badge token
+
+## 22. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny deterministic severity badge token derived from `previewHealth.level` for stable visual snapshot checks
+2. add exactly one tiny deterministic section badge token derived from `sectionHealthLevel` for section-level visual consistency checks
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 22. Acceptance Criteria for the Next Contributor
+## 23. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
