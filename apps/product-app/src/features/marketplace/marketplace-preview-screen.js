@@ -6,87 +6,119 @@ import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { productAppShell } from '../../shared/app-shell';
 import { defaultMarketplacePreviewResult, loadMarketplacePreview } from './marketplace-preview-data';
 
+const healthLevelStyles = {
+  good: {
+    borderColor: '#2E7D32',
+    pillBackground: '#E8F5E9',
+    textColor: '#2E7D32',
+    label: 'Healthy',
+  },
+  watch: {
+    borderColor: '#B26A00',
+    pillBackground: '#FFF4E5',
+    textColor: '#B26A00',
+    label: 'Needs monitoring',
+  },
+  critical: {
+    borderColor: '#B22222',
+    pillBackground: '#FDECEC',
+    textColor: '#B22222',
+    label: 'At risk',
+  },
+};
+
+function MetaPill({ text, tone = 'default', testID }) {
+  const toneStyles =
+    tone === 'accent'
+      ? {
+          color: productAppShell.theme.color.accent,
+          borderColor: '#C6E9E6',
+          backgroundColor: '#F0FBFA',
+        }
+      : {
+          color: productAppShell.theme.color.text,
+          borderColor: '#D7DFEA',
+          backgroundColor: '#FFFFFF',
+        };
+
+  return (
+    <Text
+      testID={testID}
+      style={{
+        color: toneStyles.color,
+        borderColor: toneStyles.borderColor,
+        backgroundColor: toneStyles.backgroundColor,
+        borderWidth: 1,
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        fontSize: 12,
+      }}
+    >
+      {text}
+    </Text>
+  );
+}
+
 function PreviewSectionCard({ section }) {
   return (
     <View
       testID={`marketplace-preview-section-${section.id}`}
       style={{
-        marginTop: 12,
-        borderRadius: 14,
-        padding: 14,
-        backgroundColor: productAppShell.theme.color.surface,
+        marginTop: 14,
+        borderRadius: 16,
+        padding: 16,
+        backgroundColor: '#FFFFFF',
         borderWidth: 1,
-        borderColor: productAppShell.theme.color.primary,
+        borderColor: '#D7DFEA',
+        shadowColor: '#0F172A',
+        shadowOpacity: 0.06,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 6 },
       }}
     >
-      <Text style={{ color: productAppShell.theme.color.primary, fontSize: 17, fontWeight: '600' }}>{section.title}</Text>
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>{section.description}</Text>
-      {section.highlights.map((highlight) => (
-        <Text key={highlight} style={{ marginTop: 6, color: productAppShell.theme.color.text }}>
-          • {highlight}
-        </Text>
-      ))}
-      {section.trustBadges?.length ? (
-        <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {section.trustBadges.map((badge) => (
-            <Text
-              key={badge}
-              style={{
-                color: productAppShell.theme.color.primary,
-                borderWidth: 1,
-                borderColor: productAppShell.theme.color.primary,
-                borderRadius: 999,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                fontSize: 12,
-              }}
-            >
-              {badge}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-      {section.responseSlaHint ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
-          Response SLA hint: {section.responseSlaHint}
-        </Text>
-      ) : null}
-      {typeof section.dataFreshnessMinutes === 'number' ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Data freshness: ~{section.dataFreshnessMinutes} min
-          {section.dataFreshnessLabel ? ` (${section.dataFreshnessLabel})` : ''}
-        </Text>
-      ) : null}
-      {typeof section.payloadCompletenessPercent === 'number' ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Payload completeness: {section.payloadCompletenessPercent}%
-        </Text>
-      ) : null}
-      {section.sectionHealthLevel ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Section health: {section.sectionHealthLevel}
-        </Text>
-      ) : null}
-      {section.sectionSeverityBadgeToken ? (
-        <Text testID={`marketplace-preview-section-badge-${section.id}`} style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Section badge token: {section.sectionSeverityBadgeToken}
-        </Text>
-      ) : null}
+      <Text style={{ color: productAppShell.theme.color.primary, fontSize: 19, fontWeight: '700' }}>{section.title}</Text>
+      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text, lineHeight: 22 }}>{section.description}</Text>
+
+      <View style={{ marginTop: 12, gap: 6 }}>
+        {section.highlights.map((highlight) => (
+          <Text key={highlight} style={{ color: productAppShell.theme.color.text }}>
+            • {highlight}
+          </Text>
+        ))}
+      </View>
+
+      <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {section.trustBadges?.map((badge) => (
+          <MetaPill key={badge} text={badge} />
+        ))}
+
+        {section.responseSlaHint ? <MetaPill tone="accent" text={`SLA: ${section.responseSlaHint}`} /> : null}
+        {typeof section.payloadCompletenessPercent === 'number' ? (
+          <MetaPill text={`Completeness ${section.payloadCompletenessPercent}%`} />
+        ) : null}
+        {typeof section.dataFreshnessMinutes === 'number' ? (
+          <MetaPill
+            text={`Freshness ~${section.dataFreshnessMinutes} min${section.dataFreshnessLabel ? ` (${section.dataFreshnessLabel})` : ''}`}
+          />
+        ) : null}
+      </View>
+
       {section.readinessNote ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Readiness note: {section.readinessNote}
-        </Text>
+        <Text style={{ marginTop: 12, color: '#334155', fontStyle: 'italic' }}>Readiness note: {section.readinessNote}</Text>
       ) : null}
-      {section.dataCoverageHint ? (
-        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Data coverage: {section.dataCoverageHint}
+
+      {section.sectionSeverityBadgeToken ? (
+        <Text testID={`marketplace-preview-section-badge-${section.id}`} style={{ marginTop: 10, color: '#64748B', fontSize: 12 }}>
+          Section status token: {section.sectionSeverityBadgeToken}
         </Text>
       ) : null}
       {section.dataCoverageBandToken ? (
-        <Text testID={`marketplace-preview-section-coverage-${section.id}`} style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-          Coverage band token: {section.dataCoverageBandToken}
+        <Text testID={`marketplace-preview-section-coverage-${section.id}`} style={{ marginTop: 4, color: '#64748B', fontSize: 12 }}>
+          Coverage token: {section.dataCoverageBandToken}
         </Text>
       ) : null}
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={section.ctaLabel}
@@ -95,34 +127,19 @@ function PreviewSectionCard({ section }) {
         disabled
         testID={`marketplace-preview-cta-${section.id}`}
         style={{
-          marginTop: 12,
+          marginTop: 14,
           borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
           backgroundColor: productAppShell.theme.color.primary,
-          opacity: 0.75,
+          opacity: 0.72,
         }}
       >
-        <Text style={{ color: productAppShell.theme.color.surface, fontWeight: '600' }}>{section.ctaLabel}</Text>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{section.ctaLabel}</Text>
       </Pressable>
     </View>
   );
 }
-
-const healthLevelStyles = {
-  good: {
-    borderColor: productAppShell.theme.color.primary,
-    textColor: productAppShell.theme.color.primary,
-  },
-  watch: {
-    borderColor: productAppShell.theme.color.accent,
-    textColor: productAppShell.theme.color.accent,
-  },
-  critical: {
-    borderColor: '#B22222',
-    textColor: '#B22222',
-  },
-};
 
 export function MarketplacePreviewScreen() {
   const [previewResult, setPreviewResult] = useState(defaultMarketplacePreviewResult);
@@ -148,79 +165,106 @@ export function MarketplacePreviewScreen() {
     };
   }, []);
 
+  const levelStyle = healthLevelStyles[previewResult.previewHealth.level];
+
   return (
     <ProductScreenShell
-      title="Marketplace continuation preview"
-      subtitle="Presentation-focused post-auth slice in the shared product app. Demo-safe with read-only preview API support."
+      title="Marketplace preview"
+      subtitle="A client-facing look at the post-auth customer journey: provider discovery, trust, and booking continuation."
       testID="marketplace-preview-screen"
+      contentContainerStyle={{ maxWidth: 980, alignSelf: 'center', width: '100%' }}
     >
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
-        Preview source: {isLoading ? 'loading' : previewResult.source} · no backend persistence · no production booking action
-      </Text>
-      <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-        This route now supports one read-only preview API slice with explicit fallback behavior to local fixtures.
-      </Text>
       <View
-        testID="marketplace-preview-health"
         style={{
-          marginTop: 8,
+          marginTop: 10,
+          borderRadius: 16,
           borderWidth: 1,
-          borderColor: healthLevelStyles[previewResult.previewHealth.level].borderColor,
-          borderRadius: 10,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
+          borderColor: '#D7DFEA',
+          backgroundColor: '#FFFFFF',
+          padding: 16,
         }}
       >
-        <Text
-          testID="marketplace-preview-health-level"
-          style={{ color: healthLevelStyles[previewResult.previewHealth.level].textColor, fontWeight: '600' }}
+        <Text style={{ color: productAppShell.theme.color.accent }}>
+          Data source: {isLoading ? 'loading…' : previewResult.source} · read-only preview · no production booking execution
+        </Text>
+
+        <View
+          testID="marketplace-preview-health"
+          style={{
+            marginTop: 12,
+            borderWidth: 1,
+            borderColor: levelStyle.borderColor,
+            borderRadius: 12,
+            padding: 12,
+            backgroundColor: '#FFFFFF',
+          }}
         >
-          Preview health: {previewResult.previewHealth.level}
-        </Text>
-        <Text testID="marketplace-preview-health-badge-token" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          Severity badge token: {previewResult.previewHealth.severityBadgeToken}
-        </Text>
-        <Text testID="marketplace-preview-coverage-band-token" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          Coverage band token: {previewResult.previewHealth.coverageBandToken}
-        </Text>
-        <Text testID="marketplace-preview-alignment-token" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          Alignment token: {previewResult.previewHealth.alignmentToken}
-        </Text>
-        <Text style={{ marginTop: 4, color: productAppShell.theme.color.text }}>{previewResult.previewHealth.summary}</Text>
-        <Text testID="marketplace-preview-health-counts" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          Sections → good: {previewResult.previewHealth.goodSections} · watch: {previewResult.previewHealth.watchSections} · critical:{' '}
-          {previewResult.previewHealth.criticalSections}
-        </Text>
-        <Text testID="marketplace-preview-coverage-counts" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          Coverage → well: {previewResult.previewHealth.coverageWellSections} · partial:{' '}
-          {previewResult.previewHealth.coveragePartialSections} · minimal: {previewResult.previewHealth.coverageMinimalSections}
-        </Text>
-        <Text testID="marketplace-preview-health-risk-headline" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          {previewResult.previewHealth.riskHeadline}
-        </Text>
-        <Text testID="marketplace-preview-health-narrative" style={{ marginTop: 4, color: productAppShell.theme.color.text }}>
-          {previewResult.previewHealth.narrative}
-        </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Text
+              testID="marketplace-preview-health-level"
+              style={{
+                color: levelStyle.textColor,
+                backgroundColor: levelStyle.pillBackground,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                fontWeight: '700',
+              }}
+            >
+              {levelStyle.label}
+            </Text>
+            <Text style={{ color: '#0F172A', fontWeight: '600' }}>Preview health</Text>
+          </View>
+
+          <Text testID="marketplace-preview-health-risk-headline" style={{ marginTop: 8, color: '#0F172A', fontWeight: '600' }}>
+            {previewResult.previewHealth.riskHeadline}
+          </Text>
+          <Text style={{ marginTop: 6, color: '#334155' }}>{previewResult.previewHealth.summary}</Text>
+
+          <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <MetaPill testID="marketplace-preview-health-counts" text={`good ${previewResult.previewHealth.goodSections}`} />
+            <MetaPill text={`watch ${previewResult.previewHealth.watchSections}`} />
+            <MetaPill text={`critical ${previewResult.previewHealth.criticalSections}`} />
+            <MetaPill testID="marketplace-preview-coverage-counts" text={`coverage well ${previewResult.previewHealth.coverageWellSections}`} />
+            <MetaPill text={`coverage partial ${previewResult.previewHealth.coveragePartialSections}`} />
+            <MetaPill text={`coverage minimal ${previewResult.previewHealth.coverageMinimalSections}`} />
+          </View>
+
+          <Text testID="marketplace-preview-health-narrative" style={{ marginTop: 8, color: '#475569' }}>
+            {previewResult.previewHealth.narrative}
+          </Text>
+
+          <Text testID="marketplace-preview-health-badge-token" style={{ marginTop: 8, color: '#64748B', fontSize: 12 }}>
+            Severity token: {previewResult.previewHealth.severityBadgeToken}
+          </Text>
+          <Text testID="marketplace-preview-coverage-band-token" style={{ marginTop: 2, color: '#64748B', fontSize: 12 }}>
+            Coverage token: {previewResult.previewHealth.coverageBandToken}
+          </Text>
+          <Text testID="marketplace-preview-alignment-token" style={{ marginTop: 2, color: '#64748B', fontSize: 12 }}>
+            Alignment token: {previewResult.previewHealth.alignmentToken}
+          </Text>
+        </View>
+
+        {previewResult.errorMessage ? (
+          <Text testID="marketplace-preview-error-message" style={{ marginTop: 10, color: '#B26A00' }}>
+            API currently unreachable, showing fallback fixtures: {previewResult.errorMessage}
+          </Text>
+        ) : null}
       </View>
-      {previewResult.errorMessage ? (
-        <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
-          Preview fallback: {previewResult.errorMessage}
-        </Text>
-      ) : null}
 
       <View
         style={{
           marginTop: 14,
-          borderRadius: 14,
-          padding: 14,
+          borderRadius: 16,
+          padding: 16,
           backgroundColor: productAppShell.theme.color.primary,
         }}
       >
-        <Text style={{ color: productAppShell.theme.color.surface, fontWeight: '600' }}>
-          Shared onboarding direction ({productAppShell.onboardingSteps.length} steps)
+        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
+          Provider onboarding flow ({productAppShell.onboardingSteps.length} steps)
         </Text>
         {productAppShell.onboardingSteps.map((step, index) => (
-          <Text key={step.id} style={{ marginTop: 6, color: productAppShell.theme.color.surface }}>
+          <Text key={step.id} style={{ marginTop: 6, color: '#DBEAFE' }}>
             {index + 1}. {step.label}
           </Text>
         ))}
@@ -230,18 +274,20 @@ export function MarketplacePreviewScreen() {
         <PreviewSectionCard key={section.id} section={section} />
       ))}
 
-      <ProductRouteLink
-        href="/auth"
-        title="Back to auth entry"
-        variant="outline"
-        testID="marketplace-preview-back-auth-link"
-      />
-      <ProductRouteLink
-        href="/"
-        title="Back to product home"
-        variant="outline"
-        testID="marketplace-preview-back-home-link"
-      />
+      <View style={{ marginTop: 8 }}>
+        <ProductRouteLink
+          href="/auth"
+          title="Back to auth entry"
+          variant="outline"
+          testID="marketplace-preview-back-auth-link"
+        />
+        <ProductRouteLink
+          href="/"
+          title="Back to product home"
+          variant="outline"
+          testID="marketplace-preview-back-home-link"
+        />
+      </View>
     </ProductScreenShell>
   );
 }

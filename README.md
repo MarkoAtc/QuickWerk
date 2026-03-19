@@ -122,6 +122,7 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one tiny deterministic route-level coverage band token (`previewHealth.coverageBandToken`) derived from coverage counters
   - added one tiny deterministic section coverage band token (`dataCoverageBandToken`) for section-level coverage consistency checks
   - added one tiny route-level alignment token (`previewHealth.alignmentToken`) derived from severity+coverage tokens for deterministic snapshot baselines
+  - design polish pass for client demos: improved visual hierarchy, cleaner health panel, metadata pills, refined cards, and less noisy fallback messaging on `/marketplace-preview`
 - recommended next increment:
   - keep `/marketplace-preview` demo-safe and read-only, but add one tiny section-level alignment token derived from section severity+coverage tokens for parity checks
   - keep route/shell reuse intact; do not fork platform-specific structure
