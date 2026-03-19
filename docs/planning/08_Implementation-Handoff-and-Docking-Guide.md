@@ -224,17 +224,32 @@ One tiny route-level visual severity treatment was added without widening scope:
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - added explicit `watch` health-level assertion while retaining `good` and `critical` coverage
 
-## 16. Updated Exact Next Docking Point
+## 16. Tenth Minimal Docking Increment (Completed)
+
+One small section/route consistency signal was added without widening scope:
+
+- field added: `sectionHealthLevel` on marketplace preview sections
+- derivation and logic:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - derived from the same freshness/completeness thresholds used by route-level preview health (`good`/`watch`/`critical`)
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - each section now renders `Section health: <level>`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - includes explicit section-level `critical` and `watch` assertions and keeps `good` coverage in valid mapping checks
+
+## 17. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one small consistency signal between section-level and route-level status (not a broad section expansion)
+2. add exactly one small route-level summary count (e.g. watched/critical sections) without broad section expansion
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 17. Acceptance Criteria for the Next Contributor
+## 18. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment

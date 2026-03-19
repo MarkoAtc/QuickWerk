@@ -62,6 +62,11 @@ function PreviewSectionCard({ section }) {
           Payload completeness: {section.payloadCompletenessPercent}%
         </Text>
       ) : null}
+      {section.sectionHealthLevel ? (
+        <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
+          Section health: {section.sectionHealthLevel}
+        </Text>
+      ) : null}
       {section.readinessNote ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
           Readiness note: {section.readinessNote}

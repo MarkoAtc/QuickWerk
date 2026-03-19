@@ -111,8 +111,9 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one cross-field derived indicator (`dataFreshnessLabel`) derived from `dataFreshnessMinutes` and rendered read-only
   - added one minimal route-level aggregate indicator (`previewHealth`) derived from section freshness/completeness signals
   - added one tiny route-level visual severity treatment for preview health (`good`/`watch`/`critical` styling)
+  - added one small consistency signal (`sectionHealthLevel`) derived per section to align section-level and route-level status language
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one small consistency signal between section-level and route-level status (not a broad section expansion)
+  - keep `/marketplace-preview` demo-safe and read-only, but add one small route-level summary count (e.g. watched/critical sections) without broad section expansion
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

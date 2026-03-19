@@ -85,6 +85,7 @@ describe('loadMarketplacePreview', () => {
           description: 'Read-only API-backed fixture section.',
           highlights: ['alpha', 'beta'],
           trustBadges: ['ID verified'],
+          sectionHealthLevel: 'good',
           ctaLabel: 'Open API card',
         },
       ],
@@ -134,6 +135,7 @@ describe('loadMarketplacePreview', () => {
           dataFreshnessMinutes: 3,
           dataFreshnessLabel: 'fresh',
           payloadCompletenessPercent: 95,
+          sectionHealthLevel: 'good',
           ctaLabel: 'Open API card',
         },
       ],
@@ -210,6 +212,7 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result.previewHealth.level).toBe('critical');
+    expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
   });
 
   it('marks preview health as watch when stale freshness appears without critical completeness drop', async () => {
@@ -234,5 +237,6 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result.previewHealth.level).toBe('watch');
+    expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
   });
 });

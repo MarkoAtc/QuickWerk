@@ -12,6 +12,7 @@ export type MarketplacePreviewSection = {
   payloadCompletenessPercent?: number;
   readinessNote?: string;
   responseSlaHint?: string;
+  sectionHealthLevel?: 'critical' | 'good' | 'watch';
   title: string;
   trustBadges?: string[];
 };
@@ -152,6 +153,22 @@ const normalizeMarketplacePreviewSection = (
           : 'stale'
       : undefined;
 
+  const payloadCompletenessPercent =
+    typeof value.payloadCompletenessPercent === 'number' &&
+    Number.isFinite(value.payloadCompletenessPercent) &&
+    value.payloadCompletenessPercent >= 0 &&
+    value.payloadCompletenessPercent <= 100
+      ? value.payloadCompletenessPercent
+      : undefined;
+
+  const sectionHealthLevel =
+    typeof payloadCompletenessPercent === 'number' && payloadCompletenessPercent < 80
+      ? 'critical'
+      : dataFreshnessLabel === 'stale' ||
+          (typeof payloadCompletenessPercent === 'number' && payloadCompletenessPercent < 90)
+        ? 'watch'
+        : 'good';
+
   return {
     id: value.id,
     title: value.title,
@@ -160,13 +177,8 @@ const normalizeMarketplacePreviewSection = (
     ctaLabel: value.ctaLabel,
     dataFreshnessMinutes,
     dataFreshnessLabel,
-    payloadCompletenessPercent:
-      typeof value.payloadCompletenessPercent === 'number' &&
-      Number.isFinite(value.payloadCompletenessPercent) &&
-      value.payloadCompletenessPercent >= 0 &&
-      value.payloadCompletenessPercent <= 100
-        ? value.payloadCompletenessPercent
-        : undefined,
+    payloadCompletenessPercent,
+    sectionHealthLevel,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,
     readinessNote: typeof value.readinessNote === 'string' ? value.readinessNote : undefined,
     trustBadges: trustBadges && trustBadges.length > 0 ? trustBadges : undefined,
