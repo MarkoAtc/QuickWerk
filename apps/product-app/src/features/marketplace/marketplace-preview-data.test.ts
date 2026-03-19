@@ -200,6 +200,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.riskHeadline).toContain('No critical/watch sections');
     expect(result.previewHealth.narrative).toContain('Healthy baseline');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-good');
   });
@@ -234,6 +235,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.riskHeadline).toContain('Critical risk');
     expect(result.previewHealth.narrative).toContain('Critical preview risk');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-critical');
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
@@ -270,6 +272,7 @@ describe('loadMarketplacePreview', () => {
       coveragePartialSections: 1,
       coverageMinimalSections: 0,
     });
+    expect(result.previewHealth.riskHeadline).toContain('Watch state');
     expect(result.previewHealth.narrative).toContain('Watch state');
     expect(result.previewHealth.severityBadgeToken).toBe('badge-watch');
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');

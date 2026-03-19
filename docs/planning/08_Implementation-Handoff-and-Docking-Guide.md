@@ -336,17 +336,31 @@ One tiny deterministic section-level severity token was added without widening s
   - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
   - mapping and watch/critical section cases now assert section badge tokens explicitly
 
-## 23. Updated Exact Next Docking Point
+## 23. Seventeenth Minimal Docking Increment (Completed)
+
+One tiny route-level risk headline was added without widening scope:
+
+- preview health enrichment:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.riskHeadline` derived from section critical/watch counts
+- screen-level presentation update:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - health panel now renders risk headline via `marketplace-preview-health-risk-headline`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - good/watch/critical tests now assert risk headline intent markers
+
+## 24. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny route-level risk headline derived from critical/watch counts (without broad section expansion)
+2. add exactly one tiny deterministic route-level confidence band token derived from coverage counters (without broad section expansion)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 24. Acceptance Criteria for the Next Contributor
+## 25. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
