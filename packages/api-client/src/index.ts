@@ -13,7 +13,16 @@ export const authApiRoutes = {
   signOut: `${apiRoutes.auth}/sign-out`,
 } as const;
 
+export const marketplaceApiRoutes = {
+  preview: `${apiRoutes.bookings}/preview`,
+} as const;
+
 export const createSessionBootstrapRequest = () => ({
   method: 'GET',
   path: authApiRoutes.session,
+}) as const;
+
+export const createMarketplacePreviewRequest = () => ({
+  method: 'GET',
+  path: marketplaceApiRoutes.preview,
 }) as const;

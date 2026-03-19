@@ -79,15 +79,31 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - non-OK HTTP response fallback with explicit error message
   - thrown fetch error fallback with propagated error message
   - invalid payload sanitization for session state, next step, and available action routes
-- verification snapshot:
-  - `pnpm check` passes across workspace packages
-  - `pnpm --filter @quickwerk/product-app test` passes (auth-entry-state + session-bootstrap coverage)
+
+## First read-only API docking slice (implemented)
+
+- goal achieved: `/marketplace-preview` now supports one read-only API-backed preview load with explicit fallback to local fixtures
+- platform API additions:
+  - new endpoint: `GET /api/v1/bookings/preview`
+  - file: `services/platform-api/src/marketplace/marketplace.controller.ts`
+  - module registration updated in `services/platform-api/src/app.module.ts`
+- shared API contract additions:
+  - `packages/api-client/src/index.ts` now exposes `marketplaceApiRoutes.preview` and `createMarketplacePreviewRequest()`
+- product-app additions:
+  - new data loader: `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - route screen now loads preview sections from API and falls back safely: `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - new focused tests: `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+
+## Verification snapshot
+
+- `pnpm check` passes across workspace packages
+- `pnpm --filter @quickwerk/product-app test` passes (`auth-entry-state`, `session-bootstrap`, and `marketplace-preview-data`)
 
 ## Exact next docking point
 
-- continue auth/session hardening in `apps/product-app` and `services/platform-api` from the now-documented baseline
-- recommended first increment:
-  - keep `/marketplace-preview` as demo-safe but start replacing one section with real read-only API-backed data behind explicit fallback handling
+- continue auth/session hardening and marketplace read models in small slices without widening scope
+- recommended next increment:
+  - keep `/marketplace-preview` demo-safe, but add one additional read-only section sourced from platform API (still no persistence)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
-- follow-up after this docking increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected
+- follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

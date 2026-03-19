@@ -1,35 +1,10 @@
+import { useEffect, useState } from 'react';
 import { Text, View, Pressable } from 'react-native';
 
 import { ProductRouteLink } from '../../shared/product-route-link';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { productAppShell } from '../../shared/app-shell';
-
-const previewSections = [
-  {
-    id: 'provider-discovery',
-    title: 'Provider discovery preview',
-    description:
-      'Local fixture cards show how customers can compare response speed, trust signals, and first-visit availability without loading real marketplace data.',
-    highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
-    ctaLabel: 'Open provider card',
-  },
-  {
-    id: 'booking-continuation',
-    title: 'Booking continuation preview',
-    description:
-      'A tiny post-auth continuation panel previews urgent and scheduled handoff states to keep the customer story visible during the meeting.',
-    highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
-    ctaLabel: 'Start booking flow',
-  },
-  {
-    id: 'onboarding-readiness',
-    title: 'Provider onboarding readiness',
-    description:
-      'The first shared onboarding checkpoints are surfaced as read-only status pills so stakeholders can see trust-layer direction before backend wiring.',
-    highlights: ['account setup', 'business profile', 'verification docs'],
-    ctaLabel: 'Continue provider onboarding',
-  },
-];
+import { defaultMarketplacePreviewResult, loadMarketplacePreview } from './marketplace-preview-data';
 
 function PreviewSectionCard({ section }) {
   return (
@@ -74,18 +49,46 @@ function PreviewSectionCard({ section }) {
 }
 
 export function MarketplacePreviewScreen() {
+  const [previewResult, setPreviewResult] = useState(defaultMarketplacePreviewResult);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void loadMarketplacePreview()
+      .then((nextResult) => {
+        if (isMounted) {
+          setPreviewResult(nextResult);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <ProductScreenShell
       title="Marketplace continuation preview"
-      subtitle="Presentation-focused post-auth slice in the shared product app. Demo-safe local fixtures only."
+      subtitle="Presentation-focused post-auth slice in the shared product app. Demo-safe with read-only preview API support."
       testID="marketplace-preview-screen"
     >
       <Text style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
-        Preview status: local-only fixtures · no backend persistence · no production booking action
+        Preview source: {isLoading ? 'loading' : previewResult.source} · no backend persistence · no production booking action
       </Text>
       <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
-        Next engineering return point after the meeting: add targeted session-bootstrap fallback coverage and continue auth/session hardening.
+        This route now supports one read-only preview API slice with explicit fallback behavior to local fixtures.
       </Text>
+      {previewResult.errorMessage ? (
+        <Text testID="marketplace-preview-error-message" style={{ marginTop: 8, color: productAppShell.theme.color.accent }}>
+          Preview fallback: {previewResult.errorMessage}
+        </Text>
+      ) : null}
 
       <View
         style={{
@@ -105,7 +108,7 @@ export function MarketplacePreviewScreen() {
         ))}
       </View>
 
-      {previewSections.map((section) => (
+      {previewResult.sections.map((section) => (
         <PreviewSectionCard key={section.id} section={section} />
       ))}
 

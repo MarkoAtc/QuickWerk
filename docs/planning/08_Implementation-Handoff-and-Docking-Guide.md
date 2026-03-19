@@ -76,27 +76,44 @@ The project now has:
 - explicit and test-covered session-bootstrap fallback behavior
 - unchanged long-term architecture direction
 
-## 7. Exact Next Docking Point
+## 7. First Read-only API Docking Slice (Completed)
 
-Continue with a minimal, low-risk increment that keeps the same style and constraints:
+The recommended first follow-up slice has now been implemented in the same style:
 
-1. keep `/marketplace-preview` as demo-safe shell
-2. replace exactly one local preview section with read-only API data behind explicit fallback behavior
+- new platform API endpoint: `GET /api/v1/bookings/preview`
+  - file: `services/platform-api/src/marketplace/marketplace.controller.ts`
+  - registration: `services/platform-api/src/app.module.ts`
+- shared API-client contract update:
+  - `packages/api-client/src/index.ts` adds `marketplaceApiRoutes.preview`
+  - `createMarketplacePreviewRequest()` introduced for request reuse
+- product-app read model and fallback:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - `/marketplace-preview` now loads read-only sections from API and falls back to local fixtures on failure
+- focused validation:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - covers non-OK response fallback, thrown error fallback, invalid payload sanitization, and valid payload mapping
+
+## 8. Updated Exact Next Docking Point
+
+Continue with another minimal, low-risk increment that keeps the same constraints:
+
+1. keep `/marketplace-preview` demo-safe and read-only
+2. add exactly one additional API-backed section or one richer read-model field (not both at once)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 8. Suggested First Follow-up Slice
+## 9. Suggested Next Follow-up Slice
 
-- module target: `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
-- backend touchpoint candidate: lightweight read-only endpoint in `services/platform-api`
-- risk control: preserve local fallback rendering when API is unavailable
-- validation: one targeted unit test for data sanitization/state mapping plus existing workspace typecheck
+- module target: `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+- backend touchpoint: extend preview payload with one explicit data group (for example, trust badges or response SLA hints)
+- risk control: maintain local fallback rendering when API is unavailable or payload is partial
+- validation: targeted unit test for new field sanitization/state mapping plus existing workspace typecheck
 
-## 9. Acceptance Criteria for the Next Contributor
+## 10. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
-- [ ] no hidden expansion of scope beyond one read-only slice
+- [ ] no hidden expansion of scope beyond one read-only slice increment
 - [ ] explicit fallback behavior for all new remote reads
 - [ ] focused tests added and passing
 - [ ] README handoff section kept in sync with actual implementation state
