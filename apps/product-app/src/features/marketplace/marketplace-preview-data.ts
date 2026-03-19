@@ -4,6 +4,7 @@ import { runtimeConfig } from '../../shared/runtime-config';
 
 export type MarketplacePreviewSection = {
   ctaLabel: string;
+  dataFreshnessLabel?: 'fresh' | 'stable' | 'stale';
   dataFreshnessMinutes?: number;
   description: string;
   highlights: string[];
@@ -95,6 +96,19 @@ const normalizeMarketplacePreviewSection = (
   }
 
   const trustBadges = value.trustBadges?.filter((badge: string) => typeof badge === 'string');
+  const dataFreshnessMinutes =
+    typeof value.dataFreshnessMinutes === 'number' && Number.isFinite(value.dataFreshnessMinutes)
+      ? value.dataFreshnessMinutes
+      : undefined;
+
+  const dataFreshnessLabel =
+    typeof dataFreshnessMinutes === 'number'
+      ? dataFreshnessMinutes <= 5
+        ? 'fresh'
+        : dataFreshnessMinutes <= 15
+          ? 'stable'
+          : 'stale'
+      : undefined;
 
   return {
     id: value.id,
@@ -102,10 +116,8 @@ const normalizeMarketplacePreviewSection = (
     description: value.description,
     highlights: value.highlights,
     ctaLabel: value.ctaLabel,
-    dataFreshnessMinutes:
-      typeof value.dataFreshnessMinutes === 'number' && Number.isFinite(value.dataFreshnessMinutes)
-        ? value.dataFreshnessMinutes
-        : undefined,
+    dataFreshnessMinutes,
+    dataFreshnessLabel,
     payloadCompletenessPercent:
       typeof value.payloadCompletenessPercent === 'number' &&
       Number.isFinite(value.payloadCompletenessPercent) &&

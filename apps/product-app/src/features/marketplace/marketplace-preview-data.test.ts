@@ -93,6 +93,7 @@ describe('loadMarketplacePreview', () => {
     expect(result.sections[0]?.responseSlaHint).toBeUndefined();
     expect(result.sections[0]?.readinessNote).toBeUndefined();
     expect(result.sections[0]?.dataFreshnessMinutes).toBeUndefined();
+    expect(result.sections[0]?.dataFreshnessLabel).toBeUndefined();
     expect(result.sections[0]?.payloadCompletenessPercent).toBeUndefined();
   });
 
@@ -131,11 +132,35 @@ describe('loadMarketplacePreview', () => {
           responseSlaHint: 'Median response under 7 minutes',
           readinessNote: 'Read-only provider detail loaded from API fixture.',
           dataFreshnessMinutes: 3,
+          dataFreshnessLabel: 'fresh',
           payloadCompletenessPercent: 95,
           ctaLabel: 'Open API card',
         },
       ],
       source: 'platform-api',
     });
+  });
+
+  it('derives stable freshness label for mid-range freshness minutes', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: [
+            {
+              id: 'api-booking-continuation',
+              title: 'API booking continuation',
+              description: 'Read-only API-backed fixture section.',
+              highlights: ['urgent', 'scheduled'],
+              dataFreshnessMinutes: 12,
+              ctaLabel: 'Open API booking card',
+            },
+          ],
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result.sections[0]?.dataFreshnessLabel).toBe('stable');
   });
 });

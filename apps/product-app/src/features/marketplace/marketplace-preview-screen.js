@@ -54,6 +54,7 @@ function PreviewSectionCard({ section }) {
       {typeof section.dataFreshnessMinutes === 'number' ? (
         <Text style={{ marginTop: 8, color: productAppShell.theme.color.text }}>
           Data freshness: ~{section.dataFreshnessMinutes} min
+          {section.dataFreshnessLabel ? ` (${section.dataFreshnessLabel})` : ''}
         </Text>
       ) : null}
       {typeof section.payloadCompletenessPercent === 'number' ? (
