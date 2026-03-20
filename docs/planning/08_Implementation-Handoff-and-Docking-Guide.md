@@ -886,8 +886,53 @@ This slice completes the previously docked operator hardening follow-up while pr
     - `booking.accepted.domain-event.relay`
     remain unchanged and green
 
+## 42. Phase-4 Operator Role Migration + SLO Windows + Bounded CSV Export (Completed)
+
+This slice executes the prior docking point end-to-end while preserving existing API behavior through additive, backward-safe changes.
+
+- dedicated operator-role migration (with transition safety):
+  - `services/platform-api/src/auth/domain/auth-session.repository.ts`
+  - `services/platform-api/src/auth/auth.service.ts`
+  - `services/platform-api/src/auth/infrastructure/postgres-auth-session.repository.ts`
+  - `services/platform-api/src/operators/operator-access-policy.ts`
+  - `services/platform-api/migrations/0005_operator_role_support.sql`
+  - role model now supports `operator` sessions while preserving current provider-session compatibility in transition mode
+  - policy knobs:
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE=operator-provider-transition|operator-strict`
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES` still supported for explicit rollout overrides
+- relay queue SLO window surfacing for readiness + operator views:
+  - `services/platform-api/src/health/readiness-thresholds.ts`
+    - adds rolling window config + summary derivation helpers
+  - `services/platform-api/src/health/health.controller.ts`
+    - adds `relayQueue.sloWindow` to `/health/readiness`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+    - adds `relayQueue.current.sloWindow` to `/operators/relay-queue/snapshots`
+  - SLO env knobs:
+    - `BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES`
+    - `BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT`
+- bounded CSV export follow-up (auth-guarded operator endpoint):
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+    - new `GET /operators/relay-queue/attempts.csv`
+    - dead-letter scoped by default (`status=dead-letter` only)
+    - bounded pagination (`limit` capped)
+    - allow-listed field export only (`fields` filter)
+  - `scripts/smoke/operator-relay-queue-smoke.sh`
+    - includes CSV endpoint smoke call
+- targeted tests added/expanded:
+  - `services/platform-api/src/operators/operator-access-policy.test.ts` (role migration behavior)
+  - `services/platform-api/src/health/readiness-thresholds.test.ts` (SLO window summary behavior)
+  - `services/platform-api/src/health/health.controller.test.ts` (readiness SLO payload)
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts` (SLO surfacing + CSV bounds/security)
+  - `services/platform-api/src/auth/auth.service.test.ts` (operator sign-in role)
+- compatibility notes:
+  - `GET /health` legacy payload unchanged
+  - existing structured-log contract tests remain unchanged and green
+  - no new queue infrastructure introduced (Postgres-only persistence retained)
+
 ### Updated exact next docking point
 
-1. introduce dedicated `operator` role support for auth sessions while keeping temporary provider-role compatibility
-2. add relay queue SLO burn-rate windows (`watch`/`critical` duration) and expose concise summary for dashboards
-3. add optional bounded CSV export for dead-letter inspection (auth-guarded operator endpoint)
+1. add operator-auth rollout telemetry (role-mode usage and denied-role counters) to de-risk the final move to `operator-strict`
+2. add non-blocking CSV/export handoff path for larger incident windows while keeping strict auth + bounds
+3. add pre-aggregated relay SLO trend payload (bucketed series) to reduce dashboard client-side summarization work

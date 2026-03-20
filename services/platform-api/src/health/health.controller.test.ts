@@ -26,7 +26,12 @@ describe('HealthController', () => {
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT;
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT;
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT;
 
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -39,9 +44,14 @@ describe('HealthController', () => {
     });
   });
 
-  it('returns queue readiness counters and lag thresholds in postgres-persistent mode', async () => {
+  it('returns queue readiness counters, lag thresholds, and SLO window in postgres-persistent mode', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-20T18:30:00.000Z'));
+
     process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
     process.env.PERSISTENCE_MODE = 'postgres';
+    process.env.BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES = '30';
+    process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT = '20';
 
     const controller = new HealthController({
       getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
@@ -49,6 +59,35 @@ describe('HealthController', () => {
         dueCount: 2,
         deadLetterCount: 0,
         processingLagMs: 1000,
+      }),
+      listQueueMetricSnapshots: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 1,
+            capturedAt: '2026-03-20T18:00:00.000Z',
+            correlationId: 'corr-1',
+            metrics: {
+              depth: 12,
+              dueCount: 11,
+              deadLetterCount: 0,
+              processingLagMs: 18000,
+            },
+          },
+          {
+            id: 2,
+            capturedAt: '2026-03-20T18:20:00.000Z',
+            correlationId: 'corr-2',
+            metrics: {
+              depth: 3,
+              dueCount: 2,
+              deadLetterCount: 0,
+              processingLagMs: 1000,
+            },
+          },
+        ],
+        hasMore: false,
+        nextOffset: null,
+        retained: 50,
       }),
     } as unknown as PostgresRelayAttemptExecutor);
 
@@ -73,6 +112,10 @@ describe('HealthController', () => {
           dueWatchCount: 10,
           dueCriticalCount: 50,
         },
+        sloWindow: {
+          windowMinutes: 30,
+          sampleCount: 3,
+        },
       },
     });
   });
@@ -88,6 +131,12 @@ describe('HealthController', () => {
 
     const controller = new HealthController({
       getQueueMetricsSnapshot: metrics,
+      listQueueMetricSnapshots: vi.fn().mockResolvedValue({
+        items: [],
+        hasMore: false,
+        nextOffset: null,
+        retained: 0,
+      }),
     } as unknown as PostgresRelayAttemptExecutor);
 
     const watch = await controller.getReadiness();
@@ -123,6 +172,12 @@ describe('HealthController', () => {
         dueCount: 1,
         deadLetterCount: 2,
         processingLagMs: 1000,
+      }),
+      listQueueMetricSnapshots: vi.fn().mockResolvedValue({
+        items: [],
+        hasMore: false,
+        nextOffset: null,
+        retained: 0,
       }),
     } as unknown as PostgresRelayAttemptExecutor);
 

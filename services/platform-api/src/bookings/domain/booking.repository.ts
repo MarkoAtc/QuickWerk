@@ -1,12 +1,11 @@
-import { AuthSession } from '../../auth/domain/auth-session.repository';
-
 export type BookingStatus = 'submitted' | 'accepted';
+export type BookingActorRole = 'customer' | 'provider';
 
 export type BookingStatusEvent = {
   changedAt: string;
   from: BookingStatus | null;
   to: BookingStatus;
-  actorRole: AuthSession['role'];
+  actorRole: BookingActorRole;
   actorUserId: string;
 };
 
@@ -24,7 +23,7 @@ export type CreateSubmittedBookingInput = {
   createdAt: string;
   customerUserId: string;
   requestedService: string;
-  actorRole: AuthSession['role'];
+  actorRole: BookingActorRole;
   actorUserId: string;
 };
 
@@ -32,7 +31,7 @@ export type AcceptSubmittedBookingInput = {
   bookingId: string;
   acceptedAt: string;
   providerUserId: string;
-  actorRole: AuthSession['role'];
+  actorRole: BookingActorRole;
   actorUserId: string;
 };
 

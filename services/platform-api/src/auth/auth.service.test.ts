@@ -37,4 +37,18 @@ describe('AuthService', () => {
     const afterSignOut = await service.getSession(signedIn.token);
     expect(afterSignOut.sessionState).toBe('anonymous');
   });
+
+  it('accepts dedicated operator session role on sign-in', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const signedIn = await service.signIn({
+      email: 'operator@quickwerk.local',
+      role: 'operator',
+    });
+
+    expect(signedIn.sessionState).toBe('authenticated');
+    if (signedIn.sessionState === 'authenticated') {
+      expect(signedIn.session.role).toBe('operator');
+    }
+  });
 });

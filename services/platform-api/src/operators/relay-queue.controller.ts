@@ -1,15 +1,26 @@
-import { BadRequestException, Controller, Get, Headers, HttpException, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Headers,
+  HttpException,
+  Query,
+  Res,
+} from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
 import { extractBearerToken } from '../http/auth-header';
 import {
   PostgresRelayAttemptExecutor,
   type RelayAttemptQueueStatus,
+  type RelayQueueAttemptSummary,
 } from '../orchestration/relay-attempt-executor';
 import { resolveRelayAttemptExecutorMode } from '../orchestration/relay-attempt-executor.provider';
 import {
   deriveRelayQueueReadinessLevel,
   resolveRelayQueueReadinessThresholds,
+  resolveRelayQueueSloWindowConfig,
+  summarizeRelayQueueSloWindow,
 } from '../health/readiness-thresholds';
 import { resolveOperatorAccessPolicy } from './operator-access-policy';
 
@@ -27,6 +38,35 @@ type QueueSnapshotsQuery = {
   offset?: string;
   correlationId?: string;
 };
+
+type QueueAttemptsCsvQuery = {
+  limit?: string;
+  status?: string;
+  correlationId?: string;
+  eventId?: string;
+  terminalOnly?: string;
+  fields?: string;
+};
+
+type ResponseLike = {
+  setHeader(name: string, value: string): void;
+};
+
+const allowedCsvFields = [
+  'id',
+  'eventId',
+  'correlationId',
+  'attempt',
+  'maxAttempts',
+  'status',
+  'nextAttemptAt',
+  'terminalMarker',
+  'createdAt',
+  'updatedAt',
+  'processedAt',
+] as const;
+
+type AllowedCsvField = (typeof allowedCsvFields)[number];
 
 @Controller('operators/relay-queue')
 export class RelayQueueOperatorController {
@@ -104,6 +144,45 @@ export class RelayQueueOperatorController {
     };
   }
 
+  @Get('attempts.csv')
+  async getAttemptsCsv(
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Query() query: QueueAttemptsCsvQuery,
+    @Res({ passthrough: true }) response: ResponseLike,
+  ) {
+    await this.assertOperatorAccess(authorizationHeader);
+    const relayMode = resolveRelayAttemptExecutorMode(process.env);
+
+    if (relayMode !== 'postgres-persistent') {
+      throw new HttpException('CSV export requires postgres-persistent relay mode.', 409);
+    }
+
+    const persistenceMode = process.env.PERSISTENCE_MODE?.trim().toLowerCase();
+
+    if (persistenceMode !== 'postgres') {
+      throw new HttpException('CSV export requires PERSISTENCE_MODE=postgres.', 409);
+    }
+
+    const limit = parseLimit(query.limit, 50, 100);
+    const status = parseCsvStatus(query.status);
+    const terminalOnly = parseBooleanQuery(query.terminalOnly, true);
+    const selectedFields = parseCsvFields(query.fields);
+
+    const attempts = await this.postgresRelayAttemptExecutor.listQueueAttempts({
+      limit,
+      offset: 0,
+      status,
+      correlationId: query.correlationId?.trim(),
+      eventId: query.eventId?.trim(),
+      terminalOnly,
+    });
+
+    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    response.setHeader('Content-Disposition', `attachment; filename="relay-queue-attempts-${new Date().toISOString()}.csv"`);
+
+    return toCsv(selectedFields, attempts.items);
+  }
+
   @Get('snapshots')
   async getSnapshots(
     @Headers('authorization') authorizationHeader: string | undefined,
@@ -148,6 +227,32 @@ export class RelayQueueOperatorController {
     const current = await this.postgresRelayAttemptExecutor.getQueueMetricsSnapshot();
     const thresholds = resolveRelayQueueReadinessThresholds(process.env);
     const level = deriveRelayQueueReadinessLevel(current, thresholds);
+    const now = new Date();
+    const sloConfig = resolveRelayQueueSloWindowConfig(process.env);
+    const sinceCapturedAt = new Date(now.getTime() - sloConfig.windowMinutes * 60_000).toISOString();
+
+    const sloSnapshots = await this.postgresRelayAttemptExecutor.listQueueMetricSnapshots({
+      limit: sloConfig.sampleLimit,
+      offset: 0,
+      sinceCapturedAt,
+    });
+
+    const sloWindow = summarizeRelayQueueSloWindow({
+      now,
+      windowMinutes: sloConfig.windowMinutes,
+      watchThresholdPercent: sloConfig.watchThresholdPercent,
+      criticalThresholdPercent: sloConfig.criticalThresholdPercent,
+      samples: [
+        ...sloSnapshots.items.map((snapshot) => ({
+          capturedAt: snapshot.capturedAt,
+          level: deriveRelayQueueReadinessLevel(snapshot.metrics, thresholds),
+        })),
+        {
+          capturedAt: now.toISOString(),
+          level,
+        },
+      ],
+    });
 
     return {
       service: 'platform-api',
@@ -155,10 +260,11 @@ export class RelayQueueOperatorController {
         mode: relayMode,
         enabled: true,
         current: {
-          capturedAt: new Date().toISOString(),
+          capturedAt: now.toISOString(),
           level,
           metrics: current,
           thresholds,
+          sloWindow,
         },
         snapshots: snapshots.items,
         pagination: {
@@ -254,6 +360,20 @@ function parseStatus(rawValue: string | undefined): RelayAttemptQueueStatus | un
   return normalized;
 }
 
+function parseCsvStatus(rawValue: string | undefined): RelayAttemptQueueStatus {
+  if (!rawValue) {
+    return 'dead-letter';
+  }
+
+  const parsed = parseStatus(rawValue);
+
+  if (parsed !== 'dead-letter') {
+    throw new BadRequestException('CSV export only supports status=dead-letter.');
+  }
+
+  return parsed;
+}
+
 function parseBooleanQuery(rawValue: string | undefined, fallback: boolean): boolean {
   if (!rawValue) {
     return fallback;
@@ -270,4 +390,46 @@ function parseBooleanQuery(rawValue: string | undefined, fallback: boolean): boo
   }
 
   throw new BadRequestException('Query parameter "terminalOnly" must be a boolean value.');
+}
+
+function parseCsvFields(rawValue: string | undefined): AllowedCsvField[] {
+  if (!rawValue) {
+    return ['id', 'eventId', 'correlationId', 'attempt', 'maxAttempts', 'status', 'processedAt'];
+  }
+
+  const requested = rawValue
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value): value is AllowedCsvField =>
+      (allowedCsvFields as readonly string[]).includes(value),
+    );
+
+  const deduped = [...new Set(requested)];
+
+  if (deduped.length === 0) {
+    throw new BadRequestException(`Query parameter "fields" must include any of: ${allowedCsvFields.join(', ')}.`);
+  }
+
+  return deduped;
+}
+
+function toCsv(fields: AllowedCsvField[], attempts: RelayQueueAttemptSummary[]): string {
+  const lines: string[] = [fields.join(',')];
+
+  for (const attempt of attempts) {
+    const row = fields.map((field) => escapeCsvValue(attempt[field]));
+    lines.push(row.join(','));
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function escapeCsvValue(value: unknown): string {
+  const normalized = value === null || value === undefined ? '' : String(value);
+
+  if (!/[",\n]/.test(normalized)) {
+    return normalized;
+  }
+
+  return `"${normalized.replace(/"/g, '""')}"`;
 }

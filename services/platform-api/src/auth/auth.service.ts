@@ -95,6 +95,16 @@ export class AuthService {
   }
 
   private resolveRole(role: string | undefined): SessionRole {
-    return role === 'provider' ? 'provider' : 'customer';
+    const normalizedRole = role?.trim().toLowerCase();
+
+    if (normalizedRole === 'provider') {
+      return 'provider';
+    }
+
+    if (normalizedRole === 'operator') {
+      return 'operator';
+    }
+
+    return 'customer';
   }
 }

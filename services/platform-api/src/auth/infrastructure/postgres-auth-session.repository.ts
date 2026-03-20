@@ -15,7 +15,7 @@ type SessionRow = {
   created_at: Date | string;
   expires_at: Date | string;
   email: string;
-  role: 'customer' | 'provider';
+  role: 'customer' | 'provider' | 'operator';
 };
 
 export class PostgresAuthSessionRepository implements AuthSessionRepository {

@@ -5,6 +5,8 @@ import { resolveRelayAttemptExecutorMode } from '../orchestration/relay-attempt-
 import {
   deriveRelayQueueReadinessLevel,
   resolveRelayQueueReadinessThresholds,
+  resolveRelayQueueSloWindowConfig,
+  summarizeRelayQueueSloWindow,
 } from './readiness-thresholds';
 
 @Controller('health')
@@ -65,8 +67,52 @@ export class HealthController {
     }
 
     const thresholds = resolveRelayQueueReadinessThresholds(process.env);
-
     const level = deriveRelayQueueReadinessLevel(metrics, thresholds);
+    const now = new Date();
+    const sloConfig = resolveRelayQueueSloWindowConfig(process.env);
+    const sinceCapturedAt = new Date(now.getTime() - sloConfig.windowMinutes * 60_000).toISOString();
+
+    let sloWindow = summarizeRelayQueueSloWindow({
+      now,
+      windowMinutes: sloConfig.windowMinutes,
+      watchThresholdPercent: sloConfig.watchThresholdPercent,
+      criticalThresholdPercent: sloConfig.criticalThresholdPercent,
+      samples: [
+        {
+          capturedAt: now.toISOString(),
+          level,
+        },
+      ],
+    });
+
+    try {
+      const snapshots = await this.postgresRelayAttemptExecutor.listQueueMetricSnapshots({
+        limit: sloConfig.sampleLimit,
+        offset: 0,
+        sinceCapturedAt,
+      });
+
+      const samples = [
+        ...snapshots.items.map((snapshot) => ({
+          capturedAt: snapshot.capturedAt,
+          level: deriveRelayQueueReadinessLevel(snapshot.metrics, thresholds),
+        })),
+        {
+          capturedAt: now.toISOString(),
+          level,
+        },
+      ];
+
+      sloWindow = summarizeRelayQueueSloWindow({
+        now,
+        windowMinutes: sloConfig.windowMinutes,
+        watchThresholdPercent: sloConfig.watchThresholdPercent,
+        criticalThresholdPercent: sloConfig.criticalThresholdPercent,
+        samples,
+      });
+    } catch {
+      // keep default insufficient-data placeholder to avoid changing readiness availability semantics
+    }
 
     return {
       service: 'platform-api',
@@ -82,6 +128,7 @@ export class HealthController {
         },
         lagMs: metrics.processingLagMs,
         thresholds,
+        sloWindow,
       },
     };
   }

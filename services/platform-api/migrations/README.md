@@ -20,6 +20,9 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
   - creates durable relay queue metrics snapshot history (`depth`, `due_count`, `dead_letter_count`, `processing_lag_ms`)
   - supports operator trend inspection and restart-safe observability history
   - adds indexes for newest-first scans and correlation-id filtered views
+- `0005_operator_role_support.sql`
+  - expands `users.role` constraint to include dedicated `operator`
+  - preserves existing `customer`/`provider` rows while enabling operator session migration
 
 ## How to run later (manual)
 
@@ -30,6 +33,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002_session_expiry_enforcement.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005_operator_role_support.sql
 ```
 
 Rollback is currently manual (early scaffold phase).

@@ -284,8 +284,36 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - legacy `GET /health` payload unchanged
   - relay structured-log contract tests remain unchanged
 
+### Phase-4 operator role migration + SLO windows + bounded CSV export (completed)
+
+- dedicated `operator` session role shipped with backward-safe migration:
+  - auth role model now supports `customer | provider | operator`
+  - new migration: `services/platform-api/migrations/0005_operator_role_support.sql`
+  - operator access defaults to transition mode (`operator + provider`) and can be tightened later:
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE=operator-provider-transition|operator-strict`
+    - explicit role override remains available via `BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES`
+- readiness/operator SLO window surfacing added for relay queue pressure:
+  - `/health/readiness` now includes `relayQueue.sloWindow` (rolling-state occupancy summary)
+  - `/operators/relay-queue/snapshots` now includes `relayQueue.current.sloWindow`
+  - lightweight SLO env knobs:
+    - `BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES`
+    - `BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT`
+- bounded read-only CSV export for operator dead-letter inspection:
+  - new endpoint: `GET /operators/relay-queue/attempts.csv`
+  - auth-guarded with same operator policy as JSON endpoints
+  - defaults to dead-letter rows only, bounded limit, and allow-listed safe fields
+- focused coverage added/updated:
+  - `operator-access-policy.test.ts` (transition vs strict role behavior)
+  - `health.controller.test.ts` + `readiness-thresholds.test.ts` (SLO window summary behavior)
+  - `relay-queue.controller.test.ts` (CSV bounds/security + SLO payload)
+- compatibility preserved:
+  - legacy `GET /health` payload unchanged
+  - existing relay structured-log contract tests unchanged and still green
+
 ### Exact next docking point
 
-1. introduce dedicated `operator` session role (instead of provider-as-operator default) and migrate role policy without breaking existing sessions
-2. add lightweight SLO burn-rate recording for relay queue (`watch`/`critical` duration windows) tied to the same operator dashboard mapping
-3. add optional read-only CSV export endpoint for recent dead-letter attempts (bounded + auth-guarded) for incident handoff
+1. add small operator-auth rollout telemetry (role-mode usage + denied-role counters) to confirm safe cutover to `operator-strict`
+2. add CSV streaming/async export path for large incident windows (still bounded/auth-guarded) without blocking request threads
+3. add dashboard-ready SLO trend endpoint (pre-aggregated buckets) to reduce client-side summarization load

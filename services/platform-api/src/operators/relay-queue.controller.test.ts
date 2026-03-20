@@ -9,6 +9,7 @@ describe('RelayQueueOperatorController', () => {
   const previousPersistenceMode = process.env.PERSISTENCE_MODE;
   const previousOperatorAuthMode = process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE;
   const previousOperatorAllowedRoles = process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES;
+  const previousOperatorRoleMode = process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE;
 
   afterEach(() => {
     if (previousExecutorMode === undefined) {
@@ -35,9 +36,19 @@ describe('RelayQueueOperatorController', () => {
       process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES = previousOperatorAllowedRoles;
     }
 
+    if (previousOperatorRoleMode === undefined) {
+      delete process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE;
+    } else {
+      process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE = previousOperatorRoleMode;
+    }
+
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT;
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT;
     delete process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT;
     vi.restoreAllMocks();
   });
 
@@ -58,13 +69,15 @@ describe('RelayQueueOperatorController', () => {
   });
 
   it('returns forbidden when authenticated role is not operator-allowed', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE = 'operator-strict';
+
     const controller = new RelayQueueOperatorController(
       {
         resolveSessionOrNull: vi.fn().mockResolvedValue({
-          token: 'token-customer',
+          token: 'token-provider',
           userId: 'user-1',
-          email: 'customer@quickwerk.local',
-          role: 'customer',
+          email: 'provider@quickwerk.local',
+          role: 'provider',
           createdAt: '2026-03-20T10:00:00.000Z',
           expiresAt: '2026-03-20T22:00:00.000Z',
         }),
@@ -74,9 +87,39 @@ describe('RelayQueueOperatorController', () => {
       } as unknown as PostgresRelayAttemptExecutor,
     );
 
-    await expect(controller.getAttempts('Bearer token-customer', {})).rejects.toMatchObject({
+    await expect(controller.getAttempts('Bearer token-provider', {})).rejects.toMatchObject({
       status: 403,
       message: 'Operator authorization required.',
+    });
+  });
+
+  it('keeps provider compatibility in transition mode while enabling dedicated operator sessions', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'in-memory';
+
+    const resolveSessionOrNull = vi
+      .fn()
+      .mockResolvedValueOnce({ role: 'provider' })
+      .mockResolvedValueOnce({ role: 'operator' });
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull,
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(controller.getAttempts('Bearer provider-token', {})).resolves.toMatchObject({
+      relayQueue: {
+        enabled: false,
+      },
+    });
+
+    await expect(controller.getAttempts('Bearer operator-token', {})).resolves.toMatchObject({
+      relayQueue: {
+        enabled: false,
+      },
     });
   });
 
@@ -174,35 +217,73 @@ describe('RelayQueueOperatorController', () => {
     });
   });
 
-  it('returns queue snapshots, readiness level, and retention metadata', async () => {
+  it('returns queue snapshots with readiness + SLO window metadata', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-20T18:30:00.000Z'));
+
     process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
     process.env.PERSISTENCE_MODE = 'postgres';
     process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT = '5';
     process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT = '15';
+    process.env.BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES = '30';
+    process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT = '50';
+
+    const listQueueMetricSnapshots = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 5,
+            capturedAt: '2026-03-20T18:20:00.000Z',
+            correlationId: 'corr-tick-5',
+            metrics: {
+              depth: 7,
+              dueCount: 6,
+              deadLetterCount: 0,
+              processingLagMs: 3000,
+            },
+          },
+        ],
+        hasMore: false,
+        nextOffset: null,
+        retained: 12,
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 7,
+            capturedAt: '2026-03-20T18:00:00.000Z',
+            correlationId: 'corr-window-1',
+            metrics: {
+              depth: 6,
+              dueCount: 6,
+              deadLetterCount: 0,
+              processingLagMs: 2000,
+            },
+          },
+          {
+            id: 8,
+            capturedAt: '2026-03-20T18:15:00.000Z',
+            correlationId: 'corr-window-2',
+            metrics: {
+              depth: 1,
+              dueCount: 1,
+              deadLetterCount: 0,
+              processingLagMs: 800,
+            },
+          },
+        ],
+        hasMore: false,
+        nextOffset: null,
+        retained: 12,
+      });
 
     const controller = new RelayQueueOperatorController(
       {
-        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'provider' }),
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'operator' }),
       } as unknown as AuthService,
       {
-        listQueueMetricSnapshots: vi.fn().mockResolvedValue({
-          items: [
-            {
-              id: 5,
-              capturedAt: '2026-03-20T18:20:00.000Z',
-              correlationId: 'corr-tick-5',
-              metrics: {
-                depth: 7,
-                dueCount: 6,
-                deadLetterCount: 0,
-                processingLagMs: 3000,
-              },
-            },
-          ],
-          hasMore: false,
-          nextOffset: null,
-          retained: 12,
-        }),
+        listQueueMetricSnapshots,
         getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
           depth: 8,
           dueCount: 6,
@@ -212,10 +293,21 @@ describe('RelayQueueOperatorController', () => {
       } as unknown as PostgresRelayAttemptExecutor,
     );
 
-    const response = await controller.getSnapshots('Bearer token-provider', {
+    const response = await controller.getSnapshots('Bearer token-operator', {
       limit: '10',
       offset: '0',
       correlationId: 'corr-tick-5',
+    });
+
+    expect(listQueueMetricSnapshots).toHaveBeenNthCalledWith(1, {
+      limit: 10,
+      offset: 0,
+      correlationId: 'corr-tick-5',
+    });
+    expect(listQueueMetricSnapshots).toHaveBeenNthCalledWith(2, {
+      limit: 50,
+      offset: 0,
+      sinceCapturedAt: '2026-03-20T18:00:00.000Z',
     });
 
     expect(response).toMatchObject({
@@ -234,6 +326,9 @@ describe('RelayQueueOperatorController', () => {
           thresholds: {
             depthWatchCount: 5,
             depthCriticalCount: 15,
+          },
+          sloWindow: {
+            windowMinutes: 30,
           },
         },
         snapshots: [
@@ -258,6 +353,102 @@ describe('RelayQueueOperatorController', () => {
           durability: 'postgres-table',
         },
       },
+    });
+
+    vi.useRealTimers();
+  });
+
+  it('returns bounded dead-letter CSV export with safe default fields', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
+    process.env.PERSISTENCE_MODE = 'postgres';
+
+    const setHeader = vi.fn();
+    const listQueueAttempts = vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: 91,
+          eventId: 'evt-91',
+          correlationId: 'corr-91',
+          attempt: 3,
+          maxAttempts: 3,
+          status: 'dead-letter',
+          nextAttemptAt: null,
+          terminalMarker: true,
+          createdAt: '2026-03-20T17:00:00.000Z',
+          updatedAt: '2026-03-20T17:05:00.000Z',
+          processedAt: '2026-03-20T17:05:00.000Z',
+        },
+      ],
+      hasMore: false,
+      nextOffset: null,
+    });
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'operator' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts,
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    const csv = await controller.getAttemptsCsv(
+      'Bearer token-operator',
+      {
+        limit: '999',
+      },
+      { setHeader },
+    );
+
+    expect(listQueueAttempts).toHaveBeenCalledWith({
+      limit: 100,
+      offset: 0,
+      status: 'dead-letter',
+      correlationId: undefined,
+      eventId: undefined,
+      terminalOnly: true,
+    });
+
+    expect(setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
+    expect(csv).toContain('id,eventId,correlationId,attempt,maxAttempts,status,processedAt');
+    expect(csv).toContain('91,evt-91,corr-91,3,3,dead-letter,2026-03-20T17:05:00.000Z');
+  });
+
+  it('rejects unsupported CSV status/fields to keep export constrained', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
+    process.env.PERSISTENCE_MODE = 'postgres';
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'operator' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(
+      controller.getAttemptsCsv(
+        'Bearer token-operator',
+        {
+          status: 'processed',
+        },
+        { setHeader: vi.fn() },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+    });
+
+    await expect(
+      controller.getAttemptsCsv(
+        'Bearer token-operator',
+        {
+          fields: 'payloadSnapshot',
+        },
+        { setHeader: vi.fn() },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
     });
   });
 

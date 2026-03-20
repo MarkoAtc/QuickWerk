@@ -244,6 +244,7 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     limit?: number;
     offset?: number;
     correlationId?: string;
+    sinceCapturedAt?: string;
   }): Promise<{ items: RelayQueueMetricsSnapshot[]; hasMore: boolean; nextOffset: number | null; retained: number }> {
     const config = requirePostgresPersistenceConfig(process.env);
     const limit = clampPaginationLimit(input?.limit, 20, 100);
@@ -255,6 +256,11 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     if (input?.correlationId) {
       values.push(input.correlationId);
       whereClauses.push(`correlation_id = $${values.length}`);
+    }
+
+    if (input?.sinceCapturedAt) {
+      values.push(input.sinceCapturedAt);
+      whereClauses.push(`captured_at >= $${values.length}::timestamptz`);
     }
 
     values.push(limit + 1);

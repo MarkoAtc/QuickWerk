@@ -1,4 +1,4 @@
-export type SessionRole = 'customer' | 'provider';
+export type SessionRole = 'customer' | 'provider' | 'operator';
 
 export type AuthSession = {
   createdAt: string;
