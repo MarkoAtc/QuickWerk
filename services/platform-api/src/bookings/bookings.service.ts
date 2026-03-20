@@ -1,6 +1,14 @@
+import { randomUUID } from 'node:crypto';
+
+import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
+import { logStructuredBreadcrumb } from '../observability/structured-log';
+import {
+  BOOKING_DOMAIN_EVENT_PUBLISHER,
+  BookingDomainEventPublisher,
+} from '../orchestration/domain-event.publisher';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository } from './domain/booking.repository';
 
 @Injectable()
@@ -8,6 +16,8 @@ export class BookingsService {
   constructor(
     @Inject(BOOKING_REPOSITORY)
     private readonly bookings: BookingRepository,
+    @Inject(BOOKING_DOMAIN_EVENT_PUBLISHER)
+    private readonly domainEvents: BookingDomainEventPublisher,
   ) {}
 
   getMarketplacePreview() {
@@ -50,11 +60,25 @@ export class BookingsService {
   async createBooking(
     session: AuthSession,
     input: { requestedService?: string },
+    context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 403; error: string }
     | { ok: true; statusCode: 201; booking: ReturnType<BookingsService['serializeRecord']> }
   > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
     if (session.role !== 'customer') {
+      logStructuredBreadcrumb({
+        event: 'booking.create.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+        },
+      });
+
       return {
         ok: false,
         statusCode: 403,
@@ -70,6 +94,16 @@ export class BookingsService {
       actorUserId: session.userId,
     });
 
+    logStructuredBreadcrumb({
+      event: 'booking.create.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: created.bookingId,
+        actorUserId: session.userId,
+      },
+    });
+
     return {
       ok: true,
       statusCode: 201,
@@ -80,11 +114,26 @@ export class BookingsService {
   async acceptBooking(
     session: AuthSession,
     bookingId: string,
+    context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 403 | 404 | 409; error: string }
     | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> }
   > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
     if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'booking.accept.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+          bookingId,
+        },
+      });
+
       return {
         ok: false,
         statusCode: 403,
@@ -102,6 +151,17 @@ export class BookingsService {
 
     if (!accepted.ok) {
       if (accepted.reason === 'not-found') {
+        logStructuredBreadcrumb({
+          event: 'booking.accept.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'not-found',
+            bookingId,
+            actorUserId: session.userId,
+          },
+        });
+
         return {
           ok: false,
           statusCode: 404,
@@ -109,12 +169,52 @@ export class BookingsService {
         };
       }
 
+      logStructuredBreadcrumb({
+        event: 'booking.accept.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: accepted.currentStatus,
+        },
+      });
+
       return {
         ok: false,
         statusCode: 409,
         error: `Booking cannot transition from ${accepted.currentStatus} to accepted.`,
       };
     }
+
+    const acceptedEvent: BookingAcceptedDomainEvent = {
+      eventName: 'booking.accepted',
+      eventId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      correlationId,
+      replayed: accepted.replayed,
+      booking: {
+        bookingId: accepted.booking.bookingId,
+        customerUserId: accepted.booking.customerUserId,
+        providerUserId: accepted.booking.providerUserId ?? session.userId,
+        requestedService: accepted.booking.requestedService,
+        status: 'accepted',
+      },
+    };
+
+    await this.domainEvents.publishBookingAccepted(acceptedEvent);
+
+    logStructuredBreadcrumb({
+      event: 'booking.accept.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: accepted.booking.bookingId,
+        actorUserId: session.userId,
+        replayed: accepted.replayed,
+      },
+    });
 
     return {
       ok: true,

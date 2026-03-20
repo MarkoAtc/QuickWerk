@@ -80,7 +80,11 @@ importers:
 
   packages/ui: {}
 
-  services/background-workers: {}
+  services/background-workers:
+    dependencies:
+      '@quickwerk/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
 
   services/platform-api:
     dependencies:
@@ -93,6 +97,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^11.1.17
         version: 11.1.17(@nestjs/common@11.1.17(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)
+      '@quickwerk/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       pg:
         specifier: ^8.16.3
         version: 8.20.0

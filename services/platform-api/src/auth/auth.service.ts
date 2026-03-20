@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { logStructuredBreadcrumb } from '../observability/structured-log';
 import {
   AUTH_SESSION_REPOSITORY,
   AuthSession,
@@ -41,10 +42,23 @@ export class AuthService {
     } as const;
   }
 
-  async signIn(input: { email?: string; role?: string }) {
+  async signIn(input: { email?: string; role?: string }, context?: { correlationId?: string }) {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const role = this.resolveRole(input.role);
+
     const session = await this.sessionStore.createSession({
       email: input.email?.trim() || 'demo.customer@quickwerk.local',
-      role: this.resolveRole(input.role),
+      role,
+    });
+
+    logStructuredBreadcrumb({
+      event: 'auth.sign-in.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        userId: session.userId,
+        role,
+      },
     });
 
     return {
@@ -53,8 +67,19 @@ export class AuthService {
     } as const;
   }
 
-  async signOut(token: string | undefined) {
+  async signOut(token: string | undefined, context?: { correlationId?: string }) {
+    const correlationId = context?.correlationId ?? 'corr-missing';
     const signedOut = await this.sessionStore.deleteSession(token);
+
+    logStructuredBreadcrumb({
+      event: 'auth.sign-out.write',
+      correlationId,
+      status: signedOut ? 'succeeded' : 'failed',
+      details: {
+        signedOut,
+        hadToken: Boolean(token),
+      },
+    });
 
     return {
       resource: 'auth-session',

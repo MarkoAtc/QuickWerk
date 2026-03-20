@@ -153,7 +153,24 @@ corepack pnpm --filter @quickwerk/platform-api typecheck
 RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --filter @quickwerk/platform-api test
 ```
 
+### Phase-2 orchestration kickoff + observability hardening (completed)
+
+- booking write orchestration:
+  - `BookingsService.acceptBooking` now emits `booking.accepted` domain events after successful transitions (including same-provider replay accepts)
+  - event payload includes `eventId`, `occurredAt`, `replayed`, booking identifiers, and `correlationId`
+  - emission is wired through a dedicated publisher boundary in platform-api (`BOOKING_DOMAIN_EVENT_PUBLISHER`)
+- background worker consumer stub:
+  - `services/background-workers` now includes `consumeBookingAcceptedAttempt` for `booking.accepted`
+  - consumer logs structured status envelopes with explicit retry visibility (`attempt`, `maxAttempts`, and status: `processed | retry-scheduled | dead-letter`)
+- observability breadcrumbs:
+  - correlation id extraction/generation added in platform-api with header support via `x-correlation-id`
+  - deterministic fallback (`corr-<sha256-prefix>`) is used when header input is missing/invalid
+  - auth write paths (`sign-in`, `sign-out`) and booking write paths (`create`, `accept`) now emit structured correlation-aware logs
+  - booking domain event emission and worker consumer logs include the same correlation id for trace continuity
+- API contract behavior remains unchanged for response payloads (only correlation response header is added)
+
 ### Exact next docking point
 
-1. start Phase-2 orchestration: emit booking-accepted domain event and wire background-worker consumer stub with retry visibility
-2. add observability pass for booking/auth write paths (request id correlation + event log breadcrumbs) without widening public API surface
+1. add a minimal in-repo relay path for emitted booking domain events (outbox/in-memory queue bridge) to prove producer->consumer wiring beyond logging-only emission
+2. add one focused integration slice (platform-api + worker stub contract fixture) that asserts correlation id continuity through the relay
+3. keep contracts stable and avoid introducing heavyweight observability or queue infrastructure until this relay slice is verified

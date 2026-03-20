@@ -1,4 +1,4 @@
-export { workerPipelines } from './workers/index.js';
+export { consumeBookingAcceptedAttempt, workerPipelines } from './workers/index.js';
 
 export const backgroundWorkerRuntime = {
   service: '@quickwerk/background-workers',

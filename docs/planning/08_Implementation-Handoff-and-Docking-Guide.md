@@ -539,3 +539,60 @@ Proceed to Phase-2 orchestration while preserving the current API surface:
 2. wire background worker consumer stub with retry visibility and deterministic logging envelope
 3. add one end-to-end verification slice proving event emission + consumer handling path
 4. keep repository contracts async and parity-tested across in-memory/postgres modes
+
+## 32. Phase-2 Orchestration Kickoff + Observability Hardening (Completed)
+
+This slice implements the first minimal orchestration handoff and correlation breadcrumbs without changing public response contracts.
+
+- platform-api domain event emission from booking write path:
+  - `BookingsService.acceptBooking` now emits a `booking.accepted` domain event after each successful accept (first accept and idempotent replay)
+  - event envelope includes:
+    - `eventName`, `eventId`, `occurredAt`
+    - `correlationId`
+    - `replayed`
+    - accepted booking identity payload (`bookingId`, `customerUserId`, `providerUserId`, `requestedService`, `status`)
+  - emission is routed via a dedicated publisher boundary:
+    - `src/orchestration/domain-event.publisher.ts`
+    - `src/orchestration/logging-domain-event.publisher.ts`
+    - provider wired in `src/bookings/bookings.module.ts`
+
+- background-workers consumer stub with retry visibility semantics:
+  - added `consumeBookingAcceptedAttempt` in:
+    - `services/background-workers/src/workers/booking-accepted.worker.ts`
+  - structured status logging now makes retries explicit:
+    - start: includes `attempt`, `maxAttempts`, `eventId`, `bookingId`, `replayed`
+    - success: `processed`
+    - failure with retries left: `retry-scheduled`
+    - terminal failure: `dead-letter`
+  - worker pipeline registry updated to include `booking-accepted-orchestration`
+
+- correlation breadcrumb hardening (auth + booking write paths):
+  - new correlation utility:
+    - `services/platform-api/src/observability/correlation-id.ts`
+  - behavior:
+    - accepts sanitized client-provided `x-correlation-id`
+    - falls back deterministically to `corr-<sha256-prefix>` derived from request method/path/token/body
+  - write-path coverage:
+    - `POST /api/v1/auth/sign-in`
+    - `POST /api/v1/auth/sign-out`
+    - `POST /api/v1/bookings`
+    - `POST /api/v1/bookings/:bookingId/accept`
+  - response header propagation:
+    - `x-correlation-id` is echoed/generated for these write routes
+  - structured logs now include correlation breadcrumbs across:
+    - auth writes
+    - booking writes
+    - booking domain event emission
+    - worker attempt processing
+
+- tests added for this slice:
+  - `services/platform-api/src/bookings/bookings.service.test.ts`
+    - asserts domain event emission includes correlation id and replay flag behavior
+  - `services/platform-api/src/observability/correlation-id.test.ts`
+    - asserts header normalization and deterministic fallback generation
+
+### Updated exact next docking point
+
+1. add a minimal relay bridge (in-memory queue/outbox fixture) connecting emitted booking events to the worker consumer stub for one executable producer->consumer slice
+2. add one focused integration test asserting correlation id continuity from booking accept write through relay into worker consume logs/results
+3. keep API payload contracts unchanged; continue using structured logs and lightweight envelopes only

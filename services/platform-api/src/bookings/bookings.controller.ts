@@ -1,24 +1,22 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Req, Res } from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
+import { extractBearerToken } from '../http/auth-header';
+import { correlationIdHeaderName, resolveCorrelationId } from '../observability/correlation-id';
 import { BookingsService } from './bookings.service';
 
 type CreateBookingRequestBody = {
   requestedService?: string;
 };
 
-const extractBearerToken = (authorizationHeader: string | undefined): string | undefined => {
-  if (!authorizationHeader) {
-    return undefined;
-  }
+type RequestLike = {
+  method: string;
+  path: string;
+  header(name: string): string | undefined;
+};
 
-  const [scheme, token] = authorizationHeader.split(' ');
-
-  if (scheme?.toLowerCase() !== 'bearer' || !token) {
-    return undefined;
-  }
-
-  return token;
+type ResponseLike = {
+  setHeader(name: string, value: string): void;
 };
 
 @Controller('api/v1/bookings')
@@ -35,16 +33,31 @@ export class BookingsController {
 
   @Post()
   async createBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
     @Headers('authorization') authorizationHeader: string | undefined,
     @Body() body: CreateBookingRequestBody,
   ) {
-    const session = await this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
 
     if (!session) {
       throw new HttpException('Sign-in required before creating bookings.', 401);
     }
 
-    const result = await this.bookingsService.createBooking(session, body);
+    const result = await this.bookingsService.createBooking(session, body, {
+      correlationId,
+    });
 
     if (!result.ok) {
       throw new HttpException(result.error, result.statusCode);
@@ -56,16 +69,33 @@ export class BookingsController {
   @Post(':bookingId/accept')
   @HttpCode(200)
   async acceptBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
     @Headers('authorization') authorizationHeader: string | undefined,
     @Param('bookingId') bookingId: string,
   ) {
-    const session = await this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {
+        bookingId,
+      },
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
 
     if (!session) {
       throw new HttpException('Sign-in required before accepting bookings.', 401);
     }
 
-    const result = await this.bookingsService.acceptBooking(session, bookingId);
+    const result = await this.bookingsService.acceptBooking(session, bookingId, {
+      correlationId,
+    });
 
     if (!result.ok) {
       throw new HttpException(result.error, result.statusCode);

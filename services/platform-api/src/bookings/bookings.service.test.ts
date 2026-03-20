@@ -1,6 +1,8 @@
+import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
+import { BookingDomainEventPublisher } from '../orchestration/domain-event.publisher';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
@@ -17,9 +19,23 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
   };
 };
 
+const createService = () => {
+  const emittedEvents: BookingAcceptedDomainEvent[] = [];
+  const eventPublisher: BookingDomainEventPublisher = {
+    async publishBookingAccepted(event) {
+      emittedEvents.push(event);
+    },
+  };
+
+  return {
+    emittedEvents,
+    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher),
+  };
+};
+
 describe('BookingsService', () => {
   it('enforces role auth for create and accept flows', async () => {
-    const service = new BookingsService(new InMemoryBookingRepository());
+    const { service } = createService();
     const provider = createSession('provider', 'provider-1');
     const customer = createSession('customer', 'customer-1');
 
@@ -51,7 +67,7 @@ describe('BookingsService', () => {
   });
 
   it('keeps accept idempotent for retry by the same provider and conflicts for another provider', async () => {
-    const service = new BookingsService(new InMemoryBookingRepository());
+    const { service } = createService();
     const customer = createSession('customer', 'customer-1');
     const providerA = createSession('provider', 'provider-1');
     const providerB = createSession('provider', 'provider-2');
@@ -85,7 +101,7 @@ describe('BookingsService', () => {
   });
 
   it('handles near-simultaneous provider accept attempts deterministically', async () => {
-    const service = new BookingsService(new InMemoryBookingRepository());
+    const { service } = createService();
     const customer = createSession('customer', 'customer-1');
     const providers = [
       createSession('provider', 'provider-1'),
@@ -123,7 +139,7 @@ describe('BookingsService', () => {
   });
 
   it('returns not-found when accepting an unknown booking', async () => {
-    const service = new BookingsService(new InMemoryBookingRepository());
+    const { service } = createService();
     const provider = createSession('provider', 'provider-1');
 
     const result = await service.acceptBooking(provider, 'missing-booking-id');
@@ -132,5 +148,35 @@ describe('BookingsService', () => {
     if (!result.ok) {
       expect(result.statusCode).toBe(404);
     }
+  });
+
+  it('emits booking accepted domain events with correlation breadcrumbs', async () => {
+    const { service, emittedEvents } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, {
+      requestedService: 'Heating repair',
+    });
+
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const firstAccept = await service.acceptBooking(provider, created.booking.bookingId, {
+      correlationId: 'corr-request-1',
+    });
+    const replayedAccept = await service.acceptBooking(provider, created.booking.bookingId, {
+      correlationId: 'corr-request-2',
+    });
+
+    expect(firstAccept.ok).toBe(true);
+    expect(replayedAccept.ok).toBe(true);
+    expect(emittedEvents).toHaveLength(2);
+    expect(emittedEvents[0]?.correlationId).toBe('corr-request-1');
+    expect(emittedEvents[0]?.replayed).toBe(false);
+    expect(emittedEvents[1]?.correlationId).toBe('corr-request-2');
+    expect(emittedEvents[1]?.replayed).toBe(true);
   });
 });

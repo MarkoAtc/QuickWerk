@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../auth/auth.module';
+import {
+  BOOKING_DOMAIN_EVENT_PUBLISHER,
+} from '../orchestration/domain-event.publisher';
+import { LoggingBookingDomainEventPublisher } from '../orchestration/logging-domain-event.publisher';
 import { PostgresClient } from '../persistence/postgres-client';
 import { BOOKING_REPOSITORY } from './domain/booking.repository';
 import { resolveBookingRepository } from './infrastructure/booking-repository.provider';
@@ -14,6 +18,7 @@ import { BookingsService } from './bookings.service';
   providers: [
     BookingsService,
     InMemoryBookingRepository,
+    LoggingBookingDomainEventPublisher,
     {
       provide: BOOKING_REPOSITORY,
       inject: [InMemoryBookingRepository, PostgresClient],
@@ -22,6 +27,10 @@ import { BookingsService } from './bookings.service';
           inMemoryRepository,
           postgresClient,
         }),
+    },
+    {
+      provide: BOOKING_DOMAIN_EVENT_PUBLISHER,
+      useExisting: LoggingBookingDomainEventPublisher,
     },
   ],
 })

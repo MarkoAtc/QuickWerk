@@ -37,3 +37,20 @@ export const providerOnboardingSteps = [
     label: 'Upload verification documents',
   },
 ] as const;
+
+export const correlationIdHeaderName = 'x-correlation-id' as const;
+
+export type BookingAcceptedDomainEvent = {
+  eventName: 'booking.accepted';
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+  replayed: boolean;
+  booking: {
+    bookingId: string;
+    customerUserId: string;
+    providerUserId: string;
+    requestedService: string;
+    status: 'accepted';
+  };
+};

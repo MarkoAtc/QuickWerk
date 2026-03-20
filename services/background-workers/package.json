@@ -8,5 +8,8 @@
     "dev": "pnpm run build && pnpm run start",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@quickwerk/domain": "workspace:*"
   }
 }
