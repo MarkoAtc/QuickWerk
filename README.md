@@ -99,16 +99,32 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 - `pnpm check` passes across workspace packages
 - `pnpm --filter @quickwerk/product-app test` passes (`auth-entry-state`, `session-bootstrap`, and `marketplace-preview-data`)
 
-## Exact next docking point
+## Persistence mode handoff (current)
 
-- persistence architecture is now DB-ready at the service boundary:
-  - ADR added: `docs/planning/10_ADR-Persistence-Path-Postgres-Redis-Object-Storage.md`
-  - repository interfaces added for auth sessions + bookings
-  - in-memory adapters remain default
-  - initial SQL migration scaffold added under `services/platform-api/migrations`
-  - backend unit tests now cover session resolution/sign-out and booking auth/transition conflicts
-- next implementation slice:
-  1. add Postgres-backed repository adapters behind the existing repository interfaces
-  2. wire adapter selection by environment (`in-memory` default, `postgres` opt-in)
-  3. run migration `0001_initial_auth_bookings.sql` on local Postgres and add one thin integration test for transition persistence
-  4. keep existing in-memory unit tests as a fallback safety net
+- `services/platform-api` now supports explicit persistence mode selection:
+  - `PERSISTENCE_MODE=in-memory|postgres`
+  - default mode remains `in-memory` when unset
+- mode/config resolution is centralized in:
+  - `services/platform-api/src/persistence/persistence-mode.ts`
+- adapter selection is now wired in module DI providers (auth + bookings):
+  - `InMemory*Repository` remains the default runtime path
+  - `PERSISTENCE_MODE=postgres` is fail-fast gated at startup
+
+### How to enable Postgres mode (current scaffold state)
+
+```bash
+PERSISTENCE_MODE=postgres
+DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>
+```
+
+Current behavior in `postgres` mode:
+- missing `DATABASE_URL` => startup fails immediately with clear error
+- with `DATABASE_URL` => startup fails immediately with clear "not yet enabled" message
+- reason: repository contracts are currently synchronous; real Postgres IO requires async contract migration
+
+### Current limitations / next steps
+
+1. migrate auth + booking repository interfaces/services/controllers to async-safe contracts
+2. replace scaffolded Postgres repositories with real SQL implementations
+3. run `services/platform-api/migrations/0001_initial_auth_bookings.sql` against local Postgres and add transition persistence integration coverage
+4. keep in-memory adapters as default fallback for local UI slices and fast tests
