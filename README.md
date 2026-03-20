@@ -208,8 +208,23 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - new fixed-clock boundary test asserts exact `nextAttemptAt` values across attempts
   - existing retry/dead-letter tests no longer depend on process env toggles
 
+### Phase-2 relay executor boundary + log-contract freeze (completed)
+
+- relay attempt execution is now extracted behind an adapter boundary:
+  - added `RelayAttemptExecutor` contract with DI token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR`
+  - added thin default implementation `InMemoryRelayAttemptExecutor` that delegates to in-memory `consumeBookingAcceptedAttempt`
+  - `RelayBookingDomainEventPublisher` orchestration flow now depends on the adapter contract instead of direct worker invocation
+  - `BookingsModule` wires the default in-memory adapter via `useExisting`
+- structured-log contract tests now pin payload shape for future adapter swaps:
+  - `booking.accepted.domain-event.relay.attempt`
+  - `booking.accepted.domain-event.relay`
+  - tests assert stable top-level and nested payload keys (`details`, `retry`, `dlq`) plus status/value expectations
+- scope remains intentionally limited:
+  - no Redis/SQS/outbox persistence introduced
+  - API response behavior and relay semantics remain unchanged
+
 ### Exact next docking point
 
-1. extract relay attempt execution into a small in-memory adapter boundary (`RelayAttemptExecutor`) so queue adapters can later attach without changing `RelayBookingDomainEventPublisher`
-2. add contract-level tests that pin relay attempt log payload shape (`relay.attempt` + final `relay`) for future adapter swaps
-3. keep Redis/SQS/outbox persistence out of scope until adapter boundary + contract tests are locked
+1. add a queue-backed relay adapter implementation behind `RelayAttemptExecutor` (feature-flag or provider-swap), while preserving current publisher orchestration and API behavior
+2. keep the current structured-log contract tests green as compatibility gates for adapter swaps
+3. only after adapter parity is proven, introduce persistence wiring (Redis/SQS/outbox) in a separate slice

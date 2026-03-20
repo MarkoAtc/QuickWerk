@@ -90,6 +90,15 @@ function createFixedClock(isoInstants: string[]): BookingAcceptedRelayClock {
   };
 }
 
+function expectSortedObjectKeys(input: Record<string, unknown>, expectedKeys: string[]) {
+  expect(Object.keys(input).sort()).toEqual([...expectedKeys].sort());
+}
+
+function expectIsoTimestamp(value: unknown) {
+  expect(typeof value).toBe('string');
+  expect(value as string).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+}
+
 type RunAcceptBookingFlowInput = {
   requestCorrelationId?: string;
   relayAttemptPolicy?: BookingAcceptedRelayAttemptPolicy;
@@ -351,6 +360,97 @@ describe('booking accept relay integration', () => {
       queueName: 'booking.accepted.dlq',
       reason: 'max-attempts-exhausted',
     });
+
+    await app.close();
+  });
+
+  it('freezes contract shape for booking.accepted.domain-event.relay.attempt structured logs', async () => {
+    const logs = collectStructuredLogs();
+    const requestCorrelationId = 'corr-relay-attempt-contract-001';
+
+    const { app } = await runAcceptBookingFlow({
+      requestCorrelationId,
+      relayAttemptPolicy: createFailUntilAttemptPolicy(1),
+    });
+
+    const firstRelayAttemptEvent = logs.find(
+      (entry) =>
+        entry.event === 'booking.accepted.domain-event.relay.attempt' &&
+        entry.correlationId === requestCorrelationId,
+    );
+
+    expect(firstRelayAttemptEvent).toBeTruthy();
+
+    const attemptEvent = firstRelayAttemptEvent as Record<string, unknown>;
+    expectSortedObjectKeys(attemptEvent, ['source', 'timestamp', 'event', 'correlationId', 'status', 'details']);
+    expect(attemptEvent.source).toBe('@quickwerk/platform-api');
+    expectIsoTimestamp(attemptEvent.timestamp);
+    expect(attemptEvent.event).toBe('booking.accepted.domain-event.relay.attempt');
+    expect(attemptEvent.correlationId).toBe(requestCorrelationId);
+    expect(attemptEvent.status).toBe('started');
+
+    const details = attemptEvent.details as Record<string, unknown>;
+    expectSortedObjectKeys(details, ['eventId', 'workerStatus', 'workerCorrelationId', 'retry']);
+    expect(details.eventId).toEqual(expect.any(String));
+    expect(details.workerStatus).toBe('retry-scheduled');
+    expect(details.workerCorrelationId).toBe(requestCorrelationId);
+
+    const retry = details.retry as Record<string, unknown>;
+    expectSortedObjectKeys(retry, ['strategy', 'attempt', 'maxAttempts', 'backoffMs', 'nextAttemptAt']);
+    expect(retry.strategy).toBe('deterministic-exponential-v1');
+    expect(retry.attempt).toBe(1);
+    expect(retry.maxAttempts).toBe(3);
+    expect(retry.backoffMs).toBe(1000);
+    expectIsoTimestamp(retry.nextAttemptAt);
+
+    await app.close();
+  });
+
+  it('freezes contract shape for booking.accepted.domain-event.relay structured logs', async () => {
+    const logs = collectStructuredLogs();
+    const requestCorrelationId = 'corr-relay-final-contract-001';
+
+    const { app } = await runAcceptBookingFlow({
+      requestCorrelationId,
+      relayAttemptPolicy: createFailUntilAttemptPolicy(3),
+    });
+
+    const relayResultEvent = logs.find(
+      (entry) =>
+        entry.event === 'booking.accepted.domain-event.relay' &&
+        entry.correlationId === requestCorrelationId,
+    );
+
+    expect(relayResultEvent).toBeTruthy();
+
+    const finalEvent = relayResultEvent as Record<string, unknown>;
+    expectSortedObjectKeys(finalEvent, ['source', 'timestamp', 'event', 'correlationId', 'status', 'details']);
+    expect(finalEvent.source).toBe('@quickwerk/platform-api');
+    expectIsoTimestamp(finalEvent.timestamp);
+    expect(finalEvent.event).toBe('booking.accepted.domain-event.relay');
+    expect(finalEvent.correlationId).toBe(requestCorrelationId);
+    expect(finalEvent.status).toBe('failed');
+
+    const details = finalEvent.details as Record<string, unknown>;
+    expectSortedObjectKeys(details, ['eventId', 'workerStatus', 'workerCorrelationId', 'retry', 'dlq']);
+    expect(details.eventId).toEqual(expect.any(String));
+    expect(details.workerStatus).toBe('dead-letter');
+    expect(details.workerCorrelationId).toBe(requestCorrelationId);
+
+    const retry = details.retry as Record<string, unknown>;
+    expectSortedObjectKeys(retry, ['strategy', 'attempt', 'maxAttempts', 'backoffMs', 'nextAttemptAt']);
+    expect(retry.strategy).toBe('deterministic-exponential-v1');
+    expect(retry.attempt).toBe(3);
+    expect(retry.maxAttempts).toBe(3);
+    expect(retry.backoffMs).toBe(4000);
+    expectIsoTimestamp(retry.nextAttemptAt);
+
+    const dlq = details.dlq as Record<string, unknown>;
+    expectSortedObjectKeys(dlq, ['terminal', 'queueName', 'reason', 'markedAt']);
+    expect(dlq.terminal).toBe(true);
+    expect(dlq.queueName).toBe('booking.accepted.dlq');
+    expect(dlq.reason).toBe('max-attempts-exhausted');
+    expectIsoTimestamp(dlq.markedAt);
 
     await app.close();
   });

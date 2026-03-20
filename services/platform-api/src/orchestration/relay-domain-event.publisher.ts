@@ -1,4 +1,3 @@
-import { consumeBookingAcceptedAttempt } from '@quickwerk/background-workers';
 import { Inject, Injectable } from '@nestjs/common';
 import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
 
@@ -12,6 +11,10 @@ import {
   BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
   type BookingAcceptedRelayAttemptPolicy,
 } from './relay-attempt-policy';
+import {
+  BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR,
+  type RelayAttemptExecutor,
+} from './relay-attempt-executor';
 import { LoggingBookingDomainEventPublisher } from './logging-domain-event.publisher';
 
 const relayMaxAttempts = 3;
@@ -37,12 +40,14 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
     private readonly relayAttemptPolicy: BookingAcceptedRelayAttemptPolicy,
     @Inject(BOOKING_ACCEPTED_RELAY_CLOCK)
     private readonly relayClock: BookingAcceptedRelayClock,
+    @Inject(BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR)
+    private readonly relayAttemptExecutor: RelayAttemptExecutor,
   ) {}
 
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
     await this.loggingPublisher.publishBookingAccepted(event);
 
-    let finalWorkerResult = consumeBookingAcceptedAttempt({
+    let finalWorkerResult = this.relayAttemptExecutor.execute({
       event,
       attempt: 1,
       maxAttempts: relayMaxAttempts,
@@ -69,7 +74,7 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
     });
 
     for (let attempt = 2; attempt <= relayMaxAttempts && finalWorkerResult.status === 'retry-scheduled'; attempt += 1) {
-      finalWorkerResult = consumeBookingAcceptedAttempt({
+      finalWorkerResult = this.relayAttemptExecutor.execute({
         event,
         attempt,
         maxAttempts: relayMaxAttempts,

@@ -686,8 +686,33 @@ This slice removes env-based retry simulation hacks and introduces deterministic
   - retry/dead-letter scenarios now inject `createFailUntilAttemptPolicy(...)`
   - adds fixed-clock boundary test that asserts exact `nextAttemptAt` values under retry progression.
 
+## 36. Phase-2 Relay Attempt Executor Boundary + Log Contract Freeze (Completed)
+
+This slice isolates relay attempt execution behind an adapter contract and adds payload-shape contract tests, while keeping relay runtime behavior in-memory.
+
+- relay attempt execution adapter boundary introduced:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - adds:
+    - `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR`
+    - `RelayAttemptExecutor`
+    - `InMemoryRelayAttemptExecutor`
+  - `RelayBookingDomainEventPublisher` now calls `relayAttemptExecutor.execute(...)` instead of directly invoking worker consume helpers.
+- DI wiring updated without behavior drift:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - binds default adapter via `useExisting: InMemoryRelayAttemptExecutor`
+  - keeps existing policy + clock seams intact.
+- structured-log contract tests added (integration level):
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - freezes payload shapes for:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+  - asserts stable top-level and nested key contracts (`details`, `retry`, `dlq`) and deterministic status/value expectations.
+- out-of-scope kept intact:
+  - no Redis/SQS/outbox persistence introduced in this pass
+  - no API contract change and no relay semantic change.
+
 ### Updated exact next docking point
 
-1. extract relay attempt execution into a thin in-memory adapter boundary (e.g., `RelayAttemptExecutor`) so future queue adapters can attach without changing publisher orchestration flow
-2. add relay contract tests that freeze structured-log payload shape for `booking.accepted.domain-event.relay.attempt` + final `booking.accepted.domain-event.relay`
-3. keep Redis/SQS/outbox persistence out of scope until adapter boundary + contract tests are stabilized
+1. introduce the first queue-backed relay adapter behind `RelayAttemptExecutor` (provider swap/feature-flag) while preserving publisher orchestration and external API behavior
+2. treat the new relay structured-log contract tests as non-negotiable compatibility gates for adapter changes
+3. after adapter parity is proven, deliver persistence wiring (Redis/SQS/outbox) in a dedicated follow-up slice
