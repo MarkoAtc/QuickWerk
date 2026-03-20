@@ -25,7 +25,7 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 - Root workspace tooling is installed with `pnpm` + `turbo`.
 - `apps/product-app` has a minimal Expo Router shell for web, iOS, and Android.
 - `apps/admin-web` has a minimal Next.js app-router shell.
-- `services/platform-api` has a minimal NestJS HTTP bootstrap with `GET /health` returning `200 OK`.
+- `services/platform-api` has a minimal NestJS HTTP bootstrap with `GET /health` and queue-aware `GET /health/readiness` endpoints.
 - `services/background-workers` has a minimal runnable worker bootstrap with build/start scripts.
 - `packages/domain` now contains the first shared provider-onboarding slice consumed by `apps/product-app`.
 - `packages/auth` is now exposed as a real shared workspace package with initial auth/session boundary constants.
@@ -231,24 +231,31 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - each attempt writes a queued row first, then finalizes the same row with worker outcome and retry/DLQ metadata
   - duplicate enqueue calls are idempotent (`ON CONFLICT DO NOTHING`) and resolve to persisted outcome snapshots
   - correlation id continuity is preserved from domain event through worker result and persisted row snapshots
-- durable dequeue + retry loop semantics added:
-  - executor now drains due retry rows (`status=retry-scheduled`, `next_attempt_at <= now`) in bounded batches per call
-  - due-row claiming uses `FOR UPDATE SKIP LOCKED` + successor-attempt existence guard to avoid duplicate progression under concurrency
+- durable dequeue + retry loop semantics are now worker-tick driven:
+  - HTTP request-path `execute(...)` no longer drains due retries
+  - dedicated worker tick path (`RelayQueueWorkerService`) drains due retry rows in bounded batches
+  - due-row claiming still uses `FOR UPDATE SKIP LOCKED` + successor-attempt existence guard to avoid duplicate progression under concurrency
   - claimed due rows materialize the next attempt row (`attempt + 1`) and process it through the same finalization path (`processed|retry-scheduled|dead-letter`)
 - restart-safe reclaim semantics:
   - if an attempt row already exists in `queued` state (e.g., crash between enqueue and finalize), later execute calls reclaim and finalize that row deterministically
   - due retry rows are only advanced when no successor attempt row exists, making resume behavior deterministic after restarts
 - minimal queue observability breadcrumbs:
   - emits `booking.accepted.domain-event.relay.queue.observability` with `depth`, `dueCount`, `deadLetterCount`, and `processingLagMs`
+- readiness endpoint queue metrics surfaced:
+  - new `GET /health/readiness` reports relay queue counters (`depth`, `dueCount`, `deadLetterCount`) and `lagMs`
+  - includes threshold guidance and derived readiness level (`good|watch|critical`) for operational triage
+  - existing `GET /health` payload remains unchanged
 - compatibility guardrails preserved:
   - existing `booking.accepted.domain-event.relay.attempt` and `booking.accepted.domain-event.relay` structured-log contract tests remain unchanged and green
   - publisher orchestration and public API payloads are unchanged
 - focused tests added/updated:
   - `relay-attempt-executor.provider.test.ts` covers persistent mode selection + postgres guardrail
-  - `relay-attempt-executor.postgres.test.ts` now also covers lock-safe due dequeue progression and correlation continuity for derived retry attempts
+  - `relay-attempt-executor.postgres.test.ts` covers lock-safe due dequeue progression via dedicated tick path and correlation continuity
+  - `relay-attempt-executor.postgres-contention.integration.test.ts` (optional real-Postgres) proves multi-executor contention safety with no double-advance
+  - `health.controller.test.ts` freezes readiness counters/lag + threshold-level mapping while preserving legacy `/health` payload
 
 ### Exact next docking point
 
-1. move retry drain from request-coupled execute path into dedicated background worker tick (same claim SQL, bounded batch) so HTTP latency is decoupled from queue catch-up
-2. expose queue metrics via health/readiness endpoint surface (not only breadcrumbs) and add alert thresholds for sustained lag/dead-letter growth
-3. add multi-instance concurrency integration test against real Postgres to validate claim fairness and no-double-advance guarantees under parallel executors
+1. add authenticated operator endpoint(s) for queue backlog introspection (recent attempts + dead-letter sample) without exposing payload internals publicly
+2. wire readiness threshold values to config/env so SRE can tune watch/critical cutoffs per environment
+3. add a small runbook snippet + alert examples (lag/dead-letter) tied to `GET /health/readiness` fields for on-call handoff

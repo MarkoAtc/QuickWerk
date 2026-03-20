@@ -822,8 +822,36 @@ This slice closes the first durable retry-processing gap for Postgres-persistent
     - verifies correlation continuity remains intact for derived retry attempts
     - keeps queued->retry and queued->dead-letter snapshot checks green
 
+## 40. Phase-2 Dedicated Queue Tick + Readiness Metrics + Contention Proof (Completed)
+
+This slice decouples durable retry draining from HTTP latency paths, exposes queue pressure signals via readiness, and adds real-Postgres contention proof coverage.
+
+- dequeue/retry draining moved off request path:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - `execute(...)` now performs enqueue + immediate attempt processing only
+  - new `drainDueRetriesTick(...)` runs bounded dequeue batches with the same lock-safe claim semantics (`FOR UPDATE SKIP LOCKED` + successor existence guard)
+- dedicated worker tick path introduced:
+  - `services/platform-api/src/orchestration/relay-queue-worker.service.ts`
+  - periodic tick drains due retries when persistent mode is enabled (`postgres-persistent` + `PERSISTENCE_MODE=postgres`)
+  - in-flight guard prevents overlapping local tick executions
+- queue metrics exposed on readiness endpoint:
+  - `services/platform-api/src/health/health.controller.ts`
+  - adds `GET /health/readiness` with lightweight relay queue counters and lag:
+    - `depth`, `dueCount`, `deadLetterCount`, `lagMs`
+  - includes threshold guidance + derived readiness level (`good|watch|critical`)
+  - preserves legacy `GET /health` response contract unchanged
+- contention proof added (real Postgres, optional integration suite):
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres-contention.integration.test.ts`
+  - executes concurrent drain ticks from multiple executor instances against same due row
+  - asserts no double-advance (single successor attempt materialization) and correlation continuity
+- compatibility gates maintained:
+  - structured log contract tests for:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+  - remain unchanged and green
+
 ### Updated exact next docking point
 
-1. move the dequeue/retry drain loop into a dedicated worker tick (same claim semantics) to decouple queue catch-up from request path latency
-2. expose queue depth/lag/dead-letter metrics via health/readiness endpoints and add threshold-based alert guidance
-3. add real-Postgres parallel executor integration tests to prove no-double-advance behavior across multi-instance contention
+1. add authenticated operator queue-inspection endpoint(s) for recent attempts/dead-letter sampling without exposing payload internals publicly
+2. move readiness thresholds to env-configurable values for environment-specific SRE tuning
+3. add runbook + alert examples tied to readiness queue fields for on-call handoff

@@ -50,9 +50,16 @@ type RelayQueueMetricsRow = {
   processingLagMs: number | string | null;
 };
 
+export type RelayQueueMetrics = {
+  depth: number;
+  dueCount: number;
+  deadLetterCount: number;
+  processingLagMs: number;
+};
+
 @Injectable()
 export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
-  private static readonly maxDueRetryDrainsPerExecute = 8;
+  static readonly defaultMaxDueRetryDrainsPerTick = 8;
 
   constructor(private readonly postgresClient: PostgresClient) {}
 
@@ -65,10 +72,37 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
       now,
     });
 
-    await this.drainDueRetries(config, now);
     await this.logQueueMetrics(config, now, input.event.correlationId);
 
     return immediateResult;
+  }
+
+  async drainDueRetriesTick(input?: { now?: Date; maxDrains?: number }): Promise<{ drainedCount: number }> {
+    const config = requirePostgresPersistenceConfig(process.env);
+    const now = input?.now ?? new Date();
+    const maxDrains = Math.max(1, input?.maxDrains ?? PostgresRelayAttemptExecutor.defaultMaxDueRetryDrainsPerTick);
+
+    let drainedCount = 0;
+
+    for (let index = 0; index < maxDrains; index += 1) {
+      const claimed = await this.claimDueRetry(config, now);
+
+      if (!claimed) {
+        break;
+      }
+
+      await this.processQueuedAttemptById(config, claimed.rowId, claimed.input);
+      drainedCount += 1;
+    }
+
+    return { drainedCount };
+  }
+
+  async getQueueMetricsSnapshot(input?: { now?: Date }): Promise<RelayQueueMetrics> {
+    const config = requirePostgresPersistenceConfig(process.env);
+    const now = input?.now ?? new Date();
+
+    return this.loadQueueMetrics(config, now);
   }
 
   private async enqueueAndProcessAttempt(
@@ -187,21 +221,6 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     );
 
     return result;
-  }
-
-  private async drainDueRetries(
-    config: ReturnType<typeof requirePostgresPersistenceConfig>,
-    now: Date,
-  ): Promise<void> {
-    for (let index = 0; index < PostgresRelayAttemptExecutor.maxDueRetryDrainsPerExecute; index += 1) {
-      const claimed = await this.claimDueRetry(config, now);
-
-      if (!claimed) {
-        return;
-      }
-
-      await this.processQueuedAttemptById(config, claimed.rowId, claimed.input);
-    }
   }
 
   private async claimDueRetry(
@@ -372,6 +391,20 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     now: Date,
     correlationId: string,
   ): Promise<void> {
+    const metrics = await this.loadQueueMetrics(config, now);
+
+    logStructuredBreadcrumb({
+      event: 'booking.accepted.domain-event.relay.queue.observability',
+      correlationId,
+      status: 'started',
+      details: metrics,
+    });
+  }
+
+  private async loadQueueMetrics(
+    config: ReturnType<typeof requirePostgresPersistenceConfig>,
+    now: Date,
+  ): Promise<RelayQueueMetrics> {
     const result = await this.postgresClient.query<RelayQueueMetricsRow>(
       config,
       `/* relay:queue-metrics */
@@ -393,20 +426,20 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     const metrics = result.rows[0];
 
     if (!metrics) {
-      return;
+      return {
+        depth: 0,
+        dueCount: 0,
+        deadLetterCount: 0,
+        processingLagMs: 0,
+      };
     }
 
-    logStructuredBreadcrumb({
-      event: 'booking.accepted.domain-event.relay.queue.observability',
-      correlationId,
-      status: 'started',
-      details: {
-        depth: Number(metrics.depth),
-        dueCount: Number(metrics.dueCount),
-        deadLetterCount: Number(metrics.deadLetterCount),
-        processingLagMs: metrics.processingLagMs === null ? 0 : Number(metrics.processingLagMs),
-      },
-    });
+    return {
+      depth: Number(metrics.depth),
+      dueCount: Number(metrics.dueCount),
+      deadLetterCount: Number(metrics.deadLetterCount),
+      processingLagMs: metrics.processingLagMs === null ? 0 : Number(metrics.processingLagMs),
+    };
   }
 }
 

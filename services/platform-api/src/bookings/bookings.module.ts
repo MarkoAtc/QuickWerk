@@ -10,6 +10,7 @@ import {
   SystemBookingAcceptedRelayClock,
 } from '../orchestration/relay-clock';
 import { RelayBookingDomainEventPublisher } from '../orchestration/relay-domain-event.publisher';
+import { RelayQueueWorkerService } from '../orchestration/relay-queue-worker.service';
 import {
   BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
   NoopBookingAcceptedRelayAttemptPolicy,
@@ -38,6 +39,7 @@ import { BookingsService } from './bookings.service';
     SystemBookingAcceptedRelayClock,
     InMemoryRelayAttemptExecutor,
     PostgresRelayAttemptExecutor,
+    RelayQueueWorkerService,
     RelayBookingDomainEventPublisher,
     {
       provide: BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
@@ -73,5 +75,6 @@ import { BookingsService } from './bookings.service';
       useExisting: RelayBookingDomainEventPublisher,
     },
   ],
+  exports: [PostgresRelayAttemptExecutor],
 })
 export class BookingsModule {}

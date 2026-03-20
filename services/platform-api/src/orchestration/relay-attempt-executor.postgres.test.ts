@@ -311,16 +311,17 @@ describe('PostgresRelayAttemptExecutor', () => {
       now: new Date('2026-03-20T10:00:00.000Z'),
     });
 
-    await executor.execute({
-      event: createBookingAcceptedEvent({
-        eventId: 'evt-trigger-drain-001',
-        correlationId: 'corr-trigger-drain-001',
-      }),
-      attempt: 1,
-      maxAttempts: 3,
-      shouldFail: false,
+    const beforeTickAttemptTwo = [...fakeClient.rows.values()].find(
+      (row) => row.eventId === 'evt-persistent-relay-queue-001' && row.attempt === 2,
+    );
+    expect(beforeTickAttemptTwo).toBeUndefined();
+
+    const drained = await executor.drainDueRetriesTick({
       now: new Date('2026-03-20T10:00:01.000Z'),
+      maxDrains: 1,
     });
+
+    expect(drained.drainedCount).toBe(1);
 
     const attemptOne = [...fakeClient.rows.values()].find(
       (row) => row.eventId === 'evt-persistent-relay-queue-001' && row.attempt === 1,
