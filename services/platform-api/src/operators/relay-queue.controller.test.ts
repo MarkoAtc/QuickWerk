@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthService } from '../auth/auth.service';
 import { PostgresRelayAttemptExecutor } from '../orchestration/relay-attempt-executor';
 import { RelayQueueOperatorController } from './relay-queue.controller';
 
 describe('RelayQueueOperatorController', () => {
   const previousExecutorMode = process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE;
   const previousPersistenceMode = process.env.PERSISTENCE_MODE;
+  const previousOperatorAuthMode = process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE;
+  const previousOperatorAllowedRoles = process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES;
 
   afterEach(() => {
     if (previousExecutorMode === undefined) {
@@ -20,19 +23,76 @@ describe('RelayQueueOperatorController', () => {
       process.env.PERSISTENCE_MODE = previousPersistenceMode;
     }
 
+    if (previousOperatorAuthMode === undefined) {
+      delete process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE;
+    } else {
+      process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE = previousOperatorAuthMode;
+    }
+
+    if (previousOperatorAllowedRoles === undefined) {
+      delete process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES;
+    } else {
+      process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES = previousOperatorAllowedRoles;
+    }
+
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT;
     delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION;
     vi.restoreAllMocks();
+  });
+
+  it('requires bearer auth for operator endpoints by default', async () => {
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn(),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(controller.getAttempts(undefined, {})).rejects.toMatchObject({
+      status: 401,
+      message: 'Operator authentication required.',
+    });
+  });
+
+  it('returns forbidden when authenticated role is not operator-allowed', async () => {
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({
+          token: 'token-customer',
+          userId: 'user-1',
+          email: 'customer@quickwerk.local',
+          role: 'customer',
+          createdAt: '2026-03-20T10:00:00.000Z',
+          expiresAt: '2026-03-20T22:00:00.000Z',
+        }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(controller.getAttempts('Bearer token-customer', {})).rejects.toMatchObject({
+      status: 403,
+      message: 'Operator authorization required.',
+    });
   });
 
   it('returns disabled response when relay mode is not postgres-persistent', async () => {
     process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'in-memory';
 
-    const controller = new RelayQueueOperatorController({
-      listQueueAttempts: vi.fn(),
-    } as unknown as PostgresRelayAttemptExecutor);
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'provider' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
 
-    await expect(controller.getAttempts({})).resolves.toMatchObject({
+    await expect(controller.getAttempts('Bearer token-provider', {})).resolves.toMatchObject({
       service: 'platform-api',
       relayQueue: {
         mode: 'in-memory',
@@ -65,11 +125,16 @@ describe('RelayQueueOperatorController', () => {
       nextOffset: 11,
     });
 
-    const controller = new RelayQueueOperatorController({
-      listQueueAttempts,
-    } as unknown as PostgresRelayAttemptExecutor);
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'provider' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts,
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
 
-    const response = await controller.getAttempts({
+    const response = await controller.getAttempts('Bearer token-provider', {
       limit: '10',
       offset: '1',
       status: 'retry-scheduled',
@@ -115,34 +180,39 @@ describe('RelayQueueOperatorController', () => {
     process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT = '5';
     process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT = '15';
 
-    const controller = new RelayQueueOperatorController({
-      listQueueMetricSnapshots: vi.fn().mockReturnValue({
-        items: [
-          {
-            id: 5,
-            capturedAt: '2026-03-20T18:20:00.000Z',
-            correlationId: 'corr-tick-5',
-            metrics: {
-              depth: 7,
-              dueCount: 6,
-              deadLetterCount: 0,
-              processingLagMs: 3000,
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'provider' }),
+      } as unknown as AuthService,
+      {
+        listQueueMetricSnapshots: vi.fn().mockResolvedValue({
+          items: [
+            {
+              id: 5,
+              capturedAt: '2026-03-20T18:20:00.000Z',
+              correlationId: 'corr-tick-5',
+              metrics: {
+                depth: 7,
+                dueCount: 6,
+                deadLetterCount: 0,
+                processingLagMs: 3000,
+              },
             },
-          },
-        ],
-        hasMore: false,
-        nextOffset: null,
-        retained: 12,
-      }),
-      getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
-        depth: 8,
-        dueCount: 6,
-        deadLetterCount: 0,
-        processingLagMs: 3000,
-      }),
-    } as unknown as PostgresRelayAttemptExecutor);
+          ],
+          hasMore: false,
+          nextOffset: null,
+          retained: 12,
+        }),
+        getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
+          depth: 8,
+          dueCount: 6,
+          deadLetterCount: 0,
+          processingLagMs: 3000,
+        }),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
 
-    const response = await controller.getSnapshots({
+    const response = await controller.getSnapshots('Bearer token-provider', {
       limit: '10',
       offset: '0',
       correlationId: 'corr-tick-5',
@@ -185,8 +255,28 @@ describe('RelayQueueOperatorController', () => {
         retention: {
           retained: 12,
           maxSnapshots: 200,
-          durability: 'process-memory',
+          durability: 'postgres-table',
         },
+      },
+    });
+  });
+
+  it('supports legacy-open mode as backward-compatible operator auth fallback', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE = 'legacy-open';
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'in-memory';
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn(),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(controller.getAttempts(undefined, {})).resolves.toMatchObject({
+      relayQueue: {
+        enabled: false,
       },
     });
   });

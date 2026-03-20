@@ -1,5 +1,7 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Headers, HttpException, Query } from '@nestjs/common';
 
+import { AuthService } from '../auth/auth.service';
+import { extractBearerToken } from '../http/auth-header';
 import {
   PostgresRelayAttemptExecutor,
   type RelayAttemptQueueStatus,
@@ -9,6 +11,7 @@ import {
   deriveRelayQueueReadinessLevel,
   resolveRelayQueueReadinessThresholds,
 } from '../health/readiness-thresholds';
+import { resolveOperatorAccessPolicy } from './operator-access-policy';
 
 type QueueAttemptsQuery = {
   limit?: string;
@@ -27,10 +30,17 @@ type QueueSnapshotsQuery = {
 
 @Controller('operators/relay-queue')
 export class RelayQueueOperatorController {
-  constructor(private readonly postgresRelayAttemptExecutor: PostgresRelayAttemptExecutor) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly postgresRelayAttemptExecutor: PostgresRelayAttemptExecutor,
+  ) {}
 
   @Get('attempts')
-  async getAttempts(@Query() query: QueueAttemptsQuery) {
+  async getAttempts(
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Query() query: QueueAttemptsQuery,
+  ) {
+    await this.assertOperatorAccess(authorizationHeader);
     const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
     if (relayMode !== 'postgres-persistent') {
@@ -95,7 +105,12 @@ export class RelayQueueOperatorController {
   }
 
   @Get('snapshots')
-  async getSnapshots(@Query() query: QueueSnapshotsQuery) {
+  async getSnapshots(
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Query() query: QueueSnapshotsQuery,
+  ) {
+    await this.assertOperatorAccess(authorizationHeader);
+
     const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
     if (relayMode !== 'postgres-persistent') {
@@ -125,7 +140,7 @@ export class RelayQueueOperatorController {
     const limit = parseLimit(query.limit, 20, 100);
     const offset = parseOffset(query.offset);
     const correlationId = query.correlationId?.trim();
-    const snapshots = this.postgresRelayAttemptExecutor.listQueueMetricSnapshots({
+    const snapshots = await this.postgresRelayAttemptExecutor.listQueueMetricSnapshots({
       limit,
       offset,
       correlationId,
@@ -158,11 +173,35 @@ export class RelayQueueOperatorController {
         },
         retention: {
           retained: snapshots.retained,
-          maxSnapshots: PostgresRelayAttemptExecutor.maxRetainedQueueMetricSnapshots,
-          durability: 'process-memory',
+          maxSnapshots: PostgresRelayAttemptExecutor.resolveQueueMetricSnapshotRetention(process.env),
+          durability: 'postgres-table',
         },
       },
     };
+  }
+
+  private async assertOperatorAccess(authorizationHeader: string | undefined): Promise<void> {
+    const policy = resolveOperatorAccessPolicy(process.env);
+
+    if (policy.authMode === 'legacy-open') {
+      return;
+    }
+
+    const token = extractBearerToken(authorizationHeader);
+
+    if (!token) {
+      throw new HttpException('Operator authentication required.', 401);
+    }
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Operator authentication required.', 401);
+    }
+
+    if (!policy.allowedRoles.includes(session.role)) {
+      throw new HttpException('Operator authorization required.', 403);
+    }
   }
 }
 

@@ -262,31 +262,30 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - `relay-attempt-executor.postgres-contention.integration.test.ts` (optional real-Postgres) proves multi-executor contention safety with no double-advance
   - `health.controller.test.ts` freezes readiness counters/lag + threshold-level mapping while preserving legacy `/health` payload
 
-### Phase-2 operator queue inspection + env-tuned readiness + runbook scaffolding (completed)
+### Phase-3 operator guardrails + durable snapshots + dashboard/smoke handoff (completed)
 
-- operator inspection endpoints added (read-only, backward-safe):
-  - `GET /operators/relay-queue/attempts`
-    - paginated attempt listing (`limit`, `offset`) with basic filters (`status`, `correlationId`, `eventId`, `terminalOnly`)
-    - intentionally excludes payload snapshots to avoid leaking event payload internals
-  - `GET /operators/relay-queue/snapshots`
-    - current queue metrics snapshot + derived readiness level
-    - paginated in-process queue-metrics snapshot history (`limit`, `offset`, optional `correlationId` filter)
-    - includes retention metadata (`durability: process-memory`) so operators understand restart behavior
-- env-tunable readiness thresholds wired into `/health/readiness` and operator snapshot output:
-  - lag: `BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS`, `..._LAG_CRITICAL_MS`
-  - queue depth: `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT`, `..._DEPTH_CRITICAL_COUNT`
-  - dead-letter volume: `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT`, `..._DEAD_LETTER_CRITICAL_COUNT`
-  - readiness level now evaluates lag + dead-letter + backlog pressure (`max(depth, dueCount)`) with env fallbacks
-- queue degradation runbook + alert examples added:
-  - `docs/ops/relay-queue-runbook.md`
-  - includes watch/critical response playbook, triage checklist, and alert rule examples tied to readiness fields
-- focused coverage added:
-  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
-  - `services/platform-api/src/health/health.controller.test.ts` (env-threshold path)
-- existing `GET /health` payload and existing relay structured-log contract tests remain unchanged.
+- operator authN/authZ guardrails added for `/operators/relay-queue/*`:
+  - default mode requires bearer session auth (`BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=required`)
+  - default allowed role set is `provider` (`BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES`)
+  - optional backward-compatible bypass via `BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=legacy-open`
+  - unauthorized requests now return `401`, non-operator roles return `403`
+- queue metrics snapshots are now persisted durably in Postgres:
+  - new migration: `services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql`
+  - new table: `booking_accepted_relay_queue_snapshots`
+  - `/operators/relay-queue/snapshots` now reads paginated history from Postgres (`durability: postgres-table`)
+  - bounded retention cleanup on insert via `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` (default `200`)
+- dashboard-facing examples and smoke checks added:
+  - runbook extended with Grafana/Alertmanager field mapping examples: `docs/ops/relay-queue-runbook.md`
+  - operator endpoint smoke check script: `scripts/smoke/operator-relay-queue-smoke.sh`
+- focused coverage added/updated:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts` (auth guardrails + endpoint behavior)
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts` (durable snapshot retention)
+- existing public contracts remain stable:
+  - legacy `GET /health` payload unchanged
+  - relay structured-log contract tests remain unchanged
 
 ### Exact next docking point
 
-1. add authN/authZ guardrails for `/operators/relay-queue/*` (operator role/session check) while keeping read-only semantics
-2. persist queue-metrics snapshots beyond process memory (lightweight table) and add bounded retention cleanup
-3. add dashboard-facing API contract examples (Grafana/Alertmanager mapping) and smoke checks for the new operator endpoints
+1. introduce dedicated `operator` session role (instead of provider-as-operator default) and migrate role policy without breaking existing sessions
+2. add lightweight SLO burn-rate recording for relay queue (`watch`/`critical` duration windows) tied to the same operator dashboard mapping
+3. add optional read-only CSV export endpoint for recent dead-letter attempts (bounded + auth-guarded) for incident handoff

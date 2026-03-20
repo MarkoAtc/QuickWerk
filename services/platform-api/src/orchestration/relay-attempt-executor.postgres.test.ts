@@ -22,10 +22,22 @@ type StoredRelayAttempt = {
   statusTransitions: Array<'queued' | 'processed' | 'retry-scheduled' | 'dead-letter'>;
 };
 
+type StoredQueueMetricSnapshot = {
+  id: number;
+  capturedAt: string;
+  correlationId: string;
+  depth: number;
+  dueCount: number;
+  deadLetterCount: number;
+  processingLagMs: number;
+};
+
 class FakePostgresClient {
   private nextId = 1;
+  private nextSnapshotId = 1;
 
   readonly rows = new Map<number, StoredRelayAttempt>();
+  readonly queueMetricSnapshots: StoredQueueMetricSnapshot[] = [];
   readonly dueClaimSql: string[] = [];
 
   async query(_config: unknown, text: string, values: readonly unknown[] = []): Promise<{ rows: unknown[] }> {
@@ -74,6 +86,22 @@ class FakePostgresClient {
 
     if (text.includes('relay:queue-metrics')) {
       return this.queueMetrics(values);
+    }
+
+    if (text.includes('relay:insert-queue-metric-snapshot')) {
+      return this.insertQueueMetricSnapshot(values);
+    }
+
+    if (text.includes('relay:cleanup-queue-metric-snapshots')) {
+      return this.cleanupQueueMetricSnapshots(values);
+    }
+
+    if (text.includes('relay:list-queue-metric-snapshots')) {
+      return this.listQueueMetricSnapshots(values);
+    }
+
+    if (text.includes('relay:count-queue-metric-snapshots')) {
+      return { rows: [{ retained: this.queueMetricSnapshots.length }] };
     }
 
     throw new Error(`Unexpected SQL in fake client: ${text}`);
@@ -214,6 +242,70 @@ class FakePostgresClient {
     };
   }
 
+  private insertQueueMetricSnapshot(values: readonly unknown[]): { rows: unknown[] } {
+    this.queueMetricSnapshots.push({
+      id: this.nextSnapshotId,
+      capturedAt: values[0] as string,
+      correlationId: values[1] as string,
+      depth: values[2] as number,
+      dueCount: values[3] as number,
+      deadLetterCount: values[4] as number,
+      processingLagMs: values[5] as number,
+    });
+
+    this.nextSnapshotId += 1;
+    return { rows: [] };
+  }
+
+  private cleanupQueueMetricSnapshots(values: readonly unknown[]): { rows: unknown[] } {
+    const maxRetained = values[0] as number;
+
+    if (this.queueMetricSnapshots.length <= maxRetained) {
+      return { rows: [] };
+    }
+
+    this.queueMetricSnapshots.sort((a, b) => {
+      const byCapturedAt = Date.parse(b.capturedAt) - Date.parse(a.capturedAt);
+      return byCapturedAt !== 0 ? byCapturedAt : b.id - a.id;
+    });
+
+    this.queueMetricSnapshots.splice(maxRetained);
+    return { rows: [] };
+  }
+
+  private listQueueMetricSnapshots(values: readonly unknown[]): { rows: unknown[] } {
+    let valueIndex = 0;
+
+    const correlationId =
+      values.length === 3
+        ? (values[valueIndex++] as string)
+        : undefined;
+
+    const limitPlusOne = values[valueIndex++] as number;
+    const offset = values[valueIndex] as number;
+
+    const filtered = correlationId
+      ? this.queueMetricSnapshots.filter((snapshot) => snapshot.correlationId === correlationId)
+      : this.queueMetricSnapshots;
+
+    const sorted = [...filtered].sort((a, b) => {
+      const byCapturedAt = Date.parse(b.capturedAt) - Date.parse(a.capturedAt);
+      return byCapturedAt !== 0 ? byCapturedAt : b.id - a.id;
+    });
+
+    const rows = sorted.slice(offset, offset + limitPlusOne).map((snapshot) => ({
+      id: snapshot.id,
+      capturedAt: snapshot.capturedAt,
+      correlationId: snapshot.correlationId,
+      depth: snapshot.depth,
+      dueCount: snapshot.dueCount,
+      deadLetterCount: snapshot.deadLetterCount,
+      processingLagMs: snapshot.processingLagMs,
+    }));
+
+    return { rows };
+  }
+
   private toPersistedRow(row: StoredRelayAttempt): Record<string, unknown> {
     return {
       id: row.id,
@@ -251,12 +343,19 @@ function createBookingAcceptedEvent(overrides?: Partial<BookingAcceptedDomainEve
 
 describe('PostgresRelayAttemptExecutor', () => {
   const previousDatabaseUrl = process.env.DATABASE_URL;
+  const previousSnapshotRetention = process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION;
 
   afterEach(() => {
     if (previousDatabaseUrl === undefined) {
       delete process.env.DATABASE_URL;
     } else {
       process.env.DATABASE_URL = previousDatabaseUrl;
+    }
+
+    if (previousSnapshotRetention === undefined) {
+      delete process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION;
+    } else {
+      process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION = previousSnapshotRetention;
     }
   });
 
@@ -378,5 +477,52 @@ describe('PostgresRelayAttemptExecutor', () => {
       markedAt: '2026-03-20T10:00:01.000Z',
     });
     expect(persisted?.terminalMarker).toBe(true);
+  });
+
+  it('persists queue metric snapshots durably and enforces bounded retention', async () => {
+    process.env.DATABASE_URL = 'postgres://quickwerk:test@localhost:5432/quickwerk';
+    process.env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION = '2';
+
+    const fakeClient = new FakePostgresClient();
+    const executor = new PostgresRelayAttemptExecutor(fakeClient as unknown as PostgresClient);
+
+    await executor.execute({
+      event: createBookingAcceptedEvent({
+        eventId: 'evt-metrics-1',
+        correlationId: 'corr-metrics-1',
+      }),
+      attempt: 1,
+      maxAttempts: 3,
+      now: new Date('2026-03-20T10:00:00.000Z'),
+    });
+
+    await executor.execute({
+      event: createBookingAcceptedEvent({
+        eventId: 'evt-metrics-2',
+        correlationId: 'corr-metrics-2',
+      }),
+      attempt: 1,
+      maxAttempts: 3,
+      now: new Date('2026-03-20T10:00:01.000Z'),
+    });
+
+    await executor.execute({
+      event: createBookingAcceptedEvent({
+        eventId: 'evt-metrics-3',
+        correlationId: 'corr-metrics-3',
+      }),
+      attempt: 1,
+      maxAttempts: 3,
+      now: new Date('2026-03-20T10:00:02.000Z'),
+    });
+
+    const snapshots = await executor.listQueueMetricSnapshots({
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(snapshots.retained).toBe(2);
+    expect(snapshots.items).toHaveLength(2);
+    expect(snapshots.items.map((item) => item.correlationId)).toEqual(['corr-metrics-3', 'corr-metrics-2']);
   });
 });

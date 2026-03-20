@@ -1,4 +1,4 @@
-# Relay Queue Degradation Runbook (Phase-2)
+# Relay Queue Degradation Runbook (Phase-3)
 
 This runbook covers queue pressure/degradation handling for the Postgres-persistent booking relay path.
 
@@ -6,11 +6,27 @@ This runbook covers queue pressure/degradation handling for the Postgres-persist
 
 - service: `@quickwerk/platform-api`
 - transport table: `booking_accepted_relay_attempts`
+- snapshot table: `booking_accepted_relay_queue_snapshots`
 - worker tick: `RelayQueueWorkerService`
 - readiness endpoint: `GET /health/readiness`
 - operator inspection endpoints:
   - `GET /operators/relay-queue/attempts`
   - `GET /operators/relay-queue/snapshots`
+
+## Operator access policy (authN/authZ)
+
+By default, `/operators/relay-queue/*` is authenticated and role-gated.
+
+- requires `Authorization: Bearer <token>`
+- default allowed role set: `provider`
+- optional backward-compatible bypass: `BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=legacy-open`
+
+Env knobs:
+
+```bash
+BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=required
+BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES=provider
+```
 
 ## Signals to watch
 
@@ -32,6 +48,7 @@ BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT=10
 BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT=50
 BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT=1
 BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT=5
+BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION=200
 ```
 
 ## Triage flow
@@ -55,53 +72,60 @@ BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT=5
    - reduce downstream failure causes (provider/API outage, schema mismatch, etc.)
    - tune thresholds only after confirming expected traffic profile changed
 
-## Alert examples
+## Dashboard mapping examples
 
-> Pseudocode-style examples; map to your monitoring stack (Prometheus/Grafana/Datadog).
+### Grafana panel mapping (JSON API / Infinity style)
 
-### Watch-level lag alert
+Use `/operators/relay-queue/snapshots?limit=100` and map:
+
+- time axis: `relayQueue.snapshots[].capturedAt`
+- queue depth: `relayQueue.snapshots[].metrics.depth`
+- due count: `relayQueue.snapshots[].metrics.dueCount`
+- dead-letter count: `relayQueue.snapshots[].metrics.deadLetterCount`
+- lag: `relayQueue.snapshots[].metrics.processingLagMs`
+- state panel: `relayQueue.current.level`
+
+### Alertmanager rule mapping (from readiness)
+
+Use `/health/readiness` fields:
+
+- `relayQueue.level`
+- `relayQueue.counters.depth`
+- `relayQueue.counters.dueCount`
+- `relayQueue.counters.deadLetterCount`
+- `relayQueue.lagMs`
+
+Example pseudo-rules:
 
 ```yaml
-alert: QwRelayQueueLagWatch
-expr: relay_queue_lag_ms >= relay_queue_lag_watch_ms
-for: 10m
-labels:
-  severity: warning
-annotations:
-  summary: "QuickWerk relay queue lag is in watch zone"
-  description: "lagMs has exceeded watch threshold for 10m. Check /operators/relay-queue/snapshots."
+- alert: QwRelayQueueLagWatch
+  expr: relay_queue_lag_ms >= relay_queue_lag_watch_ms
+  for: 10m
+  labels:
+    severity: warning
+
+- alert: QwRelayQueueCritical
+  expr: |
+    relay_queue_lag_ms >= relay_queue_lag_critical_ms
+    OR relay_queue_depth >= relay_queue_depth_critical_count
+    OR relay_queue_dead_letter_count >= relay_queue_dead_letter_critical_count
+  for: 5m
+  labels:
+    severity: critical
 ```
 
-### Critical backlog/dead-letter alert
+## Endpoint smoke checks
 
-```yaml
-alert: QwRelayQueueCritical
-expr: |
-  relay_queue_lag_ms >= relay_queue_lag_critical_ms
-  OR relay_queue_depth >= relay_queue_depth_critical_count
-  OR relay_queue_dead_letter_count >= relay_queue_dead_letter_critical_count
-for: 5m
-labels:
-  severity: critical
-annotations:
-  summary: "QuickWerk relay queue is degraded"
-  description: "Critical queue pressure detected. Start runbook triage and inspect dead-letter attempts immediately."
-```
+Use `scripts/smoke/operator-relay-queue-smoke.sh`:
 
-### Dead-letter rate spike alert (optional)
-
-```yaml
-alert: QwRelayDeadLetterSpike
-expr: increase(relay_queue_dead_letter_count[15m]) >= 3
-for: 0m
-labels:
-  severity: warning
-annotations:
-  summary: "QuickWerk dead-letter count spiking"
-  description: "Dead-letter attempts increased sharply in the last 15m. Investigate downstream reliability."
+```bash
+QW_PLATFORM_API_BASE_URL=http://localhost:3000 \
+QW_OPERATOR_BEARER_TOKEN=<provider-session-token> \
+./scripts/smoke/operator-relay-queue-smoke.sh
 ```
 
 ## Notes
 
-- snapshot history in `/operators/relay-queue/snapshots` is **process-memory retained**, not durable across restarts.
+- snapshot history in `/operators/relay-queue/snapshots` is now persisted in Postgres table `booking_accepted_relay_queue_snapshots`.
+- retention is bounded by `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` cleanup on insert.
 - `/health` legacy payload remains unchanged; queue pressure is surfaced via `/health/readiness`.

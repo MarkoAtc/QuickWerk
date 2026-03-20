@@ -16,6 +16,10 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
   - creates durable relay-attempt transport table for `booking.accepted` orchestration
   - tracks queued/final status, attempt counters, retry timing, correlation id, payload snapshot, and DLQ terminal marker
   - adds indexes for dequeue scans (`status + next_attempt_at`) and correlation traceability
+- `0004_booking_accepted_relay_queue_snapshots.sql`
+  - creates durable relay queue metrics snapshot history (`depth`, `due_count`, `dead_letter_count`, `processing_lag_ms`)
+  - supports operator trend inspection and restart-safe observability history
+  - adds indexes for newest-first scans and correlation-id filtered views
 
 ## How to run later (manual)
 
@@ -25,6 +29,7 @@ From repository root, point `DATABASE_URL` to the target PostgreSQL database and
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001_initial_auth_bookings.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002_session_expiry_enforcement.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql
 ```
 
 Rollback is currently manual (early scaffold phase).

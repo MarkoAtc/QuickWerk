@@ -85,6 +85,20 @@ type RelayQueueMetricsRow = {
   processingLagMs: number | string | null;
 };
 
+type RelayQueueMetricSnapshotRow = {
+  id: number | string;
+  capturedAt: string;
+  correlationId: string;
+  depth: number | string;
+  dueCount: number | string;
+  deadLetterCount: number | string;
+  processingLagMs: number | string;
+};
+
+type RelayQueueMetricSnapshotCountRow = {
+  retained: number | string;
+};
+
 export type RelayQueueMetrics = {
   depth: number;
   dueCount: number;
@@ -95,12 +109,25 @@ export type RelayQueueMetrics = {
 @Injectable()
 export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
   static readonly defaultMaxDueRetryDrainsPerTick = 8;
-  static readonly maxRetainedQueueMetricSnapshots = 200;
-
-  private readonly queueMetricsSnapshots: RelayQueueMetricsSnapshot[] = [];
-  private queueMetricsSnapshotSequence = 0;
+  static readonly defaultMaxRetainedQueueMetricSnapshots = 200;
 
   constructor(private readonly postgresClient: PostgresClient) {}
+
+  static resolveQueueMetricSnapshotRetention(env: NodeJS.ProcessEnv): number {
+    const rawValue = env.BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION?.trim();
+
+    if (!rawValue) {
+      return PostgresRelayAttemptExecutor.defaultMaxRetainedQueueMetricSnapshots;
+    }
+
+    const parsed = Number.parseInt(rawValue, 10);
+
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return PostgresRelayAttemptExecutor.defaultMaxRetainedQueueMetricSnapshots;
+    }
+
+    return Math.min(10_000, parsed);
+  }
 
   async execute(input: RelayAttemptExecutionInput): Promise<RelayAttemptExecutionResult> {
     const config = requirePostgresPersistenceConfig(process.env);
@@ -213,27 +240,72 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     };
   }
 
-  listQueueMetricSnapshots(input?: {
+  async listQueueMetricSnapshots(input?: {
     limit?: number;
     offset?: number;
     correlationId?: string;
-  }): { items: RelayQueueMetricsSnapshot[]; hasMore: boolean; nextOffset: number | null; retained: number } {
+  }): Promise<{ items: RelayQueueMetricsSnapshot[]; hasMore: boolean; nextOffset: number | null; retained: number }> {
+    const config = requirePostgresPersistenceConfig(process.env);
     const limit = clampPaginationLimit(input?.limit, 20, 100);
     const offset = clampPaginationOffset(input?.offset);
 
-    const filtered = input?.correlationId
-      ? this.queueMetricsSnapshots.filter((snapshot) => snapshot.correlationId === input.correlationId)
-      : this.queueMetricsSnapshots;
+    const whereClauses = ['1 = 1'];
+    const values: unknown[] = [];
 
-    const sortedNewestFirst = [...filtered].sort((a, b) => b.id - a.id);
-    const slice = sortedNewestFirst.slice(offset, offset + limit + 1);
-    const hasMore = slice.length > limit;
+    if (input?.correlationId) {
+      values.push(input.correlationId);
+      whereClauses.push(`correlation_id = $${values.length}`);
+    }
+
+    values.push(limit + 1);
+    const limitParamIndex = values.length;
+    values.push(offset);
+    const offsetParamIndex = values.length;
+
+    const snapshotsResult = await this.postgresClient.query<RelayQueueMetricSnapshotRow>(
+      config,
+      `/* relay:list-queue-metric-snapshots */
+       SELECT
+         id,
+         captured_at::text AS "capturedAt",
+         correlation_id AS "correlationId",
+         depth,
+         due_count AS "dueCount",
+         dead_letter_count AS "deadLetterCount",
+         processing_lag_ms AS "processingLagMs"
+       FROM booking_accepted_relay_queue_snapshots
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY captured_at DESC, id DESC
+       LIMIT $${limitParamIndex}
+       OFFSET $${offsetParamIndex}`,
+      values,
+    );
+
+    const hasMore = snapshotsResult.rows.length > limit;
+    const rows = hasMore ? snapshotsResult.rows.slice(0, limit) : snapshotsResult.rows;
+
+    const retainedResult = await this.postgresClient.query<RelayQueueMetricSnapshotCountRow>(
+      config,
+      `/* relay:count-queue-metric-snapshots */
+       SELECT COUNT(*) AS retained
+       FROM booking_accepted_relay_queue_snapshots`,
+    );
 
     return {
-      items: hasMore ? slice.slice(0, limit) : slice,
+      items: rows.map((row) => ({
+        id: Number(row.id),
+        capturedAt: row.capturedAt,
+        correlationId: row.correlationId,
+        metrics: {
+          depth: Number(row.depth),
+          dueCount: Number(row.dueCount),
+          deadLetterCount: Number(row.deadLetterCount),
+          processingLagMs: Number(row.processingLagMs),
+        },
+      })),
       hasMore,
       nextOffset: hasMore ? offset + limit : null,
-      retained: this.queueMetricsSnapshots.length,
+      retained: Number(retainedResult.rows[0]?.retained ?? 0),
     };
   }
 
@@ -525,7 +597,7 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
   ): Promise<void> {
     const metrics = await this.loadQueueMetrics(config, now);
 
-    this.recordQueueMetricSnapshot({
+    await this.recordQueueMetricSnapshot(config, {
       capturedAt: now.toISOString(),
       correlationId,
       metrics,
@@ -539,25 +611,57 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     });
   }
 
-  private recordQueueMetricSnapshot(input: {
-    capturedAt: string;
-    correlationId: string;
-    metrics: RelayQueueMetrics;
-  }): void {
-    this.queueMetricsSnapshotSequence += 1;
-    this.queueMetricsSnapshots.push({
-      id: this.queueMetricsSnapshotSequence,
-      capturedAt: input.capturedAt,
-      correlationId: input.correlationId,
-      metrics: input.metrics,
-    });
+  private async recordQueueMetricSnapshot(
+    config: ReturnType<typeof requirePostgresPersistenceConfig>,
+    input: {
+      capturedAt: string;
+      correlationId: string;
+      metrics: RelayQueueMetrics;
+    },
+  ): Promise<void> {
+    await this.postgresClient.query(
+      config,
+      `/* relay:insert-queue-metric-snapshot */
+       INSERT INTO booking_accepted_relay_queue_snapshots (
+         captured_at,
+         correlation_id,
+         depth,
+         due_count,
+         dead_letter_count,
+         processing_lag_ms
+       ) VALUES (
+         $1::timestamptz,
+         $2,
+         $3,
+         $4,
+         $5,
+         $6
+       )`,
+      [
+        input.capturedAt,
+        input.correlationId,
+        input.metrics.depth,
+        input.metrics.dueCount,
+        input.metrics.deadLetterCount,
+        input.metrics.processingLagMs,
+      ],
+    );
 
-    if (this.queueMetricsSnapshots.length > PostgresRelayAttemptExecutor.maxRetainedQueueMetricSnapshots) {
-      this.queueMetricsSnapshots.splice(
-        0,
-        this.queueMetricsSnapshots.length - PostgresRelayAttemptExecutor.maxRetainedQueueMetricSnapshots,
-      );
-    }
+    const maxSnapshots = PostgresRelayAttemptExecutor.resolveQueueMetricSnapshotRetention(process.env);
+
+    await this.postgresClient.query(
+      config,
+      `/* relay:cleanup-queue-metric-snapshots */
+       WITH stale AS (
+         SELECT id
+         FROM booking_accepted_relay_queue_snapshots
+         ORDER BY captured_at DESC, id DESC
+         OFFSET $1
+       )
+       DELETE FROM booking_accepted_relay_queue_snapshots
+       WHERE id IN (SELECT id FROM stale)`,
+      [maxSnapshots],
+    );
   }
 
   private async loadQueueMetrics(

@@ -850,42 +850,36 @@ This slice decouples durable retry draining from HTTP latency paths, exposes que
     - `booking.accepted.domain-event.relay`
   - remain unchanged and green
 
-## 41. Phase-2 Operator Queue Inspection + Env-Tuned Readiness + Runbook Examples (Completed)
+## 41. Phase-3 Operator Guardrails + Durable Queue Snapshot History + Dashboard/Smoke Handoff (Completed)
 
-This slice adds read-only operator visibility for the Postgres relay queue, makes readiness thresholds env-tunable, and ships a minimal on-call runbook/alert scaffold while preserving existing public API contracts.
+This slice completes the previously docked operator hardening follow-up while preserving existing public API contracts for all previously shipped endpoints.
 
-- operator queue inspection endpoints added (read-only):
+- authN/authZ guardrails added for `/operators/relay-queue/*`:
   - `services/platform-api/src/operators/relay-queue.controller.ts`
-  - `GET /operators/relay-queue/attempts`
-    - supports pagination (`limit`, `offset`) and basic filters (`status`, `correlationId`, `eventId`, `terminalOnly`)
-    - returns sanitized attempt metadata (no payload snapshot internals exposed)
-  - `GET /operators/relay-queue/snapshots`
-    - returns current queue metrics snapshot + readiness level
-    - exposes paginated in-process queue metrics snapshot history (with optional `correlationId` filter)
-    - includes retention metadata and explicit `process-memory` durability hint
-- queue inspection data access added to Postgres executor:
+  - `services/platform-api/src/operators/operator-access-policy.ts`
+  - default policy requires bearer session authentication and provider-role authorization
+  - env policy knobs:
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=required|legacy-open`
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES=provider[,customer]`
+  - backward-safe override (`legacy-open`) retained for staged rollout
+- queue snapshot history persisted beyond process memory:
+  - `services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql`
   - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
-  - new `listQueueAttempts(...)` query path for metadata-only attempt inspection
-  - lightweight in-process snapshot ring buffer for queue observability samples (`maxRetainedQueueMetricSnapshots=200`)
-- readiness thresholds are now env-tunable and threaded into readiness evaluation:
-  - `services/platform-api/src/health/readiness-thresholds.ts`
-  - used by:
-    - `services/platform-api/src/health/health.controller.ts`
-    - `services/platform-api/src/operators/relay-queue.controller.ts`
-  - env knobs:
-    - `BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS`
-    - `BOOKING_ACCEPTED_RELAY_READINESS_LAG_CRITICAL_MS`
-    - `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT`
-    - `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT`
-    - `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT`
-    - `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT`
-- runbook + alert examples added:
+    - snapshots written to `booking_accepted_relay_queue_snapshots`
+    - `/operators/relay-queue/snapshots` now reads durable history from Postgres
+    - bounded retention cleanup on every insert via `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` (default `200`)
+- dashboard/alert mapping + smoke handoff added:
   - `docs/ops/relay-queue-runbook.md`
-  - includes triage flow, threshold mapping, and watch/critical alert templates tied to readiness fields
+    - Grafana panel field mapping from snapshot payload
+    - Alertmanager mapping for watch/critical readiness signals
+    - updated operational notes for durable snapshot storage
+  - `scripts/smoke/operator-relay-queue-smoke.sh`
+    - quick auth-guarded smoke checks for `/operators/relay-queue/attempts` and `/operators/relay-queue/snapshots`
 - tests added/expanded:
-  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
-  - `services/platform-api/src/health/health.controller.test.ts` (env-threshold mapping)
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts` (401/403 + legacy-open fallback + endpoint behavior)
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts` (durable snapshot retention enforcement)
 - compatibility notes:
+  - existing public endpoint contracts remain unchanged
   - legacy `GET /health` response unchanged
   - existing structured-log contract tests for
     - `booking.accepted.domain-event.relay.attempt`
@@ -894,6 +888,6 @@ This slice adds read-only operator visibility for the Postgres relay queue, make
 
 ### Updated exact next docking point
 
-1. add authN/authZ guardrails for `/operators/relay-queue/*` (operator-only access policy)
-2. persist queue snapshot history beyond process memory with bounded retention/cleanup (still lightweight)
-3. add dashboard-facing examples (Grafana/Alertmanager mapping) + endpoint smoke checks for operational handoff
+1. introduce dedicated `operator` role support for auth sessions while keeping temporary provider-role compatibility
+2. add relay queue SLO burn-rate windows (`watch`/`critical` duration) and expose concise summary for dashboards
+3. add optional bounded CSV export for dead-letter inspection (auth-guarded operator endpoint)
