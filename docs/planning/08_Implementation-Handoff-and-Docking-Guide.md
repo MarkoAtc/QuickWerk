@@ -711,8 +711,40 @@ This slice isolates relay attempt execution behind an adapter contract and adds 
   - no Redis/SQS/outbox persistence introduced in this pass
   - no API contract change and no relay semantic change.
 
+## 37. Phase-2 Queue-Backed Relay Adapter + Feature-Flag Provider Swap (Completed)
+
+This slice introduces the first queue-backed adapter variant behind `RelayAttemptExecutor` without changing API contracts or publisher orchestration.
+
+- second relay attempt executor adapter added:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - adds `QueueBackedRelayAttemptExecutor` as lightweight in-process queue-backed execution path
+  - retains existing `InMemoryRelayAttemptExecutor` as default behavior.
+- adapter selection seam introduced via config/env:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.ts`
+  - adds:
+    - `RelayAttemptExecutorMode`
+    - `resolveRelayAttemptExecutorMode(...)`
+    - `resolveRelayAttemptExecutor(...)`
+  - env switch: `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=in-memory|queue-backed`
+  - invalid values fail fast with explicit configuration error.
+- DI wiring updated while keeping orchestration untouched:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - both adapters are provided; token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR` is now resolved through factory provider.
+- test coverage added/expanded:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.test.ts`
+    - default mode remains in-memory
+    - queue-backed mode resolves alternate adapter
+    - invalid mode rejection coverage
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+    - queue-backed mode integration path proves retry progression + final relay result semantics remain parity-safe
+    - existing structured-log contract freeze tests remain unchanged and green.
+- compatibility and scope guardrails preserved:
+  - no public API payload contract change
+  - no structured log payload shape drift
+  - no external queue transport/persistence introduced in this slice.
+
 ### Updated exact next docking point
 
-1. introduce the first queue-backed relay adapter behind `RelayAttemptExecutor` (provider swap/feature-flag) while preserving publisher orchestration and external API behavior
-2. treat the new relay structured-log contract tests as non-negotiable compatibility gates for adapter changes
-3. after adapter parity is proven, deliver persistence wiring (Redis/SQS/outbox) in a dedicated follow-up slice
+1. swap lightweight in-process queue adapter internals with persistent queue transport (Redis/SQS/outbox) behind the same executor seam
+2. keep relay structured-log contract tests as hard compatibility gates throughout transport migration
+3. add operational queue metrics/health breadcrumbs (depth, lag, dispatch latency) once persistent transport lands

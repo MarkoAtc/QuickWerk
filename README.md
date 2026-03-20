@@ -208,23 +208,30 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - new fixed-clock boundary test asserts exact `nextAttemptAt` values across attempts
   - existing retry/dead-letter tests no longer depend on process env toggles
 
-### Phase-2 relay executor boundary + log-contract freeze (completed)
+### Phase-2 queue-backed relay adapter + provider swap (completed)
 
-- relay attempt execution is now extracted behind an adapter boundary:
-  - added `RelayAttemptExecutor` contract with DI token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR`
-  - added thin default implementation `InMemoryRelayAttemptExecutor` that delegates to in-memory `consumeBookingAcceptedAttempt`
-  - `RelayBookingDomainEventPublisher` orchestration flow now depends on the adapter contract instead of direct worker invocation
-  - `BookingsModule` wires the default in-memory adapter via `useExisting`
-- structured-log contract tests now pin payload shape for future adapter swaps:
-  - `booking.accepted.domain-event.relay.attempt`
-  - `booking.accepted.domain-event.relay`
-  - tests assert stable top-level and nested payload keys (`details`, `retry`, `dlq`) plus status/value expectations
+- relay attempt execution remains behind `RelayAttemptExecutor`, now with two concrete adapters:
+  - `InMemoryRelayAttemptExecutor` (default)
+  - `QueueBackedRelayAttemptExecutor` (lightweight in-process queue; no Redis/SQS yet)
+- adapter selection is now env/config-driven:
+  - `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=in-memory|queue-backed`
+  - default stays `in-memory`
+  - unsupported values fail fast during module wiring
+- `BookingsModule` now resolves adapter via provider factory (`resolveRelayAttemptExecutor`) while keeping the existing publisher orchestration untouched.
+- compatibility guardrails kept intact:
+  - existing structured-log contract tests for
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+    remain green and unchanged in payload shape expectations.
+- focused tests added for adapter selection + parity:
+  - `relay-attempt-executor.provider.test.ts` verifies default mode and queue-backed mode resolution
+  - relay integration coverage verifies queue-backed mode preserves retry/final result semantics and correlation continuity
 - scope remains intentionally limited:
-  - no Redis/SQS/outbox persistence introduced
-  - API response behavior and relay semantics remain unchanged
+  - no external queue infrastructure introduced in this slice
+  - no public API payload changes
 
 ### Exact next docking point
 
-1. add a queue-backed relay adapter implementation behind `RelayAttemptExecutor` (feature-flag or provider-swap), while preserving current publisher orchestration and API behavior
-2. keep the current structured-log contract tests green as compatibility gates for adapter swaps
-3. only after adapter parity is proven, introduce persistence wiring (Redis/SQS/outbox) in a separate slice
+1. replace lightweight in-process queue adapter internals with persistent queue transport wiring (Redis/SQS/outbox) behind the same `RelayAttemptExecutor` seam
+2. keep structured-log contract tests as hard compatibility gates during transport migration
+3. add operational observability around queue depth/lag once persistence is introduced

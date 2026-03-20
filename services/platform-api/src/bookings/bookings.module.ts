@@ -17,7 +17,9 @@ import {
 import {
   BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR,
   InMemoryRelayAttemptExecutor,
+  QueueBackedRelayAttemptExecutor,
 } from '../orchestration/relay-attempt-executor';
+import { resolveRelayAttemptExecutor } from '../orchestration/relay-attempt-executor.provider';
 import { PostgresClient } from '../persistence/postgres-client';
 import { BOOKING_REPOSITORY } from './domain/booking.repository';
 import { resolveBookingRepository } from './infrastructure/booking-repository.provider';
@@ -35,6 +37,7 @@ import { BookingsService } from './bookings.service';
     NoopBookingAcceptedRelayAttemptPolicy,
     SystemBookingAcceptedRelayClock,
     InMemoryRelayAttemptExecutor,
+    QueueBackedRelayAttemptExecutor,
     RelayBookingDomainEventPublisher,
     {
       provide: BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
@@ -46,7 +49,15 @@ import { BookingsService } from './bookings.service';
     },
     {
       provide: BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR,
-      useExisting: InMemoryRelayAttemptExecutor,
+      inject: [InMemoryRelayAttemptExecutor, QueueBackedRelayAttemptExecutor],
+      useFactory: (
+        inMemoryExecutor: InMemoryRelayAttemptExecutor,
+        queueBackedExecutor: QueueBackedRelayAttemptExecutor,
+      ) =>
+        resolveRelayAttemptExecutor({
+          inMemoryExecutor,
+          queueBackedExecutor,
+        }),
     },
     {
       provide: BOOKING_REPOSITORY,

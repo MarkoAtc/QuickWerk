@@ -16,3 +16,20 @@ export class InMemoryRelayAttemptExecutor implements RelayAttemptExecutor {
     return consumeBookingAcceptedAttempt(input);
   }
 }
+
+@Injectable()
+export class QueueBackedRelayAttemptExecutor implements RelayAttemptExecutor {
+  private readonly queue: RelayAttemptExecutionInput[] = [];
+
+  execute(input: RelayAttemptExecutionInput): RelayAttemptExecutionResult {
+    this.queue.push(input);
+
+    const queuedAttempt = this.queue.shift();
+
+    if (!queuedAttempt) {
+      throw new Error('QueueBackedRelayAttemptExecutor queue underflow.');
+    }
+
+    return consumeBookingAcceptedAttempt(queuedAttempt);
+  }
+}
