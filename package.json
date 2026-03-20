@@ -7,9 +7,9 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "check": "turbo run typecheck",
-    "typecheck": "turbo run typecheck",
-    "dev": "turbo run dev --parallel",
+    "check": "corepack pnpm -r --if-present typecheck",
+    "typecheck": "corepack pnpm -r --if-present typecheck",
+    "dev": "corepack pnpm exec turbo run dev --parallel",
     "dev:product": "pnpm --filter @quickwerk/product-app dev",
     "dev:admin": "pnpm --filter @quickwerk/admin-web dev",
     "dev:api": "pnpm --filter @quickwerk/platform-api dev",

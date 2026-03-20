@@ -27,14 +27,14 @@ const createPanelContent = (actionId, authEntryState) => {
   switch (actionId) {
     case 'sign-in':
       return {
-        title: 'Returning customer sign in',
-        description: 'Fast login path optimized for users who already know exactly what they need.',
+        title: 'Sign in',
+        description: 'Fast returning-customer entry, now wired to a real session token endpoint.',
         fields: [
-          ['Email address', 'marko@quickwerk.local'],
-          ['Password', '••••••••'],
+          ['Email address', 'customer.demo@quickwerk.local'],
+          ['Role', 'customer'],
         ],
-        buttonLabel: 'Continue to dashboard',
-        footerNote: 'Ideal for repeat customers who book frequently.',
+        buttonLabel: 'Continue with sign in',
+        footerNote: 'This action performs a live sign-in call against platform-api.',
       };
     case 'sign-up':
       return {
@@ -70,8 +70,9 @@ const createPanelContent = (actionId, authEntryState) => {
   }
 };
 
-export function AuthActionPanel({ actionId, authEntryState }) {
+export function AuthActionPanel({ actionId, authEntryState, isSubmitting, onPrimaryActionPress }) {
   const panelContent = createPanelContent(actionId, authEntryState);
+  const isActionEnabled = actionId === 'sign-in' && !authEntryState.isLoading && !isSubmitting;
 
   return (
     <View
@@ -93,9 +94,16 @@ export function AuthActionPanel({ actionId, authEntryState }) {
       ))}
 
       <Pressable
-        accessibilityHint="Preview action for the selected auth path."
+        accessibilityHint={
+          isActionEnabled
+            ? 'Performs a live sign-in against platform-api and refreshes session state.'
+            : 'Disabled placeholder for a future auth submission action.'
+        }
         accessibilityLabel={panelContent.buttonLabel}
         accessibilityRole="button"
+        accessibilityState={{ disabled: !isActionEnabled }}
+        disabled={!isActionEnabled}
+        onPress={onPrimaryActionPress}
         testID={`auth-action-panel-cta-${actionId}`}
         style={{
           marginTop: 14,
@@ -103,10 +111,12 @@ export function AuthActionPanel({ actionId, authEntryState }) {
           paddingVertical: 12,
           borderRadius: 12,
           backgroundColor: productAppShell.theme.color.primary,
-          opacity: authEntryState.isLoading ? 0.75 : 0.95,
+          opacity: isActionEnabled ? 1 : 0.7,
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{panelContent.buttonLabel}</Text>
+        <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
+          {isSubmitting ? 'Signing in…' : panelContent.buttonLabel}
+        </Text>
       </Pressable>
 
       <Text style={{ marginTop: 8, color: '#475569' }}>{panelContent.footerNote}</Text>

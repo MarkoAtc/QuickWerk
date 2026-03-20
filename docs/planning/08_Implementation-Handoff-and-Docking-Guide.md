@@ -436,3 +436,32 @@ Continue with another minimal, low-risk increment that keeps the same constraint
 - [ ] explicit fallback behavior for all new remote reads
 - [ ] focused tests added and passing
 - [ ] README handoff section kept in sync with actual implementation state
+
+## 29. Phase-1 Thin Vertical Slice Foundation (Auth + Booking Transitions)
+
+A minimal but real backend-backed slice is now in place for auth and booking transitions:
+
+- platform-api refactor from controller literals to module/service structure:
+  - `services/platform-api/src/auth/auth.module.ts`
+  - `services/platform-api/src/auth/auth.service.ts`
+  - `services/platform-api/src/auth/session-store.service.ts`
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - `services/platform-api/src/bookings/bookings.service.ts`
+  - `services/platform-api/src/bookings/bookings.controller.ts`
+- hardcoded auth fixture replaced with token-based in-memory sessions:
+  - `GET /api/v1/auth/session` resolves bearer token into authenticated/anonymous state
+  - `POST /api/v1/auth/sign-in` issues session token
+  - `POST /api/v1/auth/sign-out` invalidates session token
+- booking flow foundation implemented with server-side transition enforcement:
+  - `POST /api/v1/bookings` (customer role only) creates booking in `submitted`
+  - `POST /api/v1/bookings/:bookingId/accept` (provider role only) transitions `submitted -> accepted`
+  - immutable in-memory `statusHistory` appended per transition event
+- api-client contracts expanded for this slice:
+  - sign-in/sign-out helpers
+  - create booking + accept booking request builders
+- product app minimal real action path wired:
+  - sign-in CTA now calls platform-api sign-in endpoint
+  - session bootstrap refresh uses bearer token and updates authenticated state in UI
+  - focused tests added for token header propagation + sign-in/bootstrap happy path
+
+This slice intentionally does **not** include payments, full onboarding orchestration, or persistence beyond in-memory state.

@@ -10,7 +10,7 @@ const formatActionLabel = (action) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
-export function AuthEntrySection({ authEntryState }) {
+export function AuthEntrySection({ authEntryState, actionStatusMessage, isSubmitting, onPrimaryActionPress }) {
   const [selectedActionId, setSelectedActionId] = useState(authEntryState.primaryActionId);
 
   useEffect(() => {
@@ -98,7 +98,18 @@ export function AuthEntrySection({ authEntryState }) {
         })}
       </View>
 
-      <AuthActionPanel actionId={selectedActionId} authEntryState={authEntryState} />
+      <AuthActionPanel
+        actionId={selectedActionId}
+        authEntryState={authEntryState}
+        isSubmitting={isSubmitting}
+        onPrimaryActionPress={selectedActionId === 'sign-in' ? onPrimaryActionPress : undefined}
+      />
+
+      {actionStatusMessage ? (
+        <Text testID="auth-entry-action-status" style={{ marginTop: 10, color: '#0F766E' }}>
+          {actionStatusMessage}
+        </Text>
+      ) : null}
 
       <Text testID="auth-entry-helper-text" style={{ marginTop: 10, color: '#475569' }}>
         {authEntryState.helperText}
