@@ -23,7 +23,28 @@ export class InMemoryRelayAttemptExecutor implements RelayAttemptExecutor {
   }
 }
 
-type RelayAttemptQueueStatus = 'queued' | 'processed' | 'retry-scheduled' | 'dead-letter';
+export type RelayAttemptQueueStatus = 'queued' | 'processed' | 'retry-scheduled' | 'dead-letter';
+
+export type RelayQueueAttemptSummary = {
+  id: number;
+  eventId: string;
+  correlationId: string;
+  attempt: number;
+  maxAttempts: number;
+  status: RelayAttemptQueueStatus;
+  nextAttemptAt: string | null;
+  terminalMarker: boolean;
+  createdAt: string;
+  updatedAt: string;
+  processedAt: string | null;
+};
+
+export type RelayQueueMetricsSnapshot = {
+  id: number;
+  capturedAt: string;
+  correlationId: string;
+  metrics: RelayQueueMetrics;
+};
 
 type RelayAttemptInsertRow = {
   id: number;
@@ -43,6 +64,20 @@ type PersistedRelayAttemptRow = {
   terminalMarker: boolean;
 };
 
+type RelayQueueAttemptSummaryRow = {
+  id: number | string;
+  eventId: string;
+  correlationId: string;
+  attempt: number | string;
+  maxAttempts: number | string;
+  status: RelayAttemptQueueStatus;
+  nextAttemptAt: string | null;
+  terminalMarker: boolean;
+  createdAt: string;
+  updatedAt: string;
+  processedAt: string | null;
+};
+
 type RelayQueueMetricsRow = {
   depth: number | string;
   dueCount: number | string;
@@ -60,6 +95,10 @@ export type RelayQueueMetrics = {
 @Injectable()
 export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
   static readonly defaultMaxDueRetryDrainsPerTick = 8;
+  static readonly maxRetainedQueueMetricSnapshots = 200;
+
+  private readonly queueMetricsSnapshots: RelayQueueMetricsSnapshot[] = [];
+  private queueMetricsSnapshotSequence = 0;
 
   constructor(private readonly postgresClient: PostgresClient) {}
 
@@ -103,6 +142,99 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
     const now = input?.now ?? new Date();
 
     return this.loadQueueMetrics(config, now);
+  }
+
+  async listQueueAttempts(input?: {
+    limit?: number;
+    offset?: number;
+    status?: RelayAttemptQueueStatus;
+    correlationId?: string;
+    eventId?: string;
+    terminalOnly?: boolean;
+  }): Promise<{ items: RelayQueueAttemptSummary[]; hasMore: boolean; nextOffset: number | null }> {
+    const config = requirePostgresPersistenceConfig(process.env);
+    const limit = clampPaginationLimit(input?.limit, 20, 100);
+    const offset = clampPaginationOffset(input?.offset);
+
+    const whereClauses = ['1 = 1'];
+    const values: unknown[] = [];
+
+    if (input?.status) {
+      values.push(input.status);
+      whereClauses.push(`status = $${values.length}`);
+    }
+
+    if (input?.correlationId) {
+      values.push(input.correlationId);
+      whereClauses.push(`correlation_id = $${values.length}`);
+    }
+
+    if (input?.eventId) {
+      values.push(input.eventId);
+      whereClauses.push(`event_id = $${values.length}`);
+    }
+
+    if (input?.terminalOnly) {
+      whereClauses.push('terminal_marker = TRUE');
+    }
+
+    values.push(limit + 1);
+    const limitParamIndex = values.length;
+    values.push(offset);
+    const offsetParamIndex = values.length;
+
+    const query = `/* relay:list-attempts */
+      SELECT
+        id,
+        event_id AS "eventId",
+        correlation_id AS "correlationId",
+        attempt,
+        max_attempts AS "maxAttempts",
+        status,
+        next_attempt_at::text AS "nextAttemptAt",
+        terminal_marker AS "terminalMarker",
+        created_at::text AS "createdAt",
+        updated_at::text AS "updatedAt",
+        processed_at::text AS "processedAt"
+      FROM booking_accepted_relay_attempts
+      WHERE ${whereClauses.join(' AND ')}
+      ORDER BY created_at DESC, id DESC
+      LIMIT $${limitParamIndex}
+      OFFSET $${offsetParamIndex}`;
+
+    const result = await this.postgresClient.query<RelayQueueAttemptSummaryRow>(config, query, values);
+    const hasMore = result.rows.length > limit;
+    const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
+
+    return {
+      items: rows.map(mapQueueAttemptSummaryRow),
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
+    };
+  }
+
+  listQueueMetricSnapshots(input?: {
+    limit?: number;
+    offset?: number;
+    correlationId?: string;
+  }): { items: RelayQueueMetricsSnapshot[]; hasMore: boolean; nextOffset: number | null; retained: number } {
+    const limit = clampPaginationLimit(input?.limit, 20, 100);
+    const offset = clampPaginationOffset(input?.offset);
+
+    const filtered = input?.correlationId
+      ? this.queueMetricsSnapshots.filter((snapshot) => snapshot.correlationId === input.correlationId)
+      : this.queueMetricsSnapshots;
+
+    const sortedNewestFirst = [...filtered].sort((a, b) => b.id - a.id);
+    const slice = sortedNewestFirst.slice(offset, offset + limit + 1);
+    const hasMore = slice.length > limit;
+
+    return {
+      items: hasMore ? slice.slice(0, limit) : slice,
+      hasMore,
+      nextOffset: hasMore ? offset + limit : null,
+      retained: this.queueMetricsSnapshots.length,
+    };
   }
 
   private async enqueueAndProcessAttempt(
@@ -393,12 +525,39 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
   ): Promise<void> {
     const metrics = await this.loadQueueMetrics(config, now);
 
+    this.recordQueueMetricSnapshot({
+      capturedAt: now.toISOString(),
+      correlationId,
+      metrics,
+    });
+
     logStructuredBreadcrumb({
       event: 'booking.accepted.domain-event.relay.queue.observability',
       correlationId,
       status: 'started',
       details: metrics,
     });
+  }
+
+  private recordQueueMetricSnapshot(input: {
+    capturedAt: string;
+    correlationId: string;
+    metrics: RelayQueueMetrics;
+  }): void {
+    this.queueMetricsSnapshotSequence += 1;
+    this.queueMetricsSnapshots.push({
+      id: this.queueMetricsSnapshotSequence,
+      capturedAt: input.capturedAt,
+      correlationId: input.correlationId,
+      metrics: input.metrics,
+    });
+
+    if (this.queueMetricsSnapshots.length > PostgresRelayAttemptExecutor.maxRetainedQueueMetricSnapshots) {
+      this.queueMetricsSnapshots.splice(
+        0,
+        this.queueMetricsSnapshots.length - PostgresRelayAttemptExecutor.maxRetainedQueueMetricSnapshots,
+      );
+    }
   }
 
   private async loadQueueMetrics(
@@ -441,6 +600,38 @@ export class PostgresRelayAttemptExecutor implements RelayAttemptExecutor {
       processingLagMs: metrics.processingLagMs === null ? 0 : Number(metrics.processingLagMs),
     };
   }
+}
+
+function clampPaginationLimit(value: number | undefined, fallback: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.min(max, Math.floor(value ?? fallback)));
+}
+
+function clampPaginationOffset(value: number | undefined): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(value ?? 0));
+}
+
+function mapQueueAttemptSummaryRow(row: RelayQueueAttemptSummaryRow): RelayQueueAttemptSummary {
+  return {
+    id: Number(row.id),
+    eventId: row.eventId,
+    correlationId: row.correlationId,
+    attempt: Number(row.attempt),
+    maxAttempts: Number(row.maxAttempts),
+    status: row.status,
+    nextAttemptAt: row.nextAttemptAt,
+    terminalMarker: Boolean(row.terminalMarker),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    processedAt: row.processedAt,
+  };
 }
 
 function buildPayloadSnapshot(input: RelayAttemptExecutionInput): Record<string, unknown> {

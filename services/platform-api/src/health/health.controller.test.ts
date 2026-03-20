@@ -20,6 +20,13 @@ describe('HealthController', () => {
       process.env.PERSISTENCE_MODE = previousPersistenceMode;
     }
 
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS;
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_LAG_CRITICAL_MS;
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT;
+
     vi.restoreAllMocks();
   });
 
@@ -61,6 +68,10 @@ describe('HealthController', () => {
         thresholds: {
           lagWatchMs: 15000,
           lagCriticalMs: 60000,
+          depthWatchCount: 10,
+          depthCriticalCount: 50,
+          dueWatchCount: 10,
+          dueCriticalCount: 50,
         },
       },
     });
@@ -92,6 +103,45 @@ describe('HealthController', () => {
       status: 'degraded',
       relayQueue: {
         level: 'critical',
+      },
+    });
+  });
+
+  it('applies env-tuned lag/depth/dead-letter readiness thresholds', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
+    process.env.PERSISTENCE_MODE = 'postgres';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS = '2500';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_LAG_CRITICAL_MS = '5000';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT = '2';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT = '3';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT = '4';
+    process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT = '8';
+
+    const controller = new HealthController({
+      getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
+        depth: 5,
+        dueCount: 1,
+        deadLetterCount: 2,
+        processingLagMs: 1000,
+      }),
+    } as unknown as PostgresRelayAttemptExecutor);
+
+    const readiness = await controller.getReadiness();
+
+    expect(readiness).toMatchObject({
+      status: 'ready',
+      relayQueue: {
+        level: 'watch',
+        thresholds: {
+          lagWatchMs: 2500,
+          lagCriticalMs: 5000,
+          deadLetterWatchCount: 2,
+          deadLetterCriticalCount: 3,
+          depthWatchCount: 4,
+          depthCriticalCount: 8,
+          dueWatchCount: 4,
+          dueCriticalCount: 8,
+        },
       },
     });
   });

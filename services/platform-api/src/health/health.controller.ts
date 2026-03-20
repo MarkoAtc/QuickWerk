@@ -2,8 +2,10 @@ import { Controller, Get } from '@nestjs/common';
 
 import { PostgresRelayAttemptExecutor } from '../orchestration/relay-attempt-executor';
 import { resolveRelayAttemptExecutorMode } from '../orchestration/relay-attempt-executor.provider';
-
-type RelayQueueReadinessLevel = 'good' | 'watch' | 'critical';
+import {
+  deriveRelayQueueReadinessLevel,
+  resolveRelayQueueReadinessThresholds,
+} from './readiness-thresholds';
 
 @Controller('health')
 export class HealthController {
@@ -62,16 +64,9 @@ export class HealthController {
       };
     }
 
-    const thresholds = {
-      lagWatchMs: 15_000,
-      lagCriticalMs: 60_000,
-      deadLetterWatchCount: 1,
-      deadLetterCriticalCount: 5,
-      dueWatchCount: 10,
-      dueCriticalCount: 50,
-    };
+    const thresholds = resolveRelayQueueReadinessThresholds(process.env);
 
-    const level = deriveReadinessLevel(metrics, thresholds);
+    const level = deriveRelayQueueReadinessLevel(metrics, thresholds);
 
     return {
       service: 'platform-api',
@@ -90,38 +85,4 @@ export class HealthController {
       },
     };
   }
-}
-
-function deriveReadinessLevel(
-  metrics: {
-    dueCount: number;
-    deadLetterCount: number;
-    processingLagMs: number;
-  },
-  thresholds: {
-    lagWatchMs: number;
-    lagCriticalMs: number;
-    deadLetterWatchCount: number;
-    deadLetterCriticalCount: number;
-    dueWatchCount: number;
-    dueCriticalCount: number;
-  },
-): RelayQueueReadinessLevel {
-  if (
-    metrics.processingLagMs >= thresholds.lagCriticalMs ||
-    metrics.deadLetterCount >= thresholds.deadLetterCriticalCount ||
-    metrics.dueCount >= thresholds.dueCriticalCount
-  ) {
-    return 'critical';
-  }
-
-  if (
-    metrics.processingLagMs >= thresholds.lagWatchMs ||
-    metrics.deadLetterCount >= thresholds.deadLetterWatchCount ||
-    metrics.dueCount >= thresholds.dueWatchCount
-  ) {
-    return 'watch';
-  }
-
-  return 'good';
 }

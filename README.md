@@ -137,6 +137,14 @@ AUTH_SESSION_TTL_SECONDS=43200
 
 # optional: enable durable relay transport path
 BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=postgres-persistent
+
+# optional: tune readiness watch/critical thresholds (defaults shown)
+BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS=15000
+BOOKING_ACCEPTED_RELAY_READINESS_LAG_CRITICAL_MS=60000
+BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT=10
+BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT=50
+BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT=1
+BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT=5
 ```
 
 ### Run commands
@@ -254,8 +262,31 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - `relay-attempt-executor.postgres-contention.integration.test.ts` (optional real-Postgres) proves multi-executor contention safety with no double-advance
   - `health.controller.test.ts` freezes readiness counters/lag + threshold-level mapping while preserving legacy `/health` payload
 
+### Phase-2 operator queue inspection + env-tuned readiness + runbook scaffolding (completed)
+
+- operator inspection endpoints added (read-only, backward-safe):
+  - `GET /operators/relay-queue/attempts`
+    - paginated attempt listing (`limit`, `offset`) with basic filters (`status`, `correlationId`, `eventId`, `terminalOnly`)
+    - intentionally excludes payload snapshots to avoid leaking event payload internals
+  - `GET /operators/relay-queue/snapshots`
+    - current queue metrics snapshot + derived readiness level
+    - paginated in-process queue-metrics snapshot history (`limit`, `offset`, optional `correlationId` filter)
+    - includes retention metadata (`durability: process-memory`) so operators understand restart behavior
+- env-tunable readiness thresholds wired into `/health/readiness` and operator snapshot output:
+  - lag: `BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS`, `..._LAG_CRITICAL_MS`
+  - queue depth: `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT`, `..._DEPTH_CRITICAL_COUNT`
+  - dead-letter volume: `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT`, `..._DEAD_LETTER_CRITICAL_COUNT`
+  - readiness level now evaluates lag + dead-letter + backlog pressure (`max(depth, dueCount)`) with env fallbacks
+- queue degradation runbook + alert examples added:
+  - `docs/ops/relay-queue-runbook.md`
+  - includes watch/critical response playbook, triage checklist, and alert rule examples tied to readiness fields
+- focused coverage added:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
+  - `services/platform-api/src/health/health.controller.test.ts` (env-threshold path)
+- existing `GET /health` payload and existing relay structured-log contract tests remain unchanged.
+
 ### Exact next docking point
 
-1. add authenticated operator endpoint(s) for queue backlog introspection (recent attempts + dead-letter sample) without exposing payload internals publicly
-2. wire readiness threshold values to config/env so SRE can tune watch/critical cutoffs per environment
-3. add a small runbook snippet + alert examples (lag/dead-letter) tied to `GET /health/readiness` fields for on-call handoff
+1. add authN/authZ guardrails for `/operators/relay-queue/*` (operator role/session check) while keeping read-only semantics
+2. persist queue-metrics snapshots beyond process memory (lightweight table) and add bounded retention cleanup
+3. add dashboard-facing API contract examples (Grafana/Alertmanager mapping) and smoke checks for the new operator endpoints

@@ -850,8 +850,50 @@ This slice decouples durable retry draining from HTTP latency paths, exposes que
     - `booking.accepted.domain-event.relay`
   - remain unchanged and green
 
+## 41. Phase-2 Operator Queue Inspection + Env-Tuned Readiness + Runbook Examples (Completed)
+
+This slice adds read-only operator visibility for the Postgres relay queue, makes readiness thresholds env-tunable, and ships a minimal on-call runbook/alert scaffold while preserving existing public API contracts.
+
+- operator queue inspection endpoints added (read-only):
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - `GET /operators/relay-queue/attempts`
+    - supports pagination (`limit`, `offset`) and basic filters (`status`, `correlationId`, `eventId`, `terminalOnly`)
+    - returns sanitized attempt metadata (no payload snapshot internals exposed)
+  - `GET /operators/relay-queue/snapshots`
+    - returns current queue metrics snapshot + readiness level
+    - exposes paginated in-process queue metrics snapshot history (with optional `correlationId` filter)
+    - includes retention metadata and explicit `process-memory` durability hint
+- queue inspection data access added to Postgres executor:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - new `listQueueAttempts(...)` query path for metadata-only attempt inspection
+  - lightweight in-process snapshot ring buffer for queue observability samples (`maxRetainedQueueMetricSnapshots=200`)
+- readiness thresholds are now env-tunable and threaded into readiness evaluation:
+  - `services/platform-api/src/health/readiness-thresholds.ts`
+  - used by:
+    - `services/platform-api/src/health/health.controller.ts`
+    - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - env knobs:
+    - `BOOKING_ACCEPTED_RELAY_READINESS_LAG_WATCH_MS`
+    - `BOOKING_ACCEPTED_RELAY_READINESS_LAG_CRITICAL_MS`
+    - `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_WATCH_COUNT`
+    - `BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT`
+    - `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_WATCH_COUNT`
+    - `BOOKING_ACCEPTED_RELAY_READINESS_DEAD_LETTER_CRITICAL_COUNT`
+- runbook + alert examples added:
+  - `docs/ops/relay-queue-runbook.md`
+  - includes triage flow, threshold mapping, and watch/critical alert templates tied to readiness fields
+- tests added/expanded:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
+  - `services/platform-api/src/health/health.controller.test.ts` (env-threshold mapping)
+- compatibility notes:
+  - legacy `GET /health` response unchanged
+  - existing structured-log contract tests for
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+    remain unchanged and green
+
 ### Updated exact next docking point
 
-1. add authenticated operator queue-inspection endpoint(s) for recent attempts/dead-letter sampling without exposing payload internals publicly
-2. move readiness thresholds to env-configurable values for environment-specific SRE tuning
-3. add runbook + alert examples tied to readiness queue fields for on-call handoff
+1. add authN/authZ guardrails for `/operators/relay-queue/*` (operator-only access policy)
+2. persist queue snapshot history beyond process memory with bounded retention/cleanup (still lightweight)
+3. add dashboard-facing examples (Grafana/Alertmanager mapping) + endpoint smoke checks for operational handoff
