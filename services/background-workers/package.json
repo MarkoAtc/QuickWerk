@@ -12,9 +12,13 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "pnpm run build && pnpm run start",
     "start": "node dist/main.js",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@quickwerk/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
   }
 }

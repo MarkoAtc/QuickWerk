@@ -176,8 +176,25 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
     - background worker consume attempt log
     - relay result details (`workerCorrelationId`)
 
+### Phase-2 failure/terminal relay hardening (completed)
+
+- retry progression coverage is now end-to-end in relay execution (still in-memory):
+  - relay now performs deterministic retry handoff attempts up to `maxAttempts=3` when failures are simulated
+  - each relay attempt emits a structured breadcrumb (`booking.accepted.domain-event.relay.attempt`) with retry metadata and worker status
+  - deterministic backoff progression is now covered through tests for attempt sequence `1 -> 2 -> 3` with `1000ms -> 2000ms -> 4000ms`
+- terminal-path DLQ propagation proof is now integrated:
+  - exhausted retries produce `workerStatus: dead-letter`
+  - final relay details now include the worker DLQ marker (`queueName`, `reason`, `terminal`, `markedAt`)
+- targeted tests added:
+  - `services/background-workers/src/workers/booking-accepted.worker.test.ts`
+    - backoff progression assertions for attempts 2/3
+    - terminal DLQ marker assertions on exhausted attempt
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+    - retry progression integration path (`attempt 2..N`) with deterministic backoff checks
+    - terminal exhausted path asserting `dead-letter` + DLQ marker propagation
+
 ### Exact next docking point
 
-1. introduce explicit retry scheduling stub semantics in relay (attempt 2/3 handoff simulation, still in-memory)
-2. add one failure-path integration slice proving terminal DLQ marker propagation on exhausted attempts
-3. keep Redis/SQS/outbox persistence out of scope until retry + DLQ stub behavior is fully locked by tests
+1. replace env-driven failure simulation with a small injectable relay attempt policy abstraction (still in-memory) to prepare for queue adapters without changing API contracts
+2. add one focused resilience test for non-deterministic clock boundaries (`nextAttemptAt`) using a fixed test clock adapter instead of ambient `Date`
+3. keep Redis/SQS/outbox persistence out of scope until relay policy + deterministic timing seams are fully locked by tests

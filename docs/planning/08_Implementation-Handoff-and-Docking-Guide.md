@@ -628,8 +628,34 @@ This slice closes the next orchestration docking point by proving a runnable pro
     - relay result log (`booking.accepted.domain-event.relay`) + `workerCorrelationId`
   - asserts deterministic retry metadata presence in relay result details.
 
+## 34. Phase-2 Failure/Terminal Relay Hardening (Completed)
+
+This slice completes the prior relay failure-path docking work while keeping infrastructure lightweight and public APIs unchanged.
+
+- retry progression relay behavior is now explicitly covered end-to-end:
+  - `RelayBookingDomainEventPublisher` now supports deterministic in-memory retry handoff attempts up to `maxAttempts=3`
+  - each attempt emits `booking.accepted.domain-event.relay.attempt` with structured retry details
+  - deterministic backoff progression is now asserted for attempt sequence `1 -> 2 -> 3` (`1000ms -> 2000ms -> 4000ms`)
+- terminal exhausted path is now integration-proven:
+  - forced exhausted attempts produce final `workerStatus: dead-letter`
+  - relay final details now propagate the DLQ marker payload (`terminal`, `queueName`, `reason`, `markedAt`)
+- no queue persistence infra added:
+  - no Redis/SQS/outbox/runtime queue dependency introduced
+  - behavior remains in-memory stub execution for this phase
+
+### Test coverage added in this pass
+
+- background-workers unit coverage:
+  - `services/background-workers/src/workers/booking-accepted.worker.test.ts`
+  - asserts deterministic backoff for attempts 2 and 3
+  - asserts terminal DLQ marker propagation on exhausted attempts
+- platform-api integration coverage:
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - adds retry progression scenario (`attempt 2..N`) with deterministic backoff assertions
+  - adds exhausted-attempt terminal scenario with `dead-letter` + DLQ propagation assertions
+
 ### Updated exact next docking point
 
-1. add failure-path relay coverage: simulate retry attempts (`attempt` 2..N) and assert deterministic backoff progression in logs/results
-2. add terminal-path integration proof that exhausted attempts attach `BookingAcceptedDlqMarker` and surface `dead-letter` outcome consistently
-3. keep infra lightweight (no Redis/SQS/outbox persistence) until retry progression + DLQ semantics are locked by tests
+1. replace env-driven failure simulation with a small injectable relay-attempt policy seam (still in-memory, no queue infra)
+2. add one fixed-clock relay test seam for strict `nextAttemptAt` determinism under retry progression
+3. keep Redis/SQS/outbox persistence out of scope until relay policy + clock seam tests are fully locked
