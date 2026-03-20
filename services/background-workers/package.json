@@ -2,11 +2,14 @@
   "name": "@quickwerk/background-workers",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./src/index.ts"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
