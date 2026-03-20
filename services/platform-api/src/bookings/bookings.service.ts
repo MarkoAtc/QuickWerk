@@ -1,31 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
 
-import { AuthSession } from '../auth/session-store.service';
-
-type BookingStatus = 'submitted' | 'accepted';
-
-type BookingStatusEvent = {
-  changedAt: string;
-  from: BookingStatus | null;
-  to: BookingStatus;
-  actorRole: AuthSession['role'];
-  actorUserId: string;
-};
-
-type BookingRecord = {
-  bookingId: string;
-  createdAt: string;
-  customerUserId: string;
-  providerUserId?: string;
-  requestedService: string;
-  status: BookingStatus;
-  statusHistory: readonly BookingStatusEvent[];
-};
+import { AuthSession } from '../auth/domain/auth-session.repository';
+import { BOOKING_REPOSITORY, BookingRecord, BookingRepository } from './domain/booking.repository';
 
 @Injectable()
 export class BookingsService {
-  private readonly bookings = new Map<string, BookingRecord>();
+  constructor(
+    @Inject(BOOKING_REPOSITORY)
+    private readonly bookings: BookingRepository,
+  ) {}
 
   getMarketplacePreview() {
     return {
@@ -75,31 +58,18 @@ export class BookingsService {
       };
     }
 
-    const now = new Date().toISOString();
-    const bookingId = randomUUID();
-    const initialEvent: BookingStatusEvent = {
-      changedAt: now,
-      from: null,
-      to: 'submitted',
-      actorRole: session.role,
-      actorUserId: session.userId,
-    };
-
-    const record: BookingRecord = {
-      bookingId,
-      createdAt: now,
+    const created = this.bookings.createSubmittedBooking({
+      createdAt: new Date().toISOString(),
       customerUserId: session.userId,
       requestedService: input.requestedService?.trim() || 'General handyman help',
-      status: 'submitted',
-      statusHistory: [initialEvent],
-    };
-
-    this.bookings.set(bookingId, record);
+      actorRole: session.role,
+      actorUserId: session.userId,
+    });
 
     return {
       ok: true,
       statusCode: 201,
-      booking: this.serializeRecord(record),
+      booking: this.serializeRecord(created),
     };
   }
 
@@ -114,45 +84,34 @@ export class BookingsService {
       };
     }
 
-    const record = this.bookings.get(bookingId);
+    const accepted = this.bookings.acceptSubmittedBooking({
+      bookingId,
+      acceptedAt: new Date().toISOString(),
+      providerUserId: session.userId,
+      actorRole: session.role,
+      actorUserId: session.userId,
+    });
 
-    if (!record) {
-      return {
-        ok: false,
-        statusCode: 404,
-        error: 'Booking not found.',
-      };
-    }
+    if (!accepted.ok) {
+      if (accepted.reason === 'not-found') {
+        return {
+          ok: false,
+          statusCode: 404,
+          error: 'Booking not found.',
+        };
+      }
 
-    if (record.status !== 'submitted') {
       return {
         ok: false,
         statusCode: 409,
-        error: `Booking cannot transition from ${record.status} to accepted.`,
+        error: `Booking cannot transition from ${accepted.currentStatus} to accepted.`,
       };
     }
-
-    const acceptedEvent: BookingStatusEvent = {
-      changedAt: new Date().toISOString(),
-      from: record.status,
-      to: 'accepted',
-      actorRole: session.role,
-      actorUserId: session.userId,
-    };
-
-    const updated: BookingRecord = {
-      ...record,
-      status: 'accepted',
-      providerUserId: session.userId,
-      statusHistory: [...record.statusHistory, acceptedEvent],
-    };
-
-    this.bookings.set(bookingId, updated);
 
     return {
       ok: true,
       statusCode: 200,
-      booking: this.serializeRecord(updated),
+      booking: this.serializeRecord(accepted.booking),
     };
   }
 

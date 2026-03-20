@@ -101,33 +101,14 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 
 ## Exact next docking point
 
-- continue auth/session hardening and marketplace read models in small slices without widening scope
-- latest increments completed:
-  - added one richer read-model field (`responseSlaHint`) to marketplace preview sections from platform API, with sanitization + fallback in product-app
-  - added one additional trust field (`trustBadges`) with optional-field sanitization and read-only UI rendering
-  - added one quality/readiness field (`readinessNote`) with optional-field sanitization and read-only UI rendering
-  - added one tiny data-quality signal (`dataFreshnessMinutes`) with numeric sanitization and read-only UI rendering
-  - added one payload confidence signal (`payloadCompletenessPercent`) with range sanitization (0-100) and read-only UI rendering
-  - added one cross-field derived indicator (`dataFreshnessLabel`) derived from `dataFreshnessMinutes` and rendered read-only
-  - added one minimal route-level aggregate indicator (`previewHealth`) derived from section freshness/completeness signals
-  - added one tiny route-level visual severity treatment for preview health (`good`/`watch`/`critical` styling)
-  - added one small consistency signal (`sectionHealthLevel`) derived per section to align section-level and route-level status language
-  - added one small route-level summary count for section health distribution (`good/watch/critical`)
-  - added one tiny data-coverage hint (`dataCoverageHint`) when optional fields are sparse on a section
-  - added one tiny route-level rollup over section coverage hints (`coverageWell/Partial/Minimal` counters)
-  - added one tiny derived route-level narrative summary (`previewHealth.narrative`) combining health + coverage signals
-  - added one tiny deterministic severity badge token (`previewHealth.severityBadgeToken`) derived from health level for stable snapshot/UI checks
-  - added one tiny deterministic section badge token (`sectionSeverityBadgeToken`) derived from `sectionHealthLevel` for section-level visual consistency checks
-  - added one tiny route-level risk headline (`previewHealth.riskHeadline`) derived from critical/watch counts
-  - added one tiny deterministic route-level coverage band token (`previewHealth.coverageBandToken`) derived from coverage counters
-  - added one tiny deterministic section coverage band token (`dataCoverageBandToken`) for section-level coverage consistency checks
-  - added one tiny route-level alignment token (`previewHealth.alignmentToken`) derived from severity+coverage tokens for deterministic snapshot baselines
-  - added one tiny deterministic section-level alignment token (`sectionAlignmentToken`) derived from section severity+coverage tokens for section parity checks
-  - added one tiny normalized route-level status digest (`previewHealth.statusDigest`) for deterministic compact demo/debug snapshots
-  - design polish pass for client demos: improved visual hierarchy, cleaner health panel, metadata pills, refined cards, and less noisy fallback messaging on `/marketplace-preview`
-  - auth route polish pass for client demos: cleaner hero/status card, improved action pills, and refined auth panel card layout on `/auth`
-- recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, and add one tiny deterministic section-route parity summary string (per section card footer)
-  - keep route/shell reuse intact; do not fork platform-specific structure
-  - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
-- follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected
+- persistence architecture is now DB-ready at the service boundary:
+  - ADR added: `docs/planning/10_ADR-Persistence-Path-Postgres-Redis-Object-Storage.md`
+  - repository interfaces added for auth sessions + bookings
+  - in-memory adapters remain default
+  - initial SQL migration scaffold added under `services/platform-api/migrations`
+  - backend unit tests now cover session resolution/sign-out and booking auth/transition conflicts
+- next implementation slice:
+  1. add Postgres-backed repository adapters behind the existing repository interfaces
+  2. wire adapter selection by environment (`in-memory` default, `postgres` opt-in)
+  3. run migration `0001_initial_auth_bookings.sql` on local Postgres and add one thin integration test for transition persistence
+  4. keep existing in-memory unit tests as a fallback safety net

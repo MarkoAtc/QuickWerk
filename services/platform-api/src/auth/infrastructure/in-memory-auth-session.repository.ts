@@ -1,21 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
-export type SessionRole = 'customer' | 'provider';
-
-export type AuthSession = {
-  createdAt: string;
-  email: string;
-  role: SessionRole;
-  token: string;
-  userId: string;
-};
+import {
+  AuthSession,
+  AuthSessionRepository,
+  CreateAuthSessionInput,
+} from '../domain/auth-session.repository';
 
 @Injectable()
-export class SessionStoreService {
+export class InMemoryAuthSessionRepository implements AuthSessionRepository {
   private readonly sessions = new Map<string, AuthSession>();
 
-  createSession(input: { email: string; role: SessionRole }): AuthSession {
+  createSession(input: CreateAuthSessionInput): AuthSession {
     const token = randomUUID();
     const now = new Date().toISOString();
     const session: AuthSession = {

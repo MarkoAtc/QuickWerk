@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest';
+
+import { AuthService } from './auth.service';
+import { InMemoryAuthSessionRepository } from './infrastructure/in-memory-auth-session.repository';
+
+describe('AuthService', () => {
+  it('resolves anonymous state when token is missing', () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const session = service.getSession(undefined);
+
+    expect(session.sessionState).toBe('anonymous');
+    expect(session.nextStep).toBe('sign-in');
+  });
+
+  it('creates, resolves, and invalidates sessions via sign-in/sign-out', () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const signedIn = service.signIn({
+      email: 'customer@quickwerk.local',
+      role: 'customer',
+    });
+
+    expect(signedIn.sessionState).toBe('authenticated');
+    expect(signedIn.token).toBeTruthy();
+
+    const resolved = service.getSession(signedIn.token);
+    expect(resolved.sessionState).toBe('authenticated');
+    if (resolved.sessionState === 'authenticated') {
+      expect(resolved.session.email).toBe('customer@quickwerk.local');
+      expect(resolved.session.role).toBe('customer');
+    }
+
+    const signOut = service.signOut(signedIn.token);
+    expect(signOut.signedOut).toBe(true);
+
+    const afterSignOut = service.getSession(signedIn.token);
+    expect(afterSignOut.sessionState).toBe('anonymous');
+  });
+});

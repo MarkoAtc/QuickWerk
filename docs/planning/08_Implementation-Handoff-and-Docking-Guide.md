@@ -465,3 +465,38 @@ A minimal but real backend-backed slice is now in place for auth and booking tra
   - focused tests added for token header propagation + sign-in/bootstrap happy path
 
 This slice intentionally does **not** include payments, full onboarding orchestration, or persistence beyond in-memory state.
+
+## 30. DB-ready Architecture Slice (Completed)
+
+This pass moved backend architecture from pure in-memory wiring to DB-ready boundaries without changing controller/service contracts:
+
+- persistence direction locked via ADR:
+  - `docs/planning/10_ADR-Persistence-Path-Postgres-Redis-Object-Storage.md`
+  - decision: PostgreSQL (PostGIS-ready) + Redis + object storage, no Supabase runtime dependency
+  - deployment note: Vercel-hosted app surfaces remain valid with external DB/cache/storage
+- repository interfaces introduced in domain modules:
+  - auth: `src/auth/domain/auth-session.repository.ts`
+  - bookings: `src/bookings/domain/booking.repository.ts`
+- in-memory adapters remain default (drop-in for upcoming Postgres adapters):
+  - auth: `src/auth/infrastructure/in-memory-auth-session.repository.ts`
+  - bookings: `src/bookings/infrastructure/in-memory-booking.repository.ts`
+- Nest DI now binds services to repository tokens (contracts unchanged at controller level):
+  - `AuthService` consumes `AUTH_SESSION_REPOSITORY`
+  - `BookingsService` consumes `BOOKING_REPOSITORY`
+- initial SQL migration scaffolding added:
+  - `services/platform-api/migrations/0001_initial_auth_bookings.sql`
+  - `services/platform-api/migrations/README.md`
+  - tables: `users`, `sessions`, `bookings`, `booking_status_history`
+  - includes key constraints/indexes for current auth + booking transition behavior
+- backend unit tests added:
+  - `src/auth/auth.service.test.ts` (session resolution + sign-out invalidation)
+  - `src/bookings/bookings.service.test.ts` (create/accept authorization and transition conflict checks)
+
+### Updated exact next docking point
+
+Implement the first real Postgres adapter behind existing repository interfaces, with no controller/service API changes:
+
+1. add Postgres repository implementations for auth sessions and bookings
+2. wire adapter selection via environment flag (`in-memory` default, `postgres` optional)
+3. execute `0001` migration against a local Postgres instance and add a minimal adapter integration test slice
+4. keep current in-memory tests green as fallback behavior

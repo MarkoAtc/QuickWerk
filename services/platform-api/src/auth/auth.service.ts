@@ -1,12 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
-import { AuthSession, SessionRole, SessionStoreService } from './session-store.service';
+import {
+  AUTH_SESSION_REPOSITORY,
+  AuthSession,
+  AuthSessionRepository,
+  SessionRole,
+} from './domain/auth-session.repository';
 
 const publicAuthActions = ['sign-in', 'sign-up', 'password-reset'] as const;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly sessionStore: SessionStoreService) {}
+  constructor(
+    @Inject(AUTH_SESSION_REPOSITORY)
+    private readonly sessionStore: AuthSessionRepository,
+  ) {}
 
   getSession(token: string | undefined) {
     const session = this.sessionStore.resolveSession(token);
