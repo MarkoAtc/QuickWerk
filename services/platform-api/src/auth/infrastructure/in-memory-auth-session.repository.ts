@@ -11,7 +11,7 @@ import {
 export class InMemoryAuthSessionRepository implements AuthSessionRepository {
   private readonly sessions = new Map<string, AuthSession>();
 
-  createSession(input: CreateAuthSessionInput): AuthSession {
+  async createSession(input: CreateAuthSessionInput): Promise<AuthSession> {
     const token = randomUUID();
     const now = new Date().toISOString();
     const session: AuthSession = {
@@ -27,7 +27,7 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     return session;
   }
 
-  resolveSession(token: string | null | undefined): AuthSession | null {
+  async resolveSession(token: string | null | undefined): Promise<AuthSession | null> {
     if (!token) {
       return null;
     }
@@ -35,7 +35,7 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     return this.sessions.get(token) ?? null;
   }
 
-  deleteSession(token: string | null | undefined): boolean {
+  async deleteSession(token: string | null | undefined): Promise<boolean> {
     if (!token) {
       return false;
     }

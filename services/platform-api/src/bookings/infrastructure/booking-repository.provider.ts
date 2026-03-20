@@ -20,9 +20,6 @@ export function resolveBookingRepository(params: {
   }
 
   const postgresConfig = requirePostgresPersistenceConfig(env);
-  void new PostgresBookingRepository(params.postgresClient, postgresConfig);
 
-  throw new Error(
-    'PERSISTENCE_MODE=postgres is not yet enabled for bookings. Postgres repository scaffolds are in place but repository contracts are currently synchronous. Keep PERSISTENCE_MODE=in-memory until async repository migration is implemented.',
-  );
+  return new PostgresBookingRepository(params.postgresClient, postgresConfig);
 }

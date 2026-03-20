@@ -13,7 +13,7 @@ import {
 export class InMemoryBookingRepository implements BookingRepository {
   private readonly bookings = new Map<string, BookingRecord>();
 
-  createSubmittedBooking(input: CreateSubmittedBookingInput): BookingRecord {
+  async createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord> {
     const bookingId = randomUUID();
     const initialEvent = {
       changedAt: input.createdAt,
@@ -37,7 +37,7 @@ export class InMemoryBookingRepository implements BookingRepository {
     return record;
   }
 
-  acceptSubmittedBooking(input: AcceptSubmittedBookingInput): AcceptSubmittedBookingResult {
+  async acceptSubmittedBooking(input: AcceptSubmittedBookingInput): Promise<AcceptSubmittedBookingResult> {
     const current = this.bookings.get(input.bookingId);
 
     if (!current) {

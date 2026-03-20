@@ -47,9 +47,13 @@ export class BookingsService {
     } as const;
   }
 
-  createBooking(session: AuthSession, input: { requestedService?: string }):
+  async createBooking(
+    session: AuthSession,
+    input: { requestedService?: string },
+  ): Promise<
     | { ok: false; statusCode: 403; error: string }
-    | { ok: true; statusCode: 201; booking: ReturnType<BookingsService['serializeRecord']> } {
+    | { ok: true; statusCode: 201; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
     if (session.role !== 'customer') {
       return {
         ok: false,
@@ -58,7 +62,7 @@ export class BookingsService {
       };
     }
 
-    const created = this.bookings.createSubmittedBooking({
+    const created = await this.bookings.createSubmittedBooking({
       createdAt: new Date().toISOString(),
       customerUserId: session.userId,
       requestedService: input.requestedService?.trim() || 'General handyman help',
@@ -73,9 +77,13 @@ export class BookingsService {
     };
   }
 
-  acceptBooking(session: AuthSession, bookingId: string):
+  async acceptBooking(
+    session: AuthSession,
+    bookingId: string,
+  ): Promise<
     | { ok: false; statusCode: 403 | 404 | 409; error: string }
-    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> } {
+    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
     if (session.role !== 'provider') {
       return {
         ok: false,
@@ -84,7 +92,7 @@ export class BookingsService {
       };
     }
 
-    const accepted = this.bookings.acceptSubmittedBooking({
+    const accepted = await this.bookings.acceptSubmittedBooking({
       bookingId,
       acceptedAt: new Date().toISOString(),
       providerUserId: session.userId,

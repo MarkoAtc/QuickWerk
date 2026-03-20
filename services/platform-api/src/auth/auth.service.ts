@@ -16,8 +16,8 @@ export class AuthService {
     private readonly sessionStore: AuthSessionRepository,
   ) {}
 
-  getSession(token: string | undefined) {
-    const session = this.sessionStore.resolveSession(token);
+  async getSession(token: string | undefined) {
+    const session = await this.sessionStore.resolveSession(token);
 
     if (!session) {
       return {
@@ -41,20 +41,20 @@ export class AuthService {
     } as const;
   }
 
-  signIn(input: { email?: string; role?: string }) {
-    const session = this.sessionStore.createSession({
+  async signIn(input: { email?: string; role?: string }) {
+    const session = await this.sessionStore.createSession({
       email: input.email?.trim() || 'demo.customer@quickwerk.local',
       role: this.resolveRole(input.role),
     });
 
     return {
-      ...this.getSession(session.token),
+      ...(await this.getSession(session.token)),
       token: session.token,
     } as const;
   }
 
-  signOut(token: string | undefined) {
-    const signedOut = this.sessionStore.deleteSession(token);
+  async signOut(token: string | undefined) {
+    const signedOut = await this.sessionStore.deleteSession(token);
 
     return {
       resource: 'auth-session',
@@ -65,7 +65,7 @@ export class AuthService {
     } as const;
   }
 
-  resolveSessionOrNull(token: string | undefined): AuthSession | null {
+  async resolveSessionOrNull(token: string | undefined): Promise<AuthSession | null> {
     return this.sessionStore.resolveSession(token);
   }
 

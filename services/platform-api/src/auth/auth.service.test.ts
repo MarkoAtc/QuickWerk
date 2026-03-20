@@ -4,19 +4,19 @@ import { AuthService } from './auth.service';
 import { InMemoryAuthSessionRepository } from './infrastructure/in-memory-auth-session.repository';
 
 describe('AuthService', () => {
-  it('resolves anonymous state when token is missing', () => {
+  it('resolves anonymous state when token is missing', async () => {
     const service = new AuthService(new InMemoryAuthSessionRepository());
 
-    const session = service.getSession(undefined);
+    const session = await service.getSession(undefined);
 
     expect(session.sessionState).toBe('anonymous');
     expect(session.nextStep).toBe('sign-in');
   });
 
-  it('creates, resolves, and invalidates sessions via sign-in/sign-out', () => {
+  it('creates, resolves, and invalidates sessions via sign-in/sign-out', async () => {
     const service = new AuthService(new InMemoryAuthSessionRepository());
 
-    const signedIn = service.signIn({
+    const signedIn = await service.signIn({
       email: 'customer@quickwerk.local',
       role: 'customer',
     });
@@ -24,17 +24,17 @@ describe('AuthService', () => {
     expect(signedIn.sessionState).toBe('authenticated');
     expect(signedIn.token).toBeTruthy();
 
-    const resolved = service.getSession(signedIn.token);
+    const resolved = await service.getSession(signedIn.token);
     expect(resolved.sessionState).toBe('authenticated');
     if (resolved.sessionState === 'authenticated') {
       expect(resolved.session.email).toBe('customer@quickwerk.local');
       expect(resolved.session.role).toBe('customer');
     }
 
-    const signOut = service.signOut(signedIn.token);
+    const signOut = await service.signOut(signedIn.token);
     expect(signOut.signedOut).toBe(true);
 
-    const afterSignOut = service.getSession(signedIn.token);
+    const afterSignOut = await service.getSession(signedIn.token);
     expect(afterSignOut.sessionState).toBe('anonymous');
   });
 });

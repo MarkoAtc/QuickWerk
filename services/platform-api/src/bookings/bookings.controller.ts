@@ -34,17 +34,17 @@ export class BookingsController {
   }
 
   @Post()
-  createBooking(
+  async createBooking(
     @Headers('authorization') authorizationHeader: string | undefined,
     @Body() body: CreateBookingRequestBody,
   ) {
-    const session = this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
+    const session = await this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
 
     if (!session) {
       throw new HttpException('Sign-in required before creating bookings.', 401);
     }
 
-    const result = this.bookingsService.createBooking(session, body);
+    const result = await this.bookingsService.createBooking(session, body);
 
     if (!result.ok) {
       throw new HttpException(result.error, result.statusCode);
@@ -55,14 +55,17 @@ export class BookingsController {
 
   @Post(':bookingId/accept')
   @HttpCode(200)
-  acceptBooking(@Headers('authorization') authorizationHeader: string | undefined, @Param('bookingId') bookingId: string) {
-    const session = this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
+  async acceptBooking(
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const session = await this.authService.resolveSessionOrNull(extractBearerToken(authorizationHeader));
 
     if (!session) {
       throw new HttpException('Sign-in required before accepting bookings.', 401);
     }
 
-    const result = this.bookingsService.acceptBooking(session, bookingId);
+    const result = await this.bookingsService.acceptBooking(session, bookingId);
 
     if (!result.ok) {
       throw new HttpException(result.error, result.statusCode);

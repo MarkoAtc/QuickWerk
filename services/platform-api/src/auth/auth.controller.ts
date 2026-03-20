@@ -26,17 +26,17 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('session')
-  getSession(@Headers('authorization') authorizationHeader?: string) {
+  async getSession(@Headers('authorization') authorizationHeader?: string) {
     return this.authService.getSession(extractBearerToken(authorizationHeader));
   }
 
   @Post('sign-in')
-  signIn(@Body() body: SignInRequestBody) {
+  async signIn(@Body() body: SignInRequestBody) {
     return this.authService.signIn(body);
   }
 
   @Post('sign-out')
-  signOut(@Headers('authorization') authorizationHeader?: string) {
+  async signOut(@Headers('authorization') authorizationHeader?: string) {
     return this.authService.signOut(extractBearerToken(authorizationHeader));
   }
 }

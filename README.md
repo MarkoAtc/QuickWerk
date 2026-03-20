@@ -101,30 +101,50 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 
 ## Persistence mode handoff (current)
 
-- `services/platform-api` now supports explicit persistence mode selection:
-  - `PERSISTENCE_MODE=in-memory|postgres`
-  - default mode remains `in-memory` when unset
-- mode/config resolution is centralized in:
-  - `services/platform-api/src/persistence/persistence-mode.ts`
-- adapter selection is now wired in module DI providers (auth + bookings):
-  - `InMemory*Repository` remains the default runtime path
-  - `PERSISTENCE_MODE=postgres` is fail-fast gated at startup
+`services/platform-api` now runs real auth + booking persistence in either mode:
 
-### How to enable Postgres mode (current scaffold state)
+- `PERSISTENCE_MODE=in-memory|postgres`
+- default remains `in-memory`
+- mode/config resolution: `services/platform-api/src/persistence/persistence-mode.ts`
+- DI selection remains centralized in module providers for auth + bookings
+
+### What is now truly implemented in `postgres` mode
+
+- async repository contracts for auth + bookings (Promise-based)
+- auth session persistence (`PostgresAuthSessionRepository`):
+  - create session (upsert user by email, create session token)
+  - resolve session (session + user join)
+  - delete session
+- booking persistence (`PostgresBookingRepository`):
+  - create submitted booking
+  - accept transition with conflict-safe transaction + row lock (`FOR UPDATE`)
+  - immutable `booking_status_history` writes for both `submitted` and `accepted` events
+- in-memory adapters continue to run under the same async contracts
+
+### Required env vars
 
 ```bash
 PERSISTENCE_MODE=postgres
 DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>
 ```
 
-Current behavior in `postgres` mode:
-- missing `DATABASE_URL` => startup fails immediately with clear error
-- with `DATABASE_URL` => startup fails immediately with clear "not yet enabled" message
-- reason: repository contracts are currently synchronous; real Postgres IO requires async contract migration
+### Run commands
 
-### Current limitations / next steps
+From repo root:
 
-1. migrate auth + booking repository interfaces/services/controllers to async-safe contracts
-2. replace scaffolded Postgres repositories with real SQL implementations
-3. run `services/platform-api/migrations/0001_initial_auth_bookings.sql` against local Postgres and add transition persistence integration coverage
-4. keep in-memory adapters as default fallback for local UI slices and fast tests
+```bash
+# apply schema
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001_initial_auth_bookings.sql
+
+# run platform API tests + typecheck
+corepack pnpm --filter @quickwerk/platform-api test
+corepack pnpm --filter @quickwerk/platform-api typecheck
+
+# optional real DB integration test (gated)
+RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --filter @quickwerk/platform-api test
+```
+
+### Exact next docking point
+
+1. add explicit DB-level idempotency + retry envelope for booking accept under concurrent provider races (currently conflict-safe via lock/update path)
+2. add migration `0002` for session TTL/expiry enforcement (`expires_at` usage + cleanup path) and cover with integration tests

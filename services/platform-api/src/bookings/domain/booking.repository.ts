@@ -41,8 +41,8 @@ export type AcceptSubmittedBookingResult =
   | { ok: false; reason: 'not-found' | 'transition-conflict'; currentStatus?: BookingStatus };
 
 export interface BookingRepository {
-  createSubmittedBooking(input: CreateSubmittedBookingInput): BookingRecord;
-  acceptSubmittedBooking(input: AcceptSubmittedBookingInput): AcceptSubmittedBookingResult;
+  createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord>;
+  acceptSubmittedBooking(input: AcceptSubmittedBookingInput): Promise<AcceptSubmittedBookingResult>;
 }
 
 export const BOOKING_REPOSITORY = Symbol('BOOKING_REPOSITORY');

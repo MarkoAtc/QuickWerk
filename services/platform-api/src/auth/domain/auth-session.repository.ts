@@ -14,9 +14,9 @@ export type CreateAuthSessionInput = {
 };
 
 export interface AuthSessionRepository {
-  createSession(input: CreateAuthSessionInput): AuthSession;
-  resolveSession(token: string | null | undefined): AuthSession | null;
-  deleteSession(token: string | null | undefined): boolean;
+  createSession(input: CreateAuthSessionInput): Promise<AuthSession>;
+  resolveSession(token: string | null | undefined): Promise<AuthSession | null>;
+  deleteSession(token: string | null | undefined): Promise<boolean>;
 }
 
 export const AUTH_SESSION_REPOSITORY = Symbol('AUTH_SESSION_REPOSITORY');
