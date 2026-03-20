@@ -11,20 +11,26 @@ const healthLevelStyles = {
     borderColor: '#2E7D32',
     pillBackground: '#E8F5E9',
     textColor: '#2E7D32',
-    label: 'Healthy',
+    label: 'Demo-ready',
   },
   watch: {
     borderColor: '#B26A00',
     pillBackground: '#FFF4E5',
     textColor: '#B26A00',
-    label: 'Needs monitoring',
+    label: 'In progress',
   },
   critical: {
     borderColor: '#B22222',
     pillBackground: '#FDECEC',
     textColor: '#B22222',
-    label: 'At risk',
+    label: 'Early draft',
   },
+};
+
+const healthNarratives = {
+  good: 'Core customer flow is present and easy to walkthrough in a live call.',
+  watch: 'Flow is usable for a demo, with a few areas still represented as placeholders.',
+  critical: 'Flow direction is visible, but this area is still very early and mostly placeholder.',
 };
 
 function MetaPill({ text, tone = 'default', testID }) {
@@ -93,38 +99,17 @@ function PreviewSectionCard({ section }) {
           <MetaPill key={badge} text={badge} />
         ))}
 
-        {section.responseSlaHint ? <MetaPill tone="accent" text={`SLA: ${section.responseSlaHint}`} /> : null}
-        {typeof section.payloadCompletenessPercent === 'number' ? (
-          <MetaPill text={`Completeness ${section.payloadCompletenessPercent}%`} />
-        ) : null}
-        {typeof section.dataFreshnessMinutes === 'number' ? (
-          <MetaPill
-            text={`Freshness ~${section.dataFreshnessMinutes} min${section.dataFreshnessLabel ? ` (${section.dataFreshnessLabel})` : ''}`}
-          />
-        ) : null}
+        {section.responseSlaHint ? <MetaPill tone="accent" text={`Expected speed: ${section.responseSlaHint}`} /> : null}
       </View>
 
       {section.readinessNote ? (
-        <Text style={{ marginTop: 12, color: '#334155', fontStyle: 'italic' }}>Readiness note: {section.readinessNote}</Text>
-      ) : null}
-
-      {section.sectionSeverityBadgeToken ? (
-        <Text testID={`marketplace-preview-section-badge-${section.id}`} style={{ marginTop: 10, color: '#64748B', fontSize: 12 }}>
-          Section status token: {section.sectionSeverityBadgeToken}
-        </Text>
-      ) : null}
-      {section.dataCoverageBandToken ? (
-        <Text testID={`marketplace-preview-section-coverage-${section.id}`} style={{ marginTop: 4, color: '#64748B', fontSize: 12 }}>
-          Coverage token: {section.dataCoverageBandToken}
-        </Text>
+        <Text style={{ marginTop: 12, color: '#334155', fontStyle: 'italic' }}>What this demo highlights: {section.readinessNote}</Text>
       ) : null}
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={section.ctaLabel}
-        accessibilityHint="Disabled placeholder for the future shared marketplace action."
-        accessibilityState={{ disabled: true }}
-        disabled
+        accessibilityHint="Preview action for the demo flow."
         testID={`marketplace-preview-cta-${section.id}`}
         style={{
           marginTop: 14,
@@ -132,7 +117,7 @@ function PreviewSectionCard({ section }) {
           paddingHorizontal: 14,
           paddingVertical: 12,
           backgroundColor: productAppShell.theme.color.primary,
-          opacity: 0.72,
+          opacity: 0.95,
         }}
       >
         <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{section.ctaLabel}</Text>
@@ -169,8 +154,8 @@ export function MarketplacePreviewScreen() {
 
   return (
     <ProductScreenShell
-      title="Marketplace preview"
-      subtitle="A client-facing look at the post-auth customer journey: provider discovery, trust, and booking continuation."
+      title="QuickWerk customer demo"
+      subtitle="A guided preview of how customers discover providers, build trust, and continue into booking."
       testID="marketplace-preview-screen"
       contentContainerStyle={{ maxWidth: 980, alignSelf: 'center', width: '100%' }}
     >
@@ -185,7 +170,7 @@ export function MarketplacePreviewScreen() {
         }}
       >
         <Text style={{ color: productAppShell.theme.color.accent }}>
-          Data source: {isLoading ? 'loading…' : previewResult.source} · read-only preview · no production booking execution
+          Demo mode: {isLoading ? 'loading…' : previewResult.source === 'platform-api' ? 'Live preview fixtures' : 'Local fallback fixtures'}
         </Text>
 
         <View
@@ -213,41 +198,24 @@ export function MarketplacePreviewScreen() {
             >
               {levelStyle.label}
             </Text>
-            <Text style={{ color: '#0F172A', fontWeight: '600' }}>Preview health</Text>
+            <Text style={{ color: '#0F172A', fontWeight: '600' }}>Demo readiness</Text>
           </View>
 
           <Text testID="marketplace-preview-health-risk-headline" style={{ marginTop: 8, color: '#0F172A', fontWeight: '600' }}>
-            {previewResult.previewHealth.riskHeadline}
+            Demo walkthrough status
           </Text>
-          <Text style={{ marginTop: 6, color: '#334155' }}>{previewResult.previewHealth.summary}</Text>
+          <Text style={{ marginTop: 6, color: '#334155' }}>{healthNarratives[previewResult.previewHealth.level]}</Text>
 
           <View style={{ marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <MetaPill testID="marketplace-preview-health-counts" text={`good ${previewResult.previewHealth.goodSections}`} />
-            <MetaPill text={`watch ${previewResult.previewHealth.watchSections}`} />
-            <MetaPill text={`critical ${previewResult.previewHealth.criticalSections}`} />
-            <MetaPill testID="marketplace-preview-coverage-counts" text={`coverage well ${previewResult.previewHealth.coverageWellSections}`} />
-            <MetaPill text={`coverage partial ${previewResult.previewHealth.coveragePartialSections}`} />
-            <MetaPill text={`coverage minimal ${previewResult.previewHealth.coverageMinimalSections}`} />
+            <MetaPill text="Customer journey demo" />
+            <MetaPill text="Provider discovery" />
+            <MetaPill text="Booking continuation" />
           </View>
-
-          <Text testID="marketplace-preview-health-narrative" style={{ marginTop: 8, color: '#475569' }}>
-            {previewResult.previewHealth.narrative}
-          </Text>
-
-          <Text testID="marketplace-preview-health-badge-token" style={{ marginTop: 8, color: '#64748B', fontSize: 12 }}>
-            Severity token: {previewResult.previewHealth.severityBadgeToken}
-          </Text>
-          <Text testID="marketplace-preview-coverage-band-token" style={{ marginTop: 2, color: '#64748B', fontSize: 12 }}>
-            Coverage token: {previewResult.previewHealth.coverageBandToken}
-          </Text>
-          <Text testID="marketplace-preview-alignment-token" style={{ marginTop: 2, color: '#64748B', fontSize: 12 }}>
-            Alignment token: {previewResult.previewHealth.alignmentToken}
-          </Text>
         </View>
 
         {previewResult.errorMessage ? (
           <Text testID="marketplace-preview-error-message" style={{ marginTop: 10, color: '#B26A00' }}>
-            API currently unreachable, showing fallback fixtures: {previewResult.errorMessage}
+            We are currently showing local demo data to keep the walkthrough stable.
           </Text>
         ) : null}
       </View>

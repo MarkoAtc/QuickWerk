@@ -122,10 +122,12 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
   - added one tiny deterministic route-level coverage band token (`previewHealth.coverageBandToken`) derived from coverage counters
   - added one tiny deterministic section coverage band token (`dataCoverageBandToken`) for section-level coverage consistency checks
   - added one tiny route-level alignment token (`previewHealth.alignmentToken`) derived from severity+coverage tokens for deterministic snapshot baselines
+  - added one tiny deterministic section-level alignment token (`sectionAlignmentToken`) derived from section severity+coverage tokens for section parity checks
+  - added one tiny normalized route-level status digest (`previewHealth.statusDigest`) for deterministic compact demo/debug snapshots
   - design polish pass for client demos: improved visual hierarchy, cleaner health panel, metadata pills, refined cards, and less noisy fallback messaging on `/marketplace-preview`
   - auth route polish pass for client demos: cleaner hero/status card, improved action pills, and refined auth panel card layout on `/auth`
 - recommended next increment:
-  - keep `/marketplace-preview` demo-safe and read-only, but add one tiny section-level alignment token derived from section severity+coverage tokens for parity checks
+  - keep `/marketplace-preview` demo-safe and read-only, and add one tiny deterministic section-route parity summary string (per section card footer)
   - keep route/shell reuse intact; do not fork platform-specific structure
   - preserve testability pattern (`testID`, accessibility states, focused unit tests) before broadening surface area
 - follow-up after this increment: add one minimal UI-focused test path for auth-entry/marketplace-preview interaction once a React Native-compatible render harness is selected

@@ -37,14 +37,14 @@ export function AuthEntrySection({ authEntryState }) {
         {authEntryState.primaryActionLabel}
       </Text>
       <Text style={{ marginTop: 6, color: '#334155' }}>
-        {authEntryState.primaryStatus} · {authEntryState.isLoading ? 'loading' : authEntryState.source}
+        Choose a customer path and preview how the first interaction with QuickWerk will feel in production.
       </Text>
-      <Text testID="auth-entry-onboarding-step" style={{ marginTop: 6, color: '#334155' }}>
-        Recommended onboarding step: {authEntryState.recommendedOnboardingStep}
+      <Text testID="auth-entry-onboarding-step" style={{ marginTop: 6, color: '#475569' }}>
+        Next onboarding checkpoint: {authEntryState.recommendedOnboardingStep}
       </Text>
 
       <Pressable
-        accessibilityHint="Previews the primary local auth surface."
+        accessibilityHint="Highlights the primary auth action for this demo state."
         accessibilityLabel={authEntryState.primaryActionLabel}
         accessibilityRole="button"
         accessibilityState={{ disabled: authEntryState.isLoading, selected: selectedActionId === authEntryState.primaryActionId }}
@@ -63,12 +63,8 @@ export function AuthEntrySection({ authEntryState }) {
         }}
       >
         <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '700' }}>{authEntryState.primaryActionLabel}</Text>
-        <Text style={{ marginTop: 4, color: '#334155' }}>Tap to preview the primary auth surface.</Text>
+        <Text style={{ marginTop: 4, color: '#334155' }}>Primary recommended path for this user context.</Text>
       </Pressable>
-
-      <Text testID="auth-entry-status" style={{ marginTop: 10, color: '#334155' }}>
-        State token: {authEntryState.sessionState}
-      </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
         {authEntryState.availableActions.map((action) => {
@@ -77,7 +73,7 @@ export function AuthEntrySection({ authEntryState }) {
           return (
             <Pressable
               key={action}
-              accessibilityHint="Previews this local auth surface."
+              accessibilityHint="Switches the auth demo panel to this user action."
               accessibilityLabel={formatActionLabel(action)}
               accessibilityRole="button"
               accessibilityState={{ disabled: authEntryState.isLoading, selected }}
@@ -109,7 +105,7 @@ export function AuthEntrySection({ authEntryState }) {
       </Text>
       {authEntryState.errorMessage ? (
         <Text testID="auth-entry-error-message" style={{ marginTop: 8, color: '#B26A00' }}>
-          Bootstrap fallback: {authEntryState.errorMessage}
+          Local demo data is active so the walkthrough stays reliable.
         </Text>
       ) : null}
     </View>
