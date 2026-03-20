@@ -103,7 +103,7 @@ type RunAcceptBookingFlowInput = {
   requestCorrelationId?: string;
   relayAttemptPolicy?: BookingAcceptedRelayAttemptPolicy;
   relayClock?: BookingAcceptedRelayClock;
-  relayAttemptExecutorMode?: 'in-memory' | 'queue-backed';
+  relayAttemptExecutorMode?: 'in-memory' | 'postgres-persistent';
 };
 
 async function runAcceptBookingFlow(input: RunAcceptBookingFlowInput = {}) {
@@ -245,54 +245,6 @@ describe('booking accept relay integration', () => {
     expect(retryMetadata.strategy).toBe('deterministic-exponential-v1');
     expect(retryMetadata.attempt).toBe(1);
     expect(retryMetadata.maxAttempts).toBe(3);
-
-    await app.close();
-  });
-
-  it('preserves relay result semantics with queue-backed adapter mode enabled', async () => {
-    const logs = collectStructuredLogs();
-
-    const { app, acceptResponse } = await runAcceptBookingFlow({
-      requestCorrelationId: 'corr-queue-backed-adapter-001',
-      relayAttemptPolicy: createFailUntilAttemptPolicy(2),
-      relayAttemptExecutorMode: 'queue-backed',
-    });
-    const resolvedCorrelationId = acceptResponse.headers[correlationIdHeaderName];
-
-    const relayAttemptEvents = logs.filter(
-      (entry) =>
-        entry.event === 'booking.accepted.domain-event.relay.attempt' &&
-        entry.correlationId === resolvedCorrelationId,
-    );
-
-    expect(relayAttemptEvents).toHaveLength(3);
-
-    const attemptSummary = relayAttemptEvents.map((entry) => {
-      const details = entry.details as Record<string, unknown>;
-      const retry = details.retry as Record<string, unknown>;
-
-      return {
-        workerStatus: details.workerStatus,
-        attempt: retry.attempt,
-        backoffMs: retry.backoffMs,
-      };
-    });
-
-    expect(attemptSummary).toEqual([
-      { workerStatus: 'retry-scheduled', attempt: 1, backoffMs: 1000 },
-      { workerStatus: 'retry-scheduled', attempt: 2, backoffMs: 2000 },
-      { workerStatus: 'processed', attempt: 3, backoffMs: 4000 },
-    ]);
-
-    const relayResultEvent = logs.find(
-      (entry) =>
-        entry.event === 'booking.accepted.domain-event.relay' &&
-        entry.correlationId === resolvedCorrelationId,
-    );
-
-    const relayDetails = relayResultEvent?.details as Record<string, unknown>;
-    expect(relayDetails.workerStatus).toBe('processed');
-    expect(relayDetails.workerCorrelationId).toBe(resolvedCorrelationId);
 
     await app.close();
   });

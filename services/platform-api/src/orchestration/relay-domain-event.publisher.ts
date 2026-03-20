@@ -47,7 +47,7 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
     await this.loggingPublisher.publishBookingAccepted(event);
 
-    let finalWorkerResult = this.relayAttemptExecutor.execute({
+    let finalWorkerResult = await this.relayAttemptExecutor.execute({
       event,
       attempt: 1,
       maxAttempts: relayMaxAttempts,
@@ -74,7 +74,7 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
     });
 
     for (let attempt = 2; attempt <= relayMaxAttempts && finalWorkerResult.status === 'retry-scheduled'; attempt += 1) {
-      finalWorkerResult = this.relayAttemptExecutor.execute({
+      finalWorkerResult = await this.relayAttemptExecutor.execute({
         event,
         attempt,
         maxAttempts: relayMaxAttempts,

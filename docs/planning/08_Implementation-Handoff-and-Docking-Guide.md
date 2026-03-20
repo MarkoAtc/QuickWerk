@@ -743,8 +743,52 @@ This slice introduces the first queue-backed adapter variant behind `RelayAttemp
   - no structured log payload shape drift
   - no external queue transport/persistence introduced in this slice.
 
+## 38. Phase-2 Postgres-Persistent Relay Transport (Completed)
+
+This slice replaces the lightweight in-process queue internals with a durable Postgres transport path while preserving existing API behavior and relay log contracts.
+
+- persistent transport model/migration added:
+  - `services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql`
+  - table `booking_accepted_relay_attempts` captures:
+    - status (`queued|processed|retry-scheduled|dead-letter`)
+    - attempt/max attempt counters
+    - `next_attempt_at`
+    - `correlation_id`
+    - payload snapshot (`payload_snapshot`)
+    - retry snapshot (`retry_snapshot`)
+    - DLQ snapshot (`dlq_snapshot`)
+    - terminal marker (`terminal_marker`)
+- new persistent executor adapter added behind the same seam:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - introduces `PostgresRelayAttemptExecutor`
+  - execution flow in persistent mode is enqueue-then-process:
+    1. write queued attempt row
+    2. execute worker consume attempt
+    3. finalize row with processed/retry/dead-letter status + retry/DLQ metadata
+- provider/mode selection updated with explicit opt-in safety:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.ts`
+  - supported modes:
+    - `in-memory` (default)
+    - `postgres-persistent` (explicit)
+  - legacy `queue-backed` mode string is accepted as alias -> `postgres-persistent`
+  - guardrail: `postgres-persistent` requires `PERSISTENCE_MODE=postgres`
+- DI wiring updated without orchestration drift:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR` now resolves between in-memory and Postgres-persistent adapters
+  - `RelayBookingDomainEventPublisher` orchestration remains unchanged except executor calls are now awaited to support async persistent writes
+- tests added/updated:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.test.ts`
+    - covers default mode, persistent mode, legacy alias, invalid mode, and postgres guardrail
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts`
+    - covers queued->retry-scheduled persistence snapshot behavior
+    - covers queued->dead-letter persistence snapshot behavior + terminal marker
+    - verifies correlation continuity in persistent path
+  - existing structured-log payload contract tests remain unchanged and passing:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+
 ### Updated exact next docking point
 
-1. swap lightweight in-process queue adapter internals with persistent queue transport (Redis/SQS/outbox) behind the same executor seam
-2. keep relay structured-log contract tests as hard compatibility gates throughout transport migration
-3. add operational queue metrics/health breadcrumbs (depth, lag, dispatch latency) once persistent transport lands
+1. add a true durable dequeue worker loop for due retries (`next_attempt_at`) with safe row-claiming semantics (`FOR UPDATE SKIP LOCKED` or equivalent)
+2. add duplicate enqueue idempotency/reconciliation for restart/resume scenarios across multi-instance processing
+3. add persistent transport observability + health slices (depth/lag/dead-letter counters, oldest outstanding age)

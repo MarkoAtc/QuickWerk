@@ -12,6 +12,10 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
   - enforces a non-null `sessions.expires_at` policy
   - backfills existing null expiries to `created_at + 12h`
   - adds default TTL (`NOW() + 12h`) and expiry index for cleanup/query efficiency
+- `0003_booking_accepted_relay_attempts.sql`
+  - creates durable relay-attempt transport table for `booking.accepted` orchestration
+  - tracks queued/final status, attempt counters, retry timing, correlation id, payload snapshot, and DLQ terminal marker
+  - adds indexes for dequeue scans (`status + next_attempt_at`) and correlation traceability
 
 ## How to run later (manual)
 
@@ -20,6 +24,7 @@ From repository root, point `DATABASE_URL` to the target PostgreSQL database and
 ```bash
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001_initial_auth_bookings.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002_session_expiry_enforcement.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
 ```
 
 Rollback is currently manual (early scaffold phase).

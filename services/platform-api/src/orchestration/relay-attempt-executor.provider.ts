@@ -1,16 +1,17 @@
+import { resolvePersistenceMode } from '../persistence/persistence-mode';
 import {
   InMemoryRelayAttemptExecutor,
-  QueueBackedRelayAttemptExecutor,
+  PostgresRelayAttemptExecutor,
   RelayAttemptExecutor,
 } from './relay-attempt-executor';
 
-export type RelayAttemptExecutorMode = 'in-memory' | 'queue-backed';
+export type RelayAttemptExecutorMode = 'in-memory' | 'postgres-persistent';
 
 export const defaultRelayAttemptExecutorMode: RelayAttemptExecutorMode = 'in-memory';
 
 const supportedRelayAttemptExecutorModes: readonly RelayAttemptExecutorMode[] = [
   'in-memory',
-  'queue-backed',
+  'postgres-persistent',
 ];
 
 export function resolveRelayAttemptExecutorMode(
@@ -22,8 +23,12 @@ export function resolveRelayAttemptExecutorMode(
     return defaultRelayAttemptExecutorMode;
   }
 
-  if (rawMode === 'in-memory' || rawMode === 'queue-backed') {
-    return rawMode;
+  if (rawMode === 'in-memory') {
+    return 'in-memory';
+  }
+
+  if (rawMode === 'postgres-persistent' || rawMode === 'queue-backed') {
+    return 'postgres-persistent';
   }
 
   throw new Error(
@@ -33,13 +38,22 @@ export function resolveRelayAttemptExecutorMode(
 
 export function resolveRelayAttemptExecutor(params: {
   inMemoryExecutor: InMemoryRelayAttemptExecutor;
-  queueBackedExecutor: QueueBackedRelayAttemptExecutor;
+  postgresPersistentExecutor: PostgresRelayAttemptExecutor;
   env?: NodeJS.ProcessEnv;
 }): RelayAttemptExecutor {
-  const mode = resolveRelayAttemptExecutorMode(params.env);
+  const env = params.env ?? process.env;
+  const mode = resolveRelayAttemptExecutorMode(env);
 
-  if (mode === 'queue-backed') {
-    return params.queueBackedExecutor;
+  if (mode === 'postgres-persistent') {
+    const persistenceMode = resolvePersistenceMode(env);
+
+    if (persistenceMode !== 'postgres') {
+      throw new Error(
+        'BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=postgres-persistent requires PERSISTENCE_MODE=postgres.',
+      );
+    }
+
+    return params.postgresPersistentExecutor;
   }
 
   return params.inMemoryExecutor;

@@ -134,6 +134,9 @@ PERSISTENCE_MODE=postgres
 DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>
 # optional override (seconds), defaults to 43200 (12h)
 AUTH_SESSION_TTL_SECONDS=43200
+
+# optional: enable durable relay transport path
+BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=postgres-persistent
 ```
 
 ### Run commands
@@ -144,6 +147,9 @@ From repo root:
 # apply schema + expiry enforcement
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001_initial_auth_bookings.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002_session_expiry_enforcement.sql
+
+# apply durable relay transport table (needed for postgres-persistent relay mode)
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
 
 # run platform API tests + typecheck
 corepack pnpm --filter @quickwerk/platform-api test
@@ -208,30 +214,31 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - new fixed-clock boundary test asserts exact `nextAttemptAt` values across attempts
   - existing retry/dead-letter tests no longer depend on process env toggles
 
-### Phase-2 queue-backed relay adapter + provider swap (completed)
+### Phase-2 persistent relay transport (Postgres) + provider mode hardening (completed)
 
-- relay attempt execution remains behind `RelayAttemptExecutor`, now with two concrete adapters:
-  - `InMemoryRelayAttemptExecutor` (default)
-  - `QueueBackedRelayAttemptExecutor` (lightweight in-process queue; no Redis/SQS yet)
-- adapter selection is now env/config-driven:
-  - `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=in-memory|queue-backed`
-  - default stays `in-memory`
-  - unsupported values fail fast during module wiring
-- `BookingsModule` now resolves adapter via provider factory (`resolveRelayAttemptExecutor`) while keeping the existing publisher orchestration untouched.
-- compatibility guardrails kept intact:
-  - existing structured-log contract tests for
-    - `booking.accepted.domain-event.relay.attempt`
-    - `booking.accepted.domain-event.relay`
-    remain green and unchanged in payload shape expectations.
-- focused tests added for adapter selection + parity:
-  - `relay-attempt-executor.provider.test.ts` verifies default mode and queue-backed mode resolution
-  - relay integration coverage verifies queue-backed mode preserves retry/final result semantics and correlation continuity
-- scope remains intentionally limited:
-  - no external queue infrastructure introduced in this slice
-  - no public API payload changes
+- relay attempt execution remains behind `RelayAttemptExecutor`, now with:
+  - `InMemoryRelayAttemptExecutor` (default, safe behavior)
+  - `PostgresRelayAttemptExecutor` (durable transport path)
+- persistent mode is explicitly opt-in via env:
+  - `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=postgres-persistent`
+  - runtime guard: persistent mode requires `PERSISTENCE_MODE=postgres`
+  - default remains `in-memory`
+  - backwards alias `queue-backed` now maps to `postgres-persistent` to avoid config breakage during migration
+- durable relay transport schema added:
+  - migration: `services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql`
+  - tracks status (`queued|processed|retry-scheduled|dead-letter`), attempt/max-attempts, `next_attempt_at`, `correlation_id`, payload snapshot, retry snapshot, DLQ snapshot, terminal marker
+- enqueue/process semantics in persistent path:
+  - each attempt writes a queued row first, then finalizes the same row with worker outcome and retry/DLQ metadata
+  - correlation id continuity is preserved from domain event through worker result and persisted row snapshots
+- compatibility guardrails preserved:
+  - existing `booking.accepted.domain-event.relay.attempt` and `booking.accepted.domain-event.relay` structured-log contract tests remain unchanged and green
+  - publisher orchestration and public API payloads are unchanged
+- focused tests added/updated:
+  - `relay-attempt-executor.provider.test.ts` covers persistent mode selection + postgres guardrail
+  - `relay-attempt-executor.postgres.test.ts` covers queued->retry and queued->dead-letter persistence semantics (including terminal marker + correlation continuity)
 
 ### Exact next docking point
 
-1. replace lightweight in-process queue adapter internals with persistent queue transport wiring (Redis/SQS/outbox) behind the same `RelayAttemptExecutor` seam
-2. keep structured-log contract tests as hard compatibility gates during transport migration
-3. add operational observability around queue depth/lag once persistence is introduced
+1. add real dequeue worker loop semantics for persistent transport (polling/claiming due `next_attempt_at` rows with lock-safe processing), keeping current API response path unchanged
+2. add replay/idempotency guards for duplicate persistent enqueues across restarts and concurrent accept flows
+3. add queue observability breadcrumbs/metrics (depth, lag, oldest queued age, dead-letter counts) and health endpoints for the persistent path
