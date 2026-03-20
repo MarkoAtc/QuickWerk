@@ -591,8 +591,45 @@ This slice implements the first minimal orchestration handoff and correlation br
   - `services/platform-api/src/observability/correlation-id.test.ts`
     - asserts header normalization and deterministic fallback generation
 
+## 33. Phase-2 Minimal Relay Execution Path + Correlation Continuity (Completed)
+
+This slice closes the next orchestration docking point by proving a runnable producer→consumer path without introducing queue infrastructure.
+
+- lightweight relay execution path (in-memory):
+  - platform-api now routes booking domain emission through:
+    - `services/platform-api/src/orchestration/relay-domain-event.publisher.ts`
+  - relay composes existing logging emission with direct in-memory consumer invocation:
+    - `consumeBookingAcceptedAttempt` from `@quickwerk/background-workers`
+  - bookings DI wiring now points `BOOKING_DOMAIN_EVENT_PUBLISHER` to the relay publisher:
+    - `services/platform-api/src/bookings/bookings.module.ts`
+  - public API payload contracts remain unchanged.
+
+- worker envelope contract hardening for deterministic retry + DLQ schema (stub-only):
+  - shared contract additions in domain package:
+    - `BookingAcceptedRetryBackoffMetadata`
+    - `BookingAcceptedDlqMarker`
+    - `BookingAcceptedWorkerEnvelope`
+    - file: `packages/domain/src/index.ts`
+  - background-worker consumer now builds deterministic envelope metadata and returns it in attempt results:
+    - strategy: `deterministic-exponential-v1`
+    - fields: `attempt`, `maxAttempts`, `backoffMs`, `nextAttemptAt`
+  - terminal DLQ marker schema now available via helper path (`markBookingAcceptedDlq`) and attached on terminal failures.
+
+- focused integration proof for correlation continuity:
+  - added test:
+    - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - verifies booking accept flow for both:
+    - caller-provided `x-correlation-id`
+    - generated fallback correlation id
+  - asserts same correlation id continuity through:
+    - booking accept response header
+    - emitted `booking.accepted.domain-event.emit` log
+    - worker `booking.accepted.worker-consume` started log
+    - relay result log (`booking.accepted.domain-event.relay`) + `workerCorrelationId`
+  - asserts deterministic retry metadata presence in relay result details.
+
 ### Updated exact next docking point
 
-1. add a minimal relay bridge (in-memory queue/outbox fixture) connecting emitted booking events to the worker consumer stub for one executable producer->consumer slice
-2. add one focused integration test asserting correlation id continuity from booking accept write through relay into worker consume logs/results
-3. keep API payload contracts unchanged; continue using structured logs and lightweight envelopes only
+1. add failure-path relay coverage: simulate retry attempts (`attempt` 2..N) and assert deterministic backoff progression in logs/results
+2. add terminal-path integration proof that exhausted attempts attach `BookingAcceptedDlqMarker` and surface `dead-letter` outcome consistently
+3. keep infra lightweight (no Redis/SQS/outbox persistence) until retry progression + DLQ semantics are locked by tests

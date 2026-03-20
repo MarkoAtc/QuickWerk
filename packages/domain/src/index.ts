@@ -54,3 +54,26 @@ export type BookingAcceptedDomainEvent = {
     status: 'accepted';
   };
 };
+
+export type BookingAcceptedRetryBackoffMetadata = {
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+export type BookingAcceptedDlqMarker = {
+  terminal: true;
+  queueName: 'booking.accepted.dlq';
+  reason: 'max-attempts-exhausted';
+  markedAt: string;
+};
+
+export type BookingAcceptedWorkerEnvelope = {
+  eventName: 'booking.accepted';
+  correlationId: string;
+  event: BookingAcceptedDomainEvent;
+  retry: BookingAcceptedRetryBackoffMetadata;
+  dlq?: BookingAcceptedDlqMarker;
+};

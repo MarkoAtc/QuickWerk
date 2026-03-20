@@ -5,6 +5,7 @@ import {
   BOOKING_DOMAIN_EVENT_PUBLISHER,
 } from '../orchestration/domain-event.publisher';
 import { LoggingBookingDomainEventPublisher } from '../orchestration/logging-domain-event.publisher';
+import { RelayBookingDomainEventPublisher } from '../orchestration/relay-domain-event.publisher';
 import { PostgresClient } from '../persistence/postgres-client';
 import { BOOKING_REPOSITORY } from './domain/booking.repository';
 import { resolveBookingRepository } from './infrastructure/booking-repository.provider';
@@ -19,6 +20,7 @@ import { BookingsService } from './bookings.service';
     BookingsService,
     InMemoryBookingRepository,
     LoggingBookingDomainEventPublisher,
+    RelayBookingDomainEventPublisher,
     {
       provide: BOOKING_REPOSITORY,
       inject: [InMemoryBookingRepository, PostgresClient],
@@ -30,7 +32,7 @@ import { BookingsService } from './bookings.service';
     },
     {
       provide: BOOKING_DOMAIN_EVENT_PUBLISHER,
-      useExisting: LoggingBookingDomainEventPublisher,
+      useExisting: RelayBookingDomainEventPublisher,
     },
   ],
 })

@@ -153,24 +153,31 @@ corepack pnpm --filter @quickwerk/platform-api typecheck
 RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --filter @quickwerk/platform-api test
 ```
 
-### Phase-2 orchestration kickoff + observability hardening (completed)
+### Phase-2 relay slice + correlation continuity (completed)
 
-- booking write orchestration:
-  - `BookingsService.acceptBooking` now emits `booking.accepted` domain events after successful transitions (including same-provider replay accepts)
-  - event payload includes `eventId`, `occurredAt`, `replayed`, booking identifiers, and `correlationId`
-  - emission is wired through a dedicated publisher boundary in platform-api (`BOOKING_DOMAIN_EVENT_PUBLISHER`)
-- background worker consumer stub:
-  - `services/background-workers` now includes `consumeBookingAcceptedAttempt` for `booking.accepted`
-  - consumer logs structured status envelopes with explicit retry visibility (`attempt`, `maxAttempts`, and status: `processed | retry-scheduled | dead-letter`)
-- observability breadcrumbs:
-  - correlation id extraction/generation added in platform-api with header support via `x-correlation-id`
-  - deterministic fallback (`corr-<sha256-prefix>`) is used when header input is missing/invalid
-  - auth write paths (`sign-in`, `sign-out`) and booking write paths (`create`, `accept`) now emit structured correlation-aware logs
-  - booking domain event emission and worker consumer logs include the same correlation id for trace continuity
-- API contract behavior remains unchanged for response payloads (only correlation response header is added)
+- lightweight producer→consumer relay path (in-memory, no queue infra):
+  - platform-api now uses `RelayBookingDomainEventPublisher` for `booking.accepted` emission
+  - relay invokes `consumeBookingAcceptedAttempt` from `@quickwerk/background-workers` directly
+  - public API response payloads are unchanged (correlation response header behavior remains the same)
+- worker envelope contract hardening:
+  - `@quickwerk/domain` now defines `BookingAcceptedWorkerEnvelope`
+  - deterministic retry/backoff metadata fields are included:
+    - `strategy: deterministic-exponential-v1`
+    - `attempt`, `maxAttempts`, `backoffMs`, `nextAttemptAt`
+  - terminal DLQ marker schema added (stub-level only):
+    - `terminal: true`, `queueName: booking.accepted.dlq`, `reason: max-attempts-exhausted`, `markedAt`
+- correlation continuity proof:
+  - focused integration test added in platform-api:
+    - `src/bookings/booking-accept-relay.integration.test.ts`
+  - verifies booking accept request both with and without `x-correlation-id`
+  - asserts same correlation id across:
+    - booking accept request/response
+    - emitted `booking.accepted` domain event log
+    - background worker consume attempt log
+    - relay result details (`workerCorrelationId`)
 
 ### Exact next docking point
 
-1. add a minimal in-repo relay path for emitted booking domain events (outbox/in-memory queue bridge) to prove producer->consumer wiring beyond logging-only emission
-2. add one focused integration slice (platform-api + worker stub contract fixture) that asserts correlation id continuity through the relay
-3. keep contracts stable and avoid introducing heavyweight observability or queue infrastructure until this relay slice is verified
+1. introduce explicit retry scheduling stub semantics in relay (attempt 2/3 handoff simulation, still in-memory)
+2. add one failure-path integration slice proving terminal DLQ marker propagation on exhausted attempts
+3. keep Redis/SQS/outbox persistence out of scope until retry + DLQ stub behavior is fully locked by tests
