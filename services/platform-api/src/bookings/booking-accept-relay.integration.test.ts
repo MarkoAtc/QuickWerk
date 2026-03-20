@@ -4,6 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { correlationIdHeaderName } from '../observability/correlation-id';
+import {
+  BOOKING_ACCEPTED_RELAY_CLOCK,
+  type BookingAcceptedRelayClock,
+} from '../orchestration/relay-clock';
+import {
+  BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
+  type BookingAcceptedRelayAttemptPolicy,
+} from '../orchestration/relay-attempt-policy';
 import { BookingsController } from './bookings.controller';
 
 type RequestLike = {
@@ -62,10 +70,50 @@ function collectStructuredLogs() {
   return logs;
 }
 
-async function runAcceptBookingFlow(requestCorrelationId?: string) {
-  const moduleRef = await Test.createTestingModule({
+function createFailUntilAttemptPolicy(failingAttemptCount: number): BookingAcceptedRelayAttemptPolicy {
+  return {
+    shouldFailAttempt({ attempt }) {
+      return attempt <= failingAttemptCount;
+    },
+  };
+}
+
+function createFixedClock(isoInstants: string[]): BookingAcceptedRelayClock {
+  let index = 0;
+
+  return {
+    now() {
+      const selected = isoInstants[Math.min(index, isoInstants.length - 1)] ?? isoInstants[0];
+      index += 1;
+      return new Date(selected);
+    },
+  };
+}
+
+type RunAcceptBookingFlowInput = {
+  requestCorrelationId?: string;
+  relayAttemptPolicy?: BookingAcceptedRelayAttemptPolicy;
+  relayClock?: BookingAcceptedRelayClock;
+};
+
+async function runAcceptBookingFlow(input: RunAcceptBookingFlowInput = {}) {
+  const testingModuleBuilder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+
+  if (input.relayAttemptPolicy) {
+    testingModuleBuilder
+      .overrideProvider(BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY)
+      .useValue(input.relayAttemptPolicy);
+  }
+
+  if (input.relayClock) {
+    testingModuleBuilder
+      .overrideProvider(BOOKING_ACCEPTED_RELAY_CLOCK)
+      .useValue(input.relayClock);
+  }
+
+  const moduleRef = await testingModuleBuilder.compile();
 
   const app = moduleRef.createNestApplication();
   await app.init();
@@ -97,7 +145,7 @@ async function runAcceptBookingFlow(requestCorrelationId?: string) {
 
   const acceptHeaders: Record<string, string | undefined> = {
     authorization: `Bearer ${providerSession.token}`,
-    [correlationIdHeaderName]: requestCorrelationId,
+    [correlationIdHeaderName]: input.requestCorrelationId,
   };
   const acceptRequest = createRequest({
     method: 'POST',
@@ -121,7 +169,6 @@ async function runAcceptBookingFlow(requestCorrelationId?: string) {
 
 describe('booking accept relay integration', () => {
   afterEach(() => {
-    delete process.env.BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS;
     vi.restoreAllMocks();
   });
 
@@ -136,7 +183,7 @@ describe('booking accept relay integration', () => {
     },
   ])('$name', async ({ requestCorrelationId }) => {
     const logs = collectStructuredLogs();
-    const { app, acceptResponse } = await runAcceptBookingFlow(requestCorrelationId);
+    const { app, acceptResponse } = await runAcceptBookingFlow({ requestCorrelationId });
 
     const resolvedCorrelationId = acceptResponse.headers[correlationIdHeaderName];
     expect(resolvedCorrelationId).toBeTruthy();
@@ -177,10 +224,12 @@ describe('booking accept relay integration', () => {
   });
 
   it('covers retry relay progression (attempt 2..N) with deterministic backoff metadata', async () => {
-    process.env.BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS = '2';
     const logs = collectStructuredLogs();
 
-    const { app, acceptResponse } = await runAcceptBookingFlow('corr-retry-progression-001');
+    const { app, acceptResponse } = await runAcceptBookingFlow({
+      requestCorrelationId: 'corr-retry-progression-001',
+      relayAttemptPolicy: createFailUntilAttemptPolicy(2),
+    });
     const resolvedCorrelationId = acceptResponse.headers[correlationIdHeaderName];
 
     const relayAttemptEvents = logs.filter(
@@ -223,11 +272,47 @@ describe('booking accept relay integration', () => {
     await app.close();
   });
 
-  it('proves exhausted attempts propagate terminal DLQ marker with dead-letter outcome', async () => {
-    process.env.BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS = '3';
+  it('keeps nextAttemptAt deterministic at clock-boundary instants via injected fixed clock seam', async () => {
     const logs = collectStructuredLogs();
 
-    const { app, acceptResponse } = await runAcceptBookingFlow('corr-dead-letter-001');
+    const { app, acceptResponse } = await runAcceptBookingFlow({
+      requestCorrelationId: 'corr-fixed-clock-001',
+      relayAttemptPolicy: createFailUntilAttemptPolicy(2),
+      relayClock: createFixedClock([
+        '2026-03-20T10:00:00.999Z',
+        '2026-03-20T10:00:01.999Z',
+        '2026-03-20T10:00:03.999Z',
+      ]),
+    });
+    const resolvedCorrelationId = acceptResponse.headers[correlationIdHeaderName];
+
+    const relayAttemptEvents = logs.filter(
+      (entry) =>
+        entry.event === 'booking.accepted.domain-event.relay.attempt' &&
+        entry.correlationId === resolvedCorrelationId,
+    );
+
+    const attemptRetryMetadata = relayAttemptEvents.map((entry) => {
+      const details = entry.details as Record<string, unknown>;
+      return details.retry as Record<string, unknown>;
+    });
+
+    expect(attemptRetryMetadata.map((retry) => retry.nextAttemptAt)).toEqual([
+      '2026-03-20T10:00:01.999Z',
+      '2026-03-20T10:00:03.999Z',
+      '2026-03-20T10:00:07.999Z',
+    ]);
+
+    await app.close();
+  });
+
+  it('proves exhausted attempts propagate terminal DLQ marker with dead-letter outcome', async () => {
+    const logs = collectStructuredLogs();
+
+    const { app, acceptResponse } = await runAcceptBookingFlow({
+      requestCorrelationId: 'corr-dead-letter-001',
+      relayAttemptPolicy: createFailUntilAttemptPolicy(3),
+    });
     const resolvedCorrelationId = acceptResponse.headers[correlationIdHeaderName];
 
     const relayAttemptEvents = logs.filter(

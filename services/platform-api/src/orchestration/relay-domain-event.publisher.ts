@@ -1,9 +1,17 @@
 import { consumeBookingAcceptedAttempt } from '@quickwerk/background-workers';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
+import {
+  BOOKING_ACCEPTED_RELAY_CLOCK,
+  type BookingAcceptedRelayClock,
+} from './relay-clock';
+import {
+  BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY,
+  type BookingAcceptedRelayAttemptPolicy,
+} from './relay-attempt-policy';
 import { LoggingBookingDomainEventPublisher } from './logging-domain-event.publisher';
 
 const relayMaxAttempts = 3;
@@ -21,35 +29,30 @@ function mapRelayAttemptStatus(workerStatus: 'processed' | 'retry-scheduled' | '
   return 'failed' as const;
 }
 
-function resolveForcedFailuresBeforeSuccess(): number {
-  const raw = process.env.BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS;
-
-  if (!raw) {
-    return 0;
-  }
-
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
-
-  return parsed;
-}
-
 @Injectable()
 export class RelayBookingDomainEventPublisher implements BookingDomainEventPublisher {
-  constructor(private readonly loggingPublisher: LoggingBookingDomainEventPublisher) {}
+  constructor(
+    private readonly loggingPublisher: LoggingBookingDomainEventPublisher,
+    @Inject(BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY)
+    private readonly relayAttemptPolicy: BookingAcceptedRelayAttemptPolicy,
+    @Inject(BOOKING_ACCEPTED_RELAY_CLOCK)
+    private readonly relayClock: BookingAcceptedRelayClock,
+  ) {}
 
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
     await this.loggingPublisher.publishBookingAccepted(event);
 
-    const forcedFailuresBeforeSuccess = resolveForcedFailuresBeforeSuccess();
     let finalWorkerResult = consumeBookingAcceptedAttempt({
       event,
       attempt: 1,
       maxAttempts: relayMaxAttempts,
       baseBackoffMs: relayBaseBackoffMs,
-      shouldFail: forcedFailuresBeforeSuccess > 0,
+      shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+        event,
+        attempt: 1,
+        maxAttempts: relayMaxAttempts,
+      }),
+      now: this.relayClock.now(),
     });
 
     logStructuredBreadcrumb({
@@ -71,7 +74,12 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
         attempt,
         maxAttempts: relayMaxAttempts,
         baseBackoffMs: relayBaseBackoffMs,
-        shouldFail: attempt <= forcedFailuresBeforeSuccess,
+        shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+          event,
+          attempt,
+          maxAttempts: relayMaxAttempts,
+        }),
+        now: this.relayClock.now(),
       });
 
       logStructuredBreadcrumb({

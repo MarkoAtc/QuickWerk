@@ -193,8 +193,23 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
     - retry progression integration path (`attempt 2..N`) with deterministic backoff checks
     - terminal exhausted path asserting `dead-letter` + DLQ marker propagation
 
+### Phase-2 relay policy + fixed-clock seams (completed)
+
+- relay failure simulation is now seam-driven instead of env-driven hacks:
+  - introduced `BookingAcceptedRelayAttemptPolicy` with DI token `BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY`
+  - default runtime policy is `NoopBookingAcceptedRelayAttemptPolicy` (keeps normal in-memory success path unchanged)
+  - tests now inject attempt policies directly (`createFailUntilAttemptPolicy`) to drive retry/dead-letter scenarios deterministically
+- deterministic clock seam introduced for relay retry timing:
+  - introduced `BookingAcceptedRelayClock` with DI token `BOOKING_ACCEPTED_RELAY_CLOCK`
+  - default runtime clock is `SystemBookingAcceptedRelayClock`
+  - relay now passes injected clock instants into worker attempts (`now`) so retry `nextAttemptAt` is test-deterministic
+- targeted integration coverage expanded:
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - new fixed-clock boundary test asserts exact `nextAttemptAt` values across attempts
+  - existing retry/dead-letter tests no longer depend on process env toggles
+
 ### Exact next docking point
 
-1. replace env-driven failure simulation with a small injectable relay attempt policy abstraction (still in-memory) to prepare for queue adapters without changing API contracts
-2. add one focused resilience test for non-deterministic clock boundaries (`nextAttemptAt`) using a fixed test clock adapter instead of ambient `Date`
-3. keep Redis/SQS/outbox persistence out of scope until relay policy + deterministic timing seams are fully locked by tests
+1. extract relay attempt execution into a small in-memory adapter boundary (`RelayAttemptExecutor`) so queue adapters can later attach without changing `RelayBookingDomainEventPublisher`
+2. add contract-level tests that pin relay attempt log payload shape (`relay.attempt` + final `relay`) for future adapter swaps
+3. keep Redis/SQS/outbox persistence out of scope until adapter boundary + contract tests are locked

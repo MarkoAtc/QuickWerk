@@ -654,8 +654,40 @@ This slice completes the prior relay failure-path docking work while keeping inf
   - adds retry progression scenario (`attempt 2..N`) with deterministic backoff assertions
   - adds exhausted-attempt terminal scenario with `dead-letter` + DLQ propagation assertions
 
+## 35. Phase-2 Relay Attempt Policy + Fixed Clock Seams (Completed)
+
+This slice removes env-based retry simulation hacks and introduces deterministic timing seams while keeping relay execution in-memory and API contracts unchanged.
+
+- relay attempt policy seam introduced (DI-driven):
+  - `services/platform-api/src/orchestration/relay-attempt-policy.ts`
+  - adds token + contract:
+    - `BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY`
+    - `BookingAcceptedRelayAttemptPolicy`
+  - default runtime implementation:
+    - `NoopBookingAcceptedRelayAttemptPolicy`
+  - relay publisher now consumes policy decisions per attempt rather than reading process env.
+
+- fixed clock seam introduced for deterministic retry timing:
+  - `services/platform-api/src/orchestration/relay-clock.ts`
+  - adds token + contract:
+    - `BOOKING_ACCEPTED_RELAY_CLOCK`
+    - `BookingAcceptedRelayClock`
+  - default runtime implementation:
+    - `SystemBookingAcceptedRelayClock`
+  - relay passes injected clock timestamps into worker attempt input (`now`) so `nextAttemptAt` can be pinned in tests.
+
+- bookings module wiring updated:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - binds default relay policy + clock implementations via DI (`useExisting`) without changing external behavior.
+
+- integration tests migrated to seam injection and hardened:
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - env toggles removed (`BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS` no longer used)
+  - retry/dead-letter scenarios now inject `createFailUntilAttemptPolicy(...)`
+  - adds fixed-clock boundary test that asserts exact `nextAttemptAt` values under retry progression.
+
 ### Updated exact next docking point
 
-1. replace env-driven failure simulation with a small injectable relay-attempt policy seam (still in-memory, no queue infra)
-2. add one fixed-clock relay test seam for strict `nextAttemptAt` determinism under retry progression
-3. keep Redis/SQS/outbox persistence out of scope until relay policy + clock seam tests are fully locked
+1. extract relay attempt execution into a thin in-memory adapter boundary (e.g., `RelayAttemptExecutor`) so future queue adapters can attach without changing publisher orchestration flow
+2. add relay contract tests that freeze structured-log payload shape for `booking.accepted.domain-event.relay.attempt` + final `booking.accepted.domain-event.relay`
+3. keep Redis/SQS/outbox persistence out of scope until adapter boundary + contract tests are stabilized
