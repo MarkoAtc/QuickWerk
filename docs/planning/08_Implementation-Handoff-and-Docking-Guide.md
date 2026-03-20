@@ -787,8 +787,43 @@ This slice replaces the lightweight in-process queue internals with a durable Po
     - `booking.accepted.domain-event.relay.attempt`
     - `booking.accepted.domain-event.relay`
 
+## 39. Phase-2 Persistent Dequeue + Retry Drain Loop (Completed)
+
+This slice closes the first durable retry-processing gap for Postgres-persistent relay mode while keeping publisher orchestration and API payload contracts unchanged.
+
+- dequeue/claim loop added for due retries:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - `PostgresRelayAttemptExecutor` now drains due rows in bounded batches per `execute(...)` call
+  - due eligibility:
+    - `status = 'retry-scheduled'`
+    - `next_attempt_at <= now`
+    - no already-materialized successor attempt row (`NOT EXISTS event_id + attempt+1`)
+  - lock-safe claiming uses `FOR UPDATE SKIP LOCKED` inside transaction scope
+- durable progression semantics:
+  - claimed due rows materialize successor attempt rows (`attempt + 1`) with persisted payload snapshots
+  - successor processing reuses the same finalization path and status mapping:
+    - `processed`
+    - `retry-scheduled`
+    - `dead-letter`
+  - duplicate enqueue of same `(event_id, attempt)` is now idempotent (`ON CONFLICT DO NOTHING`) and resolves against persisted state
+- restart-safe deterministic reclaim semantics:
+  - if a row exists in `queued` state (crash between enqueue and finalize), subsequent execute calls reclaim and finalize it
+  - due retries are advanced only when successor attempt rows are absent, preventing double-advance after restart/race conditions
+- minimal observability added:
+  - emits queue breadcrumb `booking.accepted.domain-event.relay.queue.observability`
+  - details include:
+    - `depth`
+    - `dueCount`
+    - `deadLetterCount`
+    - `processingLagMs` (oldest due item lag hint)
+- tests added/expanded:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts`
+    - verifies lock-safe dequeue progression behavior and retry advancement continuity
+    - verifies correlation continuity remains intact for derived retry attempts
+    - keeps queued->retry and queued->dead-letter snapshot checks green
+
 ### Updated exact next docking point
 
-1. add a true durable dequeue worker loop for due retries (`next_attempt_at`) with safe row-claiming semantics (`FOR UPDATE SKIP LOCKED` or equivalent)
-2. add duplicate enqueue idempotency/reconciliation for restart/resume scenarios across multi-instance processing
-3. add persistent transport observability + health slices (depth/lag/dead-letter counters, oldest outstanding age)
+1. move the dequeue/retry drain loop into a dedicated worker tick (same claim semantics) to decouple queue catch-up from request path latency
+2. expose queue depth/lag/dead-letter metrics via health/readiness endpoints and add threshold-based alert guidance
+3. add real-Postgres parallel executor integration tests to prove no-double-advance behavior across multi-instance contention

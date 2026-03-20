@@ -229,16 +229,26 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - tracks status (`queued|processed|retry-scheduled|dead-letter`), attempt/max-attempts, `next_attempt_at`, `correlation_id`, payload snapshot, retry snapshot, DLQ snapshot, terminal marker
 - enqueue/process semantics in persistent path:
   - each attempt writes a queued row first, then finalizes the same row with worker outcome and retry/DLQ metadata
+  - duplicate enqueue calls are idempotent (`ON CONFLICT DO NOTHING`) and resolve to persisted outcome snapshots
   - correlation id continuity is preserved from domain event through worker result and persisted row snapshots
+- durable dequeue + retry loop semantics added:
+  - executor now drains due retry rows (`status=retry-scheduled`, `next_attempt_at <= now`) in bounded batches per call
+  - due-row claiming uses `FOR UPDATE SKIP LOCKED` + successor-attempt existence guard to avoid duplicate progression under concurrency
+  - claimed due rows materialize the next attempt row (`attempt + 1`) and process it through the same finalization path (`processed|retry-scheduled|dead-letter`)
+- restart-safe reclaim semantics:
+  - if an attempt row already exists in `queued` state (e.g., crash between enqueue and finalize), later execute calls reclaim and finalize that row deterministically
+  - due retry rows are only advanced when no successor attempt row exists, making resume behavior deterministic after restarts
+- minimal queue observability breadcrumbs:
+  - emits `booking.accepted.domain-event.relay.queue.observability` with `depth`, `dueCount`, `deadLetterCount`, and `processingLagMs`
 - compatibility guardrails preserved:
   - existing `booking.accepted.domain-event.relay.attempt` and `booking.accepted.domain-event.relay` structured-log contract tests remain unchanged and green
   - publisher orchestration and public API payloads are unchanged
 - focused tests added/updated:
   - `relay-attempt-executor.provider.test.ts` covers persistent mode selection + postgres guardrail
-  - `relay-attempt-executor.postgres.test.ts` covers queued->retry and queued->dead-letter persistence semantics (including terminal marker + correlation continuity)
+  - `relay-attempt-executor.postgres.test.ts` now also covers lock-safe due dequeue progression and correlation continuity for derived retry attempts
 
 ### Exact next docking point
 
-1. add real dequeue worker loop semantics for persistent transport (polling/claiming due `next_attempt_at` rows with lock-safe processing), keeping current API response path unchanged
-2. add replay/idempotency guards for duplicate persistent enqueues across restarts and concurrent accept flows
-3. add queue observability breadcrumbs/metrics (depth, lag, oldest queued age, dead-letter counts) and health endpoints for the persistent path
+1. move retry drain from request-coupled execute path into dedicated background worker tick (same claim SQL, bounded batch) so HTTP latency is decoupled from queue catch-up
+2. expose queue metrics via health/readiness endpoint surface (not only breadcrumbs) and add alert thresholds for sustained lag/dead-letter growth
+3. add multi-instance concurrency integration test against real Postgres to validate claim fairness and no-double-advance guarantees under parallel executors
