@@ -1037,9 +1037,65 @@ This slice replaces demo-only preview screens with real thin functional flows th
 - existing demo/preview routes (`/auth`, `/marketplace-preview`) remain untouched
 - no package boundary restructuring
 
-## 45. Updated Exact Next Docking Point
+## 45. Provider Booking Discovery + List Endpoint (Completed)
+
+This slice closes the UX gap where providers had no way to discover open bookings without knowing the ID upfront.
+
+### Backend: `GET /api/v1/bookings`
+- new endpoint in `BookingsController` — bearer auth required (401 on missing/invalid session)
+- role-scoped responses:
+  - providers receive all `submitted` bookings (available to accept)
+  - customers receive their own bookings (all statuses)
+- returns array of booking summaries: `bookingId`, `status`, `requestedService`, `createdAt`, `customerUserId`
+- added `BookingSummary` type and `ListBookingsFilter` union to `booking.repository.ts`
+- `listBookings(filter)` implemented in both:
+  - `InMemoryBookingRepository` — in-memory filter by status/ownership
+  - `PostgresBookingRepository` — SQL query with WHERE clause variants
+- `BookingsService.listBookings(session)` routes to correct filter based on role
+
+### API Client: `packages/api-client/src/index.ts`
+- added `bookingApiRoutes.list` route (= `GET /api/v1/bookings`)
+- added `createListBookingsRequest(sessionToken)` builder
+
+### Frontend: Provider screen redesign
+- `apps/product-app/src/features/provider/provider-screen-actions.ts`
+  - added `listBookingsRequest(sessionToken, fetchImpl?)` action
+  - exported `BookingSummaryItem` and `ListBookingsResult` types
+- `apps/product-app/src/features/provider/provider-screen.js`
+  - on mount: fetches open bookings list via new endpoint
+  - displays list of submitted bookings (service description + truncated ID per row)
+  - each row has an inline "Accept" button — no manual ID entry required
+  - loading/empty/error states with retry/refresh affordances
+  - accepted booking confirmation with "Accept another" reset flow
+  - sign-out button preserved
+
+### Tests added
+- `services/platform-api/src/bookings/bookings.service.test.ts`
+  - `listBookings — provider sees all submitted bookings, customer sees only their own` (3 actors)
+  - `listBookings — provider does not see accepted bookings`
+  - `listBookings — returns empty array when no bookings exist`
+- `apps/product-app/src/features/provider/provider-screen-actions.test.ts`
+  - `listBookingsRequest — returns array of booking summaries on success`
+  - `listBookingsRequest — returns empty array when no bookings exist`
+  - `listBookingsRequest — returns error on non-OK response`
+  - `listBookingsRequest — returns error when response is not an array`
+  - `listBookingsRequest — returns error when fetch throws`
+
+### Validation
+- `corepack pnpm --filter @quickwerk/platform-api test` → 70 tests passing (+3 new)
+- `corepack pnpm --filter @quickwerk/platform-api typecheck` → clean
+- `corepack pnpm --filter @quickwerk/product-app test` → 47 tests passing (+5 new)
+- `corepack pnpm check` → all workspace typechecks clean
+
+### Scope controls preserved
+- no persistent session storage changes
+- no payment/onboarding/profile flows touched
+- existing demo/preview routes untouched
+- no package boundary restructuring
+
+## 46. Updated Exact Next Docking Point
 
 1. add React Context-based session provider to replace module-global session store (makes testing and server rendering safer)
-2. add sign-out on the booking and provider screens that calls `POST /api/v1/auth/sign-out`
-3. implement a minimal booking list view for the provider (fetch submitted bookings before accepting)
-4. add e2e smoke test that runs sign-in → create booking → accept booking against a running local API
+2. add sign-out on the booking screen that calls `POST /api/v1/auth/sign-out`
+3. add e2e smoke test that runs sign-in → create booking → list bookings (provider) → accept booking against a running local API
+4. add `GET /api/v1/bookings/:bookingId` single-booking read endpoint for customers to check their booking status

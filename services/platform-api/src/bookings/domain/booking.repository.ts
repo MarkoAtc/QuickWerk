@@ -44,9 +44,22 @@ export type AcceptSubmittedBookingResult =
       currentProviderUserId?: string;
     };
 
+export type BookingSummary = {
+  bookingId: string;
+  status: BookingStatus;
+  requestedService: string;
+  createdAt: string;
+  customerUserId: string;
+};
+
+export type ListBookingsFilter =
+  | { scope: 'submitted-only' }
+  | { scope: 'customer-owned'; customerUserId: string };
+
 export interface BookingRepository {
   createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord>;
   acceptSubmittedBooking(input: AcceptSubmittedBookingInput): Promise<AcceptSubmittedBookingResult>;
+  listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]>;
 }
 
 export const BOOKING_REPOSITORY = Symbol('BOOKING_REPOSITORY');

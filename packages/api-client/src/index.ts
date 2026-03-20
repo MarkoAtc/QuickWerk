@@ -15,6 +15,7 @@ export const authApiRoutes = {
 
 export const bookingApiRoutes = {
   preview: `${apiRoutes.bookings}/preview`,
+  list: apiRoutes.bookings,
   create: apiRoutes.bookings,
   accept: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/accept`,
 } as const;
@@ -58,6 +59,12 @@ export const createBookingRequest = (sessionToken: string, body: CreateBookingRe
   path: bookingApiRoutes.create,
   headers: { authorization: `Bearer ${sessionToken}` },
   body,
+}) as const;
+
+export const createListBookingsRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.list,
+  headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 
 export const createAcceptBookingRequest = (sessionToken: string, bookingId: string) => ({

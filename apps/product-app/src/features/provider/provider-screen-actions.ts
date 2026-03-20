@@ -1,6 +1,18 @@
-import { createAcceptBookingRequest } from '@quickwerk/api-client';
+import { createAcceptBookingRequest, createListBookingsRequest } from '@quickwerk/api-client';
 
 import { runtimeConfig } from '../../shared/runtime-config';
+
+export type BookingSummaryItem = {
+  bookingId: string;
+  status: string;
+  requestedService: string;
+  createdAt: string;
+  customerUserId: string;
+};
+
+export type ListBookingsResult =
+  | { bookings: BookingSummaryItem[]; errorMessage?: undefined }
+  | { bookings?: undefined; errorMessage: string };
 
 type AcceptBookingInput = {
   sessionToken: string;
@@ -18,6 +30,47 @@ type AcceptedBooking = {
 type AcceptBookingResult =
   | { booking: AcceptedBooking; errorMessage?: undefined }
   | { booking?: undefined; errorMessage: string };
+
+export async function listBookingsRequest(
+  sessionToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ListBookingsResult> {
+  const request = createListBookingsRequest(sessionToken);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: request.headers,
+    });
+
+    if (!response.ok) {
+      return { errorMessage: `List bookings failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as unknown;
+
+    if (!Array.isArray(payload)) {
+      return { errorMessage: 'List bookings response was not an array.' };
+    }
+
+    const bookings: BookingSummaryItem[] = payload.map((item: unknown) => {
+      const b = item as Record<string, unknown>;
+      return {
+        bookingId: typeof b['bookingId'] === 'string' ? b['bookingId'] : '',
+        status: typeof b['status'] === 'string' ? b['status'] : '',
+        requestedService: typeof b['requestedService'] === 'string' ? b['requestedService'] : '',
+        createdAt: typeof b['createdAt'] === 'string' ? b['createdAt'] : '',
+        customerUserId: typeof b['customerUserId'] === 'string' ? b['customerUserId'] : '',
+      };
+    });
+
+    return { bookings };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown list bookings failure.',
+    };
+  }
+}
 
 export async function acceptBookingRequest(
   input: AcceptBookingInput,

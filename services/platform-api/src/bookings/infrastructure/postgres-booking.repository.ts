@@ -8,7 +8,9 @@ import {
   BookingRepository,
   BookingStatus,
   BookingStatusEvent,
+  BookingSummary,
   CreateSubmittedBookingInput,
+  ListBookingsFilter,
 } from '../domain/booking.repository';
 import { PostgresClient } from '../../persistence/postgres-client';
 import { PostgresPersistenceConfig } from '../../persistence/persistence-mode';
@@ -146,6 +148,58 @@ export class PostgresBookingRepository implements BookingRepository {
     });
 
     return result;
+  }
+
+  async listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]> {
+    let rows: Array<{
+      id: string;
+      status: BookingStatus;
+      requested_service: string;
+      created_at: Date | string;
+      customer_user_id: string;
+    }>;
+
+    if (filter.scope === 'submitted-only') {
+      const result = await this.postgresClient.query<{
+        id: string;
+        status: BookingStatus;
+        requested_service: string;
+        created_at: Date | string;
+        customer_user_id: string;
+      }>(
+        this.postgresConfig,
+        `SELECT id::text, status, requested_service, created_at, customer_user_id::text
+         FROM bookings
+         WHERE status = 'submitted'
+         ORDER BY created_at ASC`,
+        [],
+      );
+      rows = result.rows;
+    } else {
+      const result = await this.postgresClient.query<{
+        id: string;
+        status: BookingStatus;
+        requested_service: string;
+        created_at: Date | string;
+        customer_user_id: string;
+      }>(
+        this.postgresConfig,
+        `SELECT id::text, status, requested_service, created_at, customer_user_id::text
+         FROM bookings
+         WHERE customer_user_id = $1::uuid
+         ORDER BY created_at DESC`,
+        [filter.customerUserId],
+      );
+      rows = result.rows;
+    }
+
+    return rows.map((row) => ({
+      bookingId: row.id,
+      status: row.status,
+      requestedService: row.requested_service,
+      createdAt: toIsoString(row.created_at),
+      customerUserId: row.customer_user_id,
+    }));
   }
 
   private async loadBookingOrThrow(bookingId: string): Promise<BookingRecord> {

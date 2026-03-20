@@ -9,7 +9,7 @@ import {
   BOOKING_DOMAIN_EVENT_PUBLISHER,
   BookingDomainEventPublisher,
 } from '../orchestration/domain-event.publisher';
-import { BOOKING_REPOSITORY, BookingRecord, BookingRepository } from './domain/booking.repository';
+import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
 
 @Injectable()
 export class BookingsService {
@@ -55,6 +55,15 @@ export class BookingsService {
         },
       ],
     } as const;
+  }
+
+  async listBookings(session: AuthSession): Promise<BookingSummary[]> {
+    if (session.role === 'provider') {
+      return this.bookings.listBookings({ scope: 'submitted-only' });
+    }
+
+    // customer or operator sees their own bookings
+    return this.bookings.listBookings({ scope: 'customer-owned', customerUserId: session.userId });
   }
 
   async createBooking(

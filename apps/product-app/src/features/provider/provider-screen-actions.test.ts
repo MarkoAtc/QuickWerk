@@ -1,6 +1,91 @@
 import { describe, expect, it } from 'vitest';
 
-import { acceptBookingRequest } from './provider-screen-actions';
+import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
+
+describe('listBookingsRequest', () => {
+  it('returns array of booking summaries on success', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => [
+          {
+            bookingId: 'bk-001',
+            status: 'submitted',
+            requestedService: 'Fix the boiler',
+            createdAt: '2026-03-20T10:00:00.000Z',
+            customerUserId: 'usr-001',
+          },
+          {
+            bookingId: 'bk-002',
+            status: 'submitted',
+            requestedService: 'Install shelves',
+            createdAt: '2026-03-20T11:00:00.000Z',
+            customerUserId: 'usr-002',
+          },
+        ],
+      }) as Response;
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result.errorMessage).toBeUndefined();
+    expect(result.bookings).toHaveLength(2);
+    expect(result.bookings?.[0]).toMatchObject({
+      bookingId: 'bk-001',
+      status: 'submitted',
+      requestedService: 'Fix the boiler',
+    });
+  });
+
+  it('returns empty array when no bookings exist', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => [],
+      }) as Response;
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result.errorMessage).toBeUndefined();
+    expect(result.bookings).toEqual([]);
+  });
+
+  it('returns error on non-OK response', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: false,
+        status: 401,
+      }) as Response;
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result.errorMessage).toMatch('401');
+    expect(result.bookings).toBeUndefined();
+  });
+
+  it('returns error when response is not an array', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({ error: 'unexpected shape' }),
+      }) as Response;
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result.errorMessage).toMatch(/not an array/);
+    expect(result.bookings).toBeUndefined();
+  });
+
+  it('returns error when fetch throws', async () => {
+    const fetchMock = async () => {
+      throw new Error('Network failure');
+    };
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result.errorMessage).toBe('Network failure');
+    expect(result.bookings).toBeUndefined();
+  });
+});
 
 describe('acceptBookingRequest', () => {
   it('returns accepted booking on success', async () => {

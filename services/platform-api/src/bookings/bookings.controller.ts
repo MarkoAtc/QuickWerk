@@ -31,6 +31,32 @@ export class BookingsController {
     return this.bookingsService.getMarketplacePreview();
   }
 
+  @Get()
+  async listBookings(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to list bookings.', 401);
+    }
+
+    return this.bookingsService.listBookings(session);
+  }
+
   @Post()
   async createBooking(
     @Req() request: RequestLike,

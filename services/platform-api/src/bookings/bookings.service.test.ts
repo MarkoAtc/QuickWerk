@@ -150,6 +150,69 @@ describe('BookingsService', () => {
     }
   });
 
+  it('listBookings — provider sees all submitted bookings, customer sees only their own', async () => {
+    const { service } = createService();
+    const customer1 = createSession('customer', 'customer-1');
+    const customer2 = createSession('customer', 'customer-2');
+    const provider = createSession('provider', 'provider-1');
+
+    // customer1 creates two bookings
+    const created1 = await service.createBooking(customer1, { requestedService: 'Plumbing' });
+    const created2 = await service.createBooking(customer1, { requestedService: 'Electric repair' });
+    // customer2 creates one booking
+    const created3 = await service.createBooking(customer2, { requestedService: 'Painting' });
+
+    expect(created1.ok).toBe(true);
+    expect(created2.ok).toBe(true);
+    expect(created3.ok).toBe(true);
+
+    // provider sees all 3 submitted
+    const providerList = await service.listBookings(provider);
+    expect(providerList).toHaveLength(3);
+    expect(providerList.every((b) => b.status === 'submitted')).toBe(true);
+
+    // customer1 sees only their 2
+    const customer1List = await service.listBookings(customer1);
+    expect(customer1List).toHaveLength(2);
+    expect(customer1List.every((b) => b.customerUserId === 'customer-1')).toBe(true);
+
+    // customer2 sees only their 1
+    const customer2List = await service.listBookings(customer2);
+    expect(customer2List).toHaveLength(1);
+    expect(customer2List[0]?.customerUserId).toBe('customer-2');
+  });
+
+  it('listBookings — provider does not see accepted bookings', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Door lock change' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    // accept the booking
+    await service.acceptBooking(provider, created.booking.bookingId);
+
+    // provider list should be empty now
+    const providerList = await service.listBookings(provider);
+    expect(providerList).toHaveLength(0);
+
+    // customer should still see their accepted booking
+    const customerList = await service.listBookings(customer);
+    expect(customerList).toHaveLength(1);
+    expect(customerList[0]?.status).toBe('accepted');
+  });
+
+  it('listBookings — returns empty array when no bookings exist', async () => {
+    const { service } = createService();
+    const provider = createSession('provider', 'provider-1');
+    const customer = createSession('customer', 'customer-1');
+
+    expect(await service.listBookings(provider)).toEqual([]);
+    expect(await service.listBookings(customer)).toEqual([]);
+  });
+
   it('emits booking accepted domain events with correlation breadcrumbs', async () => {
     const { service, emittedEvents } = createService();
     const customer = createSession('customer', 'customer-1');

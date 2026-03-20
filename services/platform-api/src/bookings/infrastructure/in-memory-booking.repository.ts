@@ -6,7 +6,9 @@ import {
   AcceptSubmittedBookingResult,
   BookingRecord,
   BookingRepository,
+  BookingSummary,
   CreateSubmittedBookingInput,
+  ListBookingsFilter,
 } from '../domain/booking.repository';
 
 @Injectable()
@@ -83,5 +85,22 @@ export class InMemoryBookingRepository implements BookingRepository {
       booking: updated,
       replayed: false,
     };
+  }
+
+  async listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]> {
+    const all = Array.from(this.bookings.values());
+
+    const filtered =
+      filter.scope === 'submitted-only'
+        ? all.filter((b) => b.status === 'submitted')
+        : all.filter((b) => b.customerUserId === filter.customerUserId);
+
+    return filtered.map((b) => ({
+      bookingId: b.bookingId,
+      status: b.status,
+      requestedService: b.requestedService,
+      createdAt: b.createdAt,
+      customerUserId: b.customerUserId,
+    }));
   }
 }
