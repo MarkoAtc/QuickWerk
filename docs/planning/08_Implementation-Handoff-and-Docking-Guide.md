@@ -972,3 +972,74 @@ This slice executes all previously docked follow-ups in additive, backward-safe 
 1. persist async handoff job metadata/results in Postgres for cross-instance continuity
 2. add low-cardinality per-endpoint latency counters alongside auth telemetry for rollout risk triage
 3. ship dashboard presets for common incident windows (15m/1h/6h) built on `sloTrend` buckets
+
+## 44. Phase-1 Real Frontend User Journey (Completed)
+
+This slice replaces demo-only preview screens with real thin functional flows that consume the existing platform-api endpoints end-to-end.
+
+### Auth flow (real sign-in)
+- new sign-in screen with email + role selector (customer/provider) + submit:
+  - `apps/product-app/src/features/auth/sign-in-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/auth/sign-in-screen-actions.ts`
+  - calls `POST /api/v1/auth/sign-in`, extracts bearer token
+- route file:
+  - `apps/product-app/app/sign-in.js`
+- in-memory session store (module-scoped, no persistence):
+  - `apps/product-app/src/shared/session-context.ts`
+- state helpers:
+  - `apps/product-app/src/features/auth/sign-in-state.ts`
+
+### Customer booking flow (real)
+- booking screen with service description form + submit:
+  - `apps/product-app/src/features/booking/booking-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/booking/booking-screen-actions.ts`
+  - calls `POST /api/v1/bookings` with bearer token, shows created booking with `submitted` status
+- route file:
+  - `apps/product-app/app/booking.js`
+- state helpers:
+  - `apps/product-app/src/features/booking/booking-state.ts`
+
+### Provider accept flow (real)
+- provider screen with booking ID input + accept button:
+  - `apps/product-app/src/features/provider/provider-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/provider/provider-screen-actions.ts`
+  - calls `POST /api/v1/bookings/:id/accept`, shows `accepted` status
+- route file:
+  - `apps/product-app/app/provider.js`
+- state helpers:
+  - `apps/product-app/src/features/provider/provider-state.ts`
+
+### Home routing
+- `apps/product-app/app/index.js` now implements routing logic:
+  - unauthenticated → `/sign-in`
+  - authenticated customer → `/booking`
+  - authenticated provider → `/provider`
+
+### Tests added
+- `src/features/auth/sign-in-state.test.ts` (4 tests)
+- `src/features/auth/sign-in-screen-actions.test.ts` (4 tests)
+- `src/features/booking/booking-state.test.ts` (4 tests)
+- `src/features/booking/booking-screen-actions.test.ts` (4 tests)
+- `src/features/provider/provider-state.test.ts` (4 tests)
+- `src/features/provider/provider-screen-actions.test.ts` (5 tests)
+
+### Validation
+- `corepack pnpm --filter @quickwerk/product-app test` → 42 tests passing (9 test files)
+- `corepack pnpm --filter @quickwerk/product-app typecheck` → clean
+- `corepack pnpm check` → all workspace typechecks clean
+
+### Scope controls preserved
+- no persistent session storage (module-scoped only)
+- no payment/onboarding/profile flows changed
+- existing demo/preview routes (`/auth`, `/marketplace-preview`) remain untouched
+- no package boundary restructuring
+
+## 45. Updated Exact Next Docking Point
+
+1. add React Context-based session provider to replace module-global session store (makes testing and server rendering safer)
+2. add sign-out on the booking and provider screens that calls `POST /api/v1/auth/sign-out`
+3. implement a minimal booking list view for the provider (fetch submitted bookings before accepting)
+4. add e2e smoke test that runs sign-in → create booking → accept booking against a running local API
