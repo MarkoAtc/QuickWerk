@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from '../auth/auth.service';
 import { PostgresRelayAttemptExecutor } from '../orchestration/relay-attempt-executor';
+import { resetRelayQueueExportHandoffsForTests } from './relay-queue-export-handoff';
 import { RelayQueueOperatorController } from './relay-queue.controller';
+import { resetRelayQueueOperatorTelemetryForTests } from './relay-queue-telemetry';
 
 describe('RelayQueueOperatorController', () => {
   const previousExecutorMode = process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE;
@@ -49,6 +51,9 @@ describe('RelayQueueOperatorController', () => {
     delete process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT;
     delete process.env.BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT;
     delete process.env.BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT;
+    delete process.env.BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES;
+    resetRelayQueueOperatorTelemetryForTests();
+    resetRelayQueueExportHandoffsForTests();
     vi.restoreAllMocks();
   });
 
@@ -90,6 +95,41 @@ describe('RelayQueueOperatorController', () => {
     await expect(controller.getAttempts('Bearer token-provider', {})).rejects.toMatchObject({
       status: 403,
       message: 'Operator authorization required.',
+    });
+  });
+
+  it('increments denied-role telemetry counters in strict mode', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE = 'operator-strict';
+
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'in-memory';
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValueOnce({ role: 'provider' }).mockResolvedValueOnce({ role: 'operator' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts: vi.fn(),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    await expect(controller.getAttempts('Bearer token-provider', {})).rejects.toMatchObject({
+      status: 403,
+    });
+
+    const followup = await controller.getAttempts('Bearer token-operator', {});
+
+    expect(followup).toMatchObject({
+      relayQueue: {
+        operatorAuthTelemetry: {
+          roleModeUsage: {
+            'operator-strict': 2,
+          },
+          deniedRoleCount: {
+            provider: 1,
+          },
+          totalAccessChecks: 2,
+        },
+      },
     });
   });
 
@@ -213,6 +253,17 @@ describe('RelayQueueOperatorController', () => {
           eventId: 'evt-101',
           terminalOnly: false,
         },
+        operatorAuthTelemetry: {
+          roleModeUsage: {
+            'operator-provider-transition': 1,
+            'operator-strict': 0,
+          },
+          deniedRoleCount: {
+            provider: 0,
+          },
+          deniedAuthCount: 0,
+          totalAccessChecks: 1,
+        },
       },
     });
   });
@@ -227,6 +278,7 @@ describe('RelayQueueOperatorController', () => {
     process.env.BOOKING_ACCEPTED_RELAY_READINESS_DEPTH_CRITICAL_COUNT = '15';
     process.env.BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES = '30';
     process.env.BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT = '50';
+    process.env.BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES = '15';
 
     const listQueueMetricSnapshots = vi
       .fn()
@@ -330,6 +382,20 @@ describe('RelayQueueOperatorController', () => {
           sloWindow: {
             windowMinutes: 30,
           },
+          sloTrend: {
+            windowMinutes: 30,
+            bucketMinutes: 15,
+            buckets: [
+              {
+                bucketStart: '2026-03-20T18:00:00.000Z',
+                bucketEnd: '2026-03-20T18:15:00.000Z',
+              },
+              {
+                bucketStart: '2026-03-20T18:15:00.000Z',
+                bucketEnd: '2026-03-20T18:30:00.000Z',
+              },
+            ],
+          },
         },
         snapshots: [
           {
@@ -412,6 +478,86 @@ describe('RelayQueueOperatorController', () => {
     expect(setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
     expect(csv).toContain('id,eventId,correlationId,attempt,maxAttempts,status,processedAt');
     expect(csv).toContain('91,evt-91,corr-91,3,3,dead-letter,2026-03-20T17:05:00.000Z');
+  });
+
+  it('creates non-blocking CSV handoff for larger bounded export windows', async () => {
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
+    process.env.PERSISTENCE_MODE = 'postgres';
+
+    const listQueueAttempts = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 201,
+            eventId: 'evt-201',
+            correlationId: 'corr-201',
+            attempt: 3,
+            maxAttempts: 3,
+            status: 'dead-letter',
+            nextAttemptAt: null,
+            terminalMarker: true,
+            createdAt: '2026-03-20T16:59:00.000Z',
+            updatedAt: '2026-03-20T17:00:00.000Z',
+            processedAt: '2026-03-20T17:00:00.000Z',
+          },
+        ],
+        hasMore: false,
+        nextOffset: null,
+      });
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'operator' }),
+      } as unknown as AuthService,
+      {
+        listQueueAttempts,
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    const created = await controller.startAttemptsCsvHandoff('Bearer token-operator', {
+      limit: '500',
+      terminalOnly: 'true',
+      fields: 'id,eventId,status,processedAt',
+    });
+
+    expect(created).toMatchObject({
+      relayQueue: {
+        exportHandoff: {
+          status: 'pending',
+          rowLimit: 500,
+        },
+      },
+    });
+
+    const handoffId = created.relayQueue.exportHandoff.id;
+
+    await vi.waitFor(async () => {
+      const poll = await controller.getAttemptsCsvHandoff(
+        'Bearer token-operator',
+        handoffId,
+        {},
+        { setHeader: vi.fn() },
+      );
+
+      if (typeof poll === 'string') {
+        throw new Error('expected JSON handoff poll payload');
+      }
+
+      expect(poll.relayQueue.exportHandoff.status).toBe('ready');
+    });
+
+    const setHeader = vi.fn();
+    const csv = await controller.getAttemptsCsvHandoff(
+      'Bearer token-operator',
+      handoffId,
+      { download: '1' },
+      { setHeader },
+    );
+
+    expect(setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
+    expect(csv).toContain('id,eventId,status,processedAt');
+    expect(csv).toContain('201,evt-201,dead-letter,2026-03-20T17:00:00.000Z');
   });
 
   it('rejects unsupported CSV status/fields to keep export constrained', async () => {

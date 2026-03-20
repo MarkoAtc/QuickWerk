@@ -312,8 +312,26 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
   - legacy `GET /health` payload unchanged
   - existing relay structured-log contract tests unchanged and still green
 
+### Phase-5 operator rollout telemetry + async CSV handoff + SLO trend buckets (completed)
+
+- operator-auth rollout telemetry added for relay operator endpoints:
+  - role-mode usage counters and denied-role counters are tracked in-memory and surfaced as additive payload (`relayQueue.operatorAuthTelemetry`)
+  - structured breadcrumbs emitted per access decision via `booking.accepted.relay.operator.access.telemetry`
+  - strict/transition rollout visibility now available without changing existing endpoint contracts
+- non-blocking CSV/export handoff path added for larger windows:
+  - `GET /operators/relay-queue/attempts.csv/handoff` creates bounded async export jobs (up to `2000` rows)
+  - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId` polls job state
+  - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId?download=1` downloads CSV once ready
+  - existing `GET /operators/relay-queue/attempts.csv` behavior remains unchanged
+- pre-aggregated relay SLO trend buckets added for dashboard efficiency:
+  - `/operators/relay-queue/snapshots` now includes `relayQueue.current.sloTrend`
+  - bucket width configurable via `BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES` (default `5`, max `60`)
+- focused coverage added/updated:
+  - `relay-queue.controller.test.ts` (telemetry counters, async handoff path, SLO trend payload shape)
+  - `readiness-thresholds.test.ts` (bucketed trend builder)
+
 ### Exact next docking point
 
-1. add small operator-auth rollout telemetry (role-mode usage + denied-role counters) to confirm safe cutover to `operator-strict`
-2. add CSV streaming/async export path for large incident windows (still bounded/auth-guarded) without blocking request threads
-3. add dashboard-ready SLO trend endpoint (pre-aggregated buckets) to reduce client-side summarization load
+1. persist async CSV handoff jobs across restarts/replicas (DB-backed handoff state) while keeping auth scope unchanged
+2. add lightweight per-endpoint latency counters to pair operator auth telemetry with performance trendlines
+3. add dashboard endpoint presets for common incident windows (`15m`, `1h`, `6h`) using existing SLO trend buckets

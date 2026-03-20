@@ -1,4 +1,4 @@
-# Relay Queue Degradation Runbook (Phase-4)
+# Relay Queue Degradation Runbook (Phase-5)
 
 This runbook covers queue pressure/degradation handling for the Postgres-persistent booking relay path.
 
@@ -13,6 +13,8 @@ This runbook covers queue pressure/degradation handling for the Postgres-persist
   - `GET /operators/relay-queue/attempts`
   - `GET /operators/relay-queue/snapshots`
   - `GET /operators/relay-queue/attempts.csv`
+  - `GET /operators/relay-queue/attempts.csv/handoff`
+  - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
 
 ## Operator access policy (authN/authZ)
 
@@ -44,6 +46,14 @@ From `GET /health/readiness` (`relayQueue` payload):
 - `thresholds.*`
 - `sloWindow.*` (rolling occupancy summary)
 
+From `/operators/relay-queue/*` (`relayQueue.operatorAuthTelemetry`):
+
+- `roleModeUsage.operator-provider-transition`
+- `roleModeUsage.operator-strict`
+- `deniedRoleCount.*`
+- `deniedAuthCount`
+- `totalAccessChecks`
+
 ### Threshold env knobs
 
 ```bash
@@ -63,6 +73,7 @@ BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES=30
 BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT=240
 BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT=20
 BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT=5
+BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES=5
 ```
 
 ## Triage flow
@@ -78,10 +89,15 @@ BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT=5
    - `sloWindow.status=watch|critical` => sustained pressure across the configured rolling window (not only point-in-time spikes)
 3. **Inspect recent attempts**
    - call `GET /operators/relay-queue/attempts?status=dead-letter&limit=20`
-   - for handoff, export bounded CSV: `GET /operators/relay-queue/attempts.csv?limit=50`
+   - small handoff export: `GET /operators/relay-queue/attempts.csv?limit=50`
+   - large-window non-blocking handoff:
+     1. `GET /operators/relay-queue/attempts.csv/handoff?limit=500`
+     2. poll `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
+     3. download once ready: `GET /operators/relay-queue/attempts.csv/handoff/:handoffId?download=1`
    - sample a recent failure window with `eventId` / `correlationId` filters
 4. **Inspect queue snapshot trend**
    - call `GET /operators/relay-queue/snapshots?limit=50`
+   - use `relayQueue.current.sloTrend.buckets[]` for pre-aggregated trend panels
    - verify whether pressure is transient or sustained
 5. **Take corrective action**
    - validate worker tick process health
@@ -101,6 +117,10 @@ Use `/operators/relay-queue/snapshots?limit=100` and map:
 - lag: `relayQueue.snapshots[].metrics.processingLagMs`
 - state panel: `relayQueue.current.level`
 - sustained pressure panel: `relayQueue.current.sloWindow.status`
+- trend panel (pre-aggregated):
+  - x-axis: `relayQueue.current.sloTrend.buckets[].bucketStart`
+  - critical ratio: `relayQueue.current.sloTrend.buckets[].summary.stateRatios.critical`
+  - status lane: `relayQueue.current.sloTrend.buckets[].summary.status`
 
 ### Alertmanager rule mapping (from readiness)
 
@@ -148,5 +168,7 @@ QW_OPERATOR_BEARER_TOKEN=<operator-or-provider-session-token> \
 
 - snapshot history in `/operators/relay-queue/snapshots` is persisted in Postgres table `booking_accepted_relay_queue_snapshots`.
 - retention is bounded by `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` cleanup on insert.
-- `/operators/relay-queue/attempts.csv` is bounded and restricted to allow-listed columns for dead-letter inspection handoff.
+- `/operators/relay-queue/attempts.csv` remains bounded and restricted to allow-listed columns for quick dead-letter inspection.
+- `/operators/relay-queue/attempts.csv/handoff*` provides non-blocking staged exports for larger bounded windows.
+- `/operators/relay-queue/*` responses include additive `operatorAuthTelemetry` counters to de-risk `operator-strict` rollout.
 - `/health` legacy payload remains unchanged; queue pressure is surfaced via `/health/readiness`.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { summarizeRelayQueueSloWindow } from './readiness-thresholds';
+import { buildRelayQueueSloTrend, summarizeRelayQueueSloWindow } from './readiness-thresholds';
 
 describe('summarizeRelayQueueSloWindow', () => {
   it('marks window critical when critical occupancy exceeds threshold', () => {
@@ -44,6 +44,38 @@ describe('summarizeRelayQueueSloWindow', () => {
       status: 'insufficient-data',
       observedSeconds: 0,
       sampleCount: 1,
+    });
+  });
+});
+
+describe('buildRelayQueueSloTrend', () => {
+  it('returns bucketed summaries for dashboard trend rendering', () => {
+    const trend = buildRelayQueueSloTrend({
+      now: new Date('2026-03-20T18:30:00.000Z'),
+      windowMinutes: 30,
+      bucketMinutes: 15,
+      watchThresholdPercent: 20,
+      criticalThresholdPercent: 5,
+      samples: [
+        { capturedAt: '2026-03-20T18:00:00.000Z', level: 'good' },
+        { capturedAt: '2026-03-20T18:10:00.000Z', level: 'watch' },
+        { capturedAt: '2026-03-20T18:20:00.000Z', level: 'critical' },
+        { capturedAt: '2026-03-20T18:30:00.000Z', level: 'good' },
+      ],
+    });
+
+    expect(trend).toMatchObject({
+      windowMinutes: 30,
+      bucketMinutes: 15,
+    });
+    expect(trend.buckets).toHaveLength(2);
+    expect(trend.buckets[0]).toMatchObject({
+      bucketStart: '2026-03-20T18:00:00.000Z',
+      bucketEnd: '2026-03-20T18:15:00.000Z',
+    });
+    expect(trend.buckets[1]).toMatchObject({
+      bucketStart: '2026-03-20T18:15:00.000Z',
+      bucketEnd: '2026-03-20T18:30:00.000Z',
     });
   });
 });

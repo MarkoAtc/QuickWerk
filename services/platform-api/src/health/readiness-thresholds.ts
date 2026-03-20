@@ -41,6 +41,18 @@ export type RelayQueueSloWindowSummary = {
   status: 'good' | 'watch' | 'critical' | 'insufficient-data';
 };
 
+export type RelayQueueSloTrendBucket = {
+  bucketStart: string;
+  bucketEnd: string;
+  summary: RelayQueueSloWindowSummary;
+};
+
+export type RelayQueueSloTrend = {
+  windowMinutes: number;
+  bucketMinutes: number;
+  buckets: RelayQueueSloTrendBucket[];
+};
+
 const defaultThresholds = {
   lagWatchMs: 15_000,
   lagCriticalMs: 60_000,
@@ -56,6 +68,8 @@ const defaultSloWindowConfig = {
   watchThresholdPercent: 20,
   criticalThresholdPercent: 5,
 } as const;
+
+const defaultSloTrendBucketMinutes = 5;
 
 export function resolveRelayQueueReadinessThresholds(env: NodeJS.ProcessEnv): RelayQueueReadinessThresholds {
   const lagWatchMs = resolvePositiveInteger(
@@ -119,6 +133,15 @@ export function resolveRelayQueueSloWindowConfig(env: NodeJS.ProcessEnv): RelayQ
     watchThresholdPercent,
     criticalThresholdPercent: Math.min(watchThresholdPercent, criticalThresholdPercent),
   };
+}
+
+export function resolveRelayQueueSloTrendBucketMinutes(env: NodeJS.ProcessEnv): number {
+  const bucketMinutes = resolvePositiveInteger(
+    env.BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES,
+    defaultSloTrendBucketMinutes,
+  );
+
+  return Math.min(60, bucketMinutes);
 }
 
 export function deriveRelayQueueReadinessLevel(
@@ -259,6 +282,82 @@ export function summarizeRelayQueueSloWindow(input: {
       criticalPercent: input.criticalThresholdPercent,
     },
     status,
+  };
+}
+
+export function buildRelayQueueSloTrend(input: {
+  now: Date;
+  windowMinutes: number;
+  bucketMinutes: number;
+  watchThresholdPercent: number;
+  criticalThresholdPercent: number;
+  samples: Array<{ capturedAt: string; level: RelayQueueReadinessLevel }>;
+}): RelayQueueSloTrend {
+  const bucketMinutes = Math.max(1, Math.floor(input.bucketMinutes));
+  const bucketMs = bucketMinutes * 60_000;
+  const nowMs = input.now.getTime();
+  const windowStartMs = nowMs - input.windowMinutes * 60_000;
+
+  const orderedSamples = [...input.samples]
+    .map((sample) => ({ ...sample, capturedAtMs: new Date(sample.capturedAt).getTime() }))
+    .filter((sample) => Number.isFinite(sample.capturedAtMs))
+    .sort((left, right) => left.capturedAtMs - right.capturedAtMs);
+
+  const buckets: RelayQueueSloTrendBucket[] = [];
+
+  for (let bucketStartMs = windowStartMs; bucketStartMs < nowMs; bucketStartMs += bucketMs) {
+    const bucketEndMs = Math.min(nowMs, bucketStartMs + bucketMs);
+    const carrySample = [...orderedSamples]
+      .reverse()
+      .find((sample) => sample.capturedAtMs <= bucketStartMs);
+    const bucketSamples = orderedSamples.filter(
+      (sample) => sample.capturedAtMs > bucketStartMs && sample.capturedAtMs <= bucketEndMs,
+    );
+
+    const trendSamples: Array<{ capturedAt: string; level: RelayQueueReadinessLevel }> = [];
+
+    if (carrySample) {
+      trendSamples.push({
+        capturedAt: new Date(bucketStartMs).toISOString(),
+        level: carrySample.level,
+      });
+    }
+
+    for (const sample of bucketSamples) {
+      trendSamples.push({
+        capturedAt: new Date(sample.capturedAtMs).toISOString(),
+        level: sample.level,
+      });
+    }
+
+    const latestLevel = bucketSamples[bucketSamples.length - 1]?.level ?? carrySample?.level;
+
+    if (latestLevel) {
+      trendSamples.push({
+        capturedAt: new Date(bucketEndMs).toISOString(),
+        level: latestLevel,
+      });
+    }
+
+    const summary = summarizeRelayQueueSloWindow({
+      now: new Date(bucketEndMs),
+      windowMinutes: Math.max(1, Math.ceil((bucketEndMs - bucketStartMs) / 60_000)),
+      watchThresholdPercent: input.watchThresholdPercent,
+      criticalThresholdPercent: input.criticalThresholdPercent,
+      samples: trendSamples,
+    });
+
+    buckets.push({
+      bucketStart: new Date(bucketStartMs).toISOString(),
+      bucketEnd: new Date(bucketEndMs).toISOString(),
+      summary,
+    });
+  }
+
+  return {
+    windowMinutes: input.windowMinutes,
+    bucketMinutes,
+    buckets,
   };
 }
 

@@ -931,8 +931,44 @@ This slice executes the prior docking point end-to-end while preserving existing
   - existing structured-log contract tests remain unchanged and green
   - no new queue infrastructure introduced (Postgres-only persistence retained)
 
+## 43. Phase-5 Operator Rollout Telemetry + Async CSV Handoff + SLO Trend Buckets (Completed)
+
+This slice executes all previously docked follow-ups in additive, backward-safe form without introducing new queue infra.
+
+- operator-auth rollout telemetry for `/operators/relay-queue/*`:
+  - `services/platform-api/src/operators/relay-queue-telemetry.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - role-mode usage counters and denied-role counters tracked + surfaced as `relayQueue.operatorAuthTelemetry`
+  - structured log payload emitted per auth decision:
+    - `booking.accepted.relay.operator.access.telemetry`
+- non-blocking CSV handoff path for larger incident windows:
+  - `services/platform-api/src/operators/relay-queue-export-handoff.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - adds:
+    - `GET /operators/relay-queue/attempts.csv/handoff`
+    - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
+    - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId?download=1`
+  - bounded (max `2000` rows), auth-guarded, dead-letter constrained, and non-blocking via staged handoff generation
+  - legacy `GET /operators/relay-queue/attempts.csv` contract preserved unchanged
+- pre-aggregated relay SLO trend payload:
+  - `services/platform-api/src/health/readiness-thresholds.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - `/operators/relay-queue/snapshots` now includes `relayQueue.current.sloTrend` with bucketed summaries
+  - env knob added: `BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES` (default `5`, max `60`)
+- targeted tests added/updated:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
+    - telemetry counters
+    - export handoff behavior
+    - SLO trend payload shape
+  - `services/platform-api/src/health/readiness-thresholds.test.ts`
+    - bucketed SLO trend helper
+- compatibility notes:
+  - existing endpoint behavior/contracts are preserved (additive payloads/endpoints only)
+  - no Redis/SQS rollout; infra remains Postgres + in-memory handoff staging
+  - existing relay structured-log contract tests remain green
+
 ### Updated exact next docking point
 
-1. add operator-auth rollout telemetry (role-mode usage and denied-role counters) to de-risk the final move to `operator-strict`
-2. add non-blocking CSV/export handoff path for larger incident windows while keeping strict auth + bounds
-3. add pre-aggregated relay SLO trend payload (bucketed series) to reduce dashboard client-side summarization work
+1. persist async handoff job metadata/results in Postgres for cross-instance continuity
+2. add low-cardinality per-endpoint latency counters alongside auth telemetry for rollout risk triage
+3. ship dashboard presets for common incident windows (15m/1h/6h) built on `sloTrend` buckets
