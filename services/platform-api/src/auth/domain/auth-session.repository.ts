@@ -2,6 +2,7 @@ export type SessionRole = 'customer' | 'provider';
 
 export type AuthSession = {
   createdAt: string;
+  expiresAt: string;
   email: string;
   role: SessionRole;
   token: string;

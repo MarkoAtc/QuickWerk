@@ -76,8 +76,8 @@ export class PostgresBookingRepository implements BookingRepository {
     }
 
     const result = await this.postgresClient.withTransaction<AcceptSubmittedBookingResult>(async (client) => {
-      const currentResult = await client.query<Pick<BookingRow, 'status'>>(
-        'SELECT status FROM bookings WHERE id = $1::uuid FOR UPDATE',
+      const currentResult = await client.query<Pick<BookingRow, 'status' | 'provider_user_id'>>(
+        'SELECT status, provider_user_id::text FROM bookings WHERE id = $1::uuid FOR UPDATE',
         [input.bookingId],
       );
 
@@ -88,10 +88,25 @@ export class PostgresBookingRepository implements BookingRepository {
       }
 
       if (current.status !== 'submitted') {
+        if (current.status === 'accepted' && current.provider_user_id === input.providerUserId) {
+          const booking = await this.loadBookingById(client, input.bookingId);
+
+          if (!booking) {
+            throw new Error(`Failed to load replayed accepted booking ${input.bookingId}.`);
+          }
+
+          return {
+            ok: true,
+            booking,
+            replayed: true,
+          };
+        }
+
         return {
           ok: false,
           reason: 'transition-conflict',
           currentStatus: current.status,
+          currentProviderUserId: current.provider_user_id ?? undefined,
         };
       }
 
@@ -122,6 +137,7 @@ export class PostgresBookingRepository implements BookingRepository {
       return {
         ok: true,
         booking,
+        replayed: false,
       };
     }, {
       ...process.env,

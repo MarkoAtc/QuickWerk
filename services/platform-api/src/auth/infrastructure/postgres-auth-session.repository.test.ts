@@ -19,9 +19,11 @@ describe('PostgresAuthSessionRepository', () => {
             token: '11111111-1111-4111-8111-111111111111',
             user_id: '22222222-2222-4222-8222-222222222222',
             created_at: '2026-03-20T12:00:00.000Z',
+            expires_at: '2026-03-20T12:30:00.000Z',
           },
         ],
       })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] })
       .mockResolvedValueOnce({
         rowCount: 1,
         rows: [
@@ -29,6 +31,7 @@ describe('PostgresAuthSessionRepository', () => {
             token: '11111111-1111-4111-8111-111111111111',
             user_id: '22222222-2222-4222-8222-222222222222',
             created_at: '2026-03-20T12:00:00.000Z',
+            expires_at: '2026-03-20T12:30:00.000Z',
             email: 'customer@quickwerk.local',
             role: 'customer',
           },
@@ -50,6 +53,9 @@ describe('PostgresAuthSessionRepository', () => {
 
     expect(created.userId).toBe('22222222-2222-4222-8222-222222222222');
     expect(created.token).toBe('11111111-1111-4111-8111-111111111111');
+    expect(created.expiresAt).toBe('2026-03-20T12:30:00.000Z');
+
+    expect(query.mock.calls[1]?.[1]).toContain('make_interval');
 
     const resolved = await repository.resolveSession(created.token);
     expect(resolved).toMatchObject({
@@ -60,6 +66,23 @@ describe('PostgresAuthSessionRepository', () => {
 
     const deleted = await repository.deleteSession(created.token);
     expect(deleted).toBe(true);
+  });
+
+  it('invalidates an expired token on resolve and returns null', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ rowCount: 1, rows: [] })
+      .mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    const repository = new PostgresAuthSessionRepository(
+      {
+        query,
+      } as unknown as PostgresClient,
+      postgresConfig,
+    );
+
+    await expect(repository.resolveSession('11111111-1111-4111-8111-111111111111')).resolves.toBeNull();
+    expect(query).toHaveBeenCalledTimes(2);
   });
 
   it('returns null/false for missing or invalid tokens without querying', async () => {

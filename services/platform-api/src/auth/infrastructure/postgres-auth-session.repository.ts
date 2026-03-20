@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { resolveAuthSessionTtlSeconds } from '../domain/auth-session-expiry';
 import {
   AuthSession,
   AuthSessionRepository,
@@ -12,11 +13,14 @@ type SessionRow = {
   token: string;
   user_id: string;
   created_at: Date | string;
+  expires_at: Date | string;
   email: string;
   role: 'customer' | 'provider';
 };
 
 export class PostgresAuthSessionRepository implements AuthSessionRepository {
+  private readonly sessionTtlSeconds = resolveAuthSessionTtlSeconds();
+
   constructor(
     private readonly postgresClient: PostgresClient,
     private readonly postgresConfig: PostgresPersistenceConfig,
@@ -37,12 +41,14 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
 
     const sessionResult = await this.postgresClient.query<SessionRow>(
       this.postgresConfig,
-      `INSERT INTO sessions (token, user_id)
-       SELECT $1::uuid, users.id
+      `INSERT INTO sessions (token, user_id, expires_at)
+       SELECT $1::uuid,
+              users.id,
+              NOW() + make_interval(secs => $3::int)
        FROM users
        WHERE users.email = $2
-       RETURNING token::text, user_id::text, created_at`,
-      [token, input.email],
+       RETURNING token::text, user_id::text, created_at, expires_at`,
+      [token, input.email, this.sessionTtlSeconds],
     );
 
     const row = sessionResult.rows[0];
@@ -53,6 +59,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
 
     return {
       createdAt: toIsoString(row.created_at),
+      expiresAt: toIsoString(row.expires_at),
       email: input.email,
       role: input.role,
       token: row.token,
@@ -65,16 +72,26 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
       return null;
     }
 
+    await this.postgresClient.query(
+      this.postgresConfig,
+      `DELETE FROM sessions
+       WHERE token = $1::uuid
+         AND expires_at <= NOW()`,
+      [token],
+    );
+
     const result = await this.postgresClient.query<SessionRow>(
       this.postgresConfig,
       `SELECT s.token::text,
               s.user_id::text,
               s.created_at,
+              s.expires_at,
               u.email,
               u.role
        FROM sessions s
        INNER JOIN users u ON u.id = s.user_id
        WHERE s.token = $1::uuid
+         AND s.expires_at > NOW()
        LIMIT 1`,
       [token],
     );
@@ -87,6 +104,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
 
     return {
       createdAt: toIsoString(row.created_at),
+      expiresAt: toIsoString(row.expires_at),
       email: row.email,
       role: row.role,
       token: row.token,

@@ -60,7 +60,7 @@ describe.runIf(shouldRun && Boolean(databaseUrl))('postgres mode integration (op
       expect(acceptedBooking.booking.statusHistory).toHaveLength(2);
     }
 
-    const conflictingAccept = await bookingRepository.acceptSubmittedBooking({
+    const replayedAccept = await bookingRepository.acceptSubmittedBooking({
       bookingId: createdBooking.bookingId,
       acceptedAt: new Date().toISOString(),
       providerUserId: providerSession.userId,
@@ -68,10 +68,30 @@ describe.runIf(shouldRun && Boolean(databaseUrl))('postgres mode integration (op
       actorUserId: providerSession.userId,
     });
 
+    expect(replayedAccept.ok).toBe(true);
+    if (replayedAccept.ok) {
+      expect(replayedAccept.replayed).toBe(true);
+      expect(replayedAccept.booking.statusHistory).toHaveLength(2);
+    }
+
+    const conflictingProviderSession = await authRepository.createSession({
+      email: 'integration.provider-2@quickwerk.local',
+      role: 'provider',
+    });
+
+    const conflictingAccept = await bookingRepository.acceptSubmittedBooking({
+      bookingId: createdBooking.bookingId,
+      acceptedAt: new Date().toISOString(),
+      providerUserId: conflictingProviderSession.userId,
+      actorRole: 'provider',
+      actorUserId: conflictingProviderSession.userId,
+    });
+
     expect(conflictingAccept).toEqual({
       ok: false,
       reason: 'transition-conflict',
       currentStatus: 'accepted',
+      currentProviderUserId: providerSession.userId,
     });
 
     await expect(authRepository.deleteSession(customerSession.token)).resolves.toBe(true);

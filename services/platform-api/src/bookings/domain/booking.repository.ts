@@ -37,8 +37,13 @@ export type AcceptSubmittedBookingInput = {
 };
 
 export type AcceptSubmittedBookingResult =
-  | { ok: true; booking: BookingRecord }
-  | { ok: false; reason: 'not-found' | 'transition-conflict'; currentStatus?: BookingStatus };
+  | { ok: true; booking: BookingRecord; replayed: boolean }
+  | {
+      ok: false;
+      reason: 'not-found' | 'transition-conflict';
+      currentStatus?: BookingStatus;
+      currentProviderUserId?: string;
+    };
 
 export interface BookingRepository {
   createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord>;

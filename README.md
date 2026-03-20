@@ -101,31 +101,39 @@ This repository is now initialized for **Phase 0** of the agreed implementation 
 
 ## Persistence mode handoff (current)
 
-`services/platform-api` now runs real auth + booking persistence in either mode:
+`services/platform-api` now runs real auth + booking persistence in either mode with retry-safe booking accept semantics and enforced session expiry:
 
 - `PERSISTENCE_MODE=in-memory|postgres`
 - default remains `in-memory`
 - mode/config resolution: `services/platform-api/src/persistence/persistence-mode.ts`
 - DI selection remains centralized in module providers for auth + bookings
 
-### What is now truly implemented in `postgres` mode
+### What is now implemented in both adapters
 
 - async repository contracts for auth + bookings (Promise-based)
-- auth session persistence (`PostgresAuthSessionRepository`):
-  - create session (upsert user by email, create session token)
-  - resolve session (session + user join)
-  - delete session
-- booking persistence (`PostgresBookingRepository`):
-  - create submitted booking
-  - accept transition with conflict-safe transaction + row lock (`FOR UPDATE`)
-  - immutable `booking_status_history` writes for both `submitted` and `accepted` events
-- in-memory adapters continue to run under the same async contracts
+- booking accept idempotency/retry safety:
+  - first provider accept transitions `submitted -> accepted`
+  - retry by the **same provider** returns `ok: true` without duplicate history events
+  - competing provider accept returns deterministic transition conflict
+  - near-simultaneous attempts are covered by tests
+- auth session lifecycle enforcement:
+  - sessions now always carry `expiresAt`
+  - resolve path enforces expiry in both adapters
+  - on-access cleanup invalidates expired sessions deterministically
+
+### Postgres-specific notes
+
+- migration `0002_session_expiry_enforcement.sql` now enforces `sessions.expires_at` (`NOT NULL`, default `NOW() + 12h`, indexed)
+- `PostgresAuthSessionRepository` creates sessions with DB-side TTL via `make_interval`
+- `PostgresBookingRepository` keeps `FOR UPDATE` locking and now supports same-provider accept replay semantics
 
 ### Required env vars
 
 ```bash
 PERSISTENCE_MODE=postgres
 DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>
+# optional override (seconds), defaults to 43200 (12h)
+AUTH_SESSION_TTL_SECONDS=43200
 ```
 
 ### Run commands
@@ -133,8 +141,9 @@ DATABASE_URL=postgres://<user>:<pass>@<host>:5432/<db>
 From repo root:
 
 ```bash
-# apply schema
+# apply schema + expiry enforcement
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0001_initial_auth_bookings.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002_session_expiry_enforcement.sql
 
 # run platform API tests + typecheck
 corepack pnpm --filter @quickwerk/platform-api test
@@ -146,5 +155,5 @@ RUN_POSTGRES_INTEGRATION_TESTS=1 DATABASE_URL="$DATABASE_URL" corepack pnpm --fi
 
 ### Exact next docking point
 
-1. add explicit DB-level idempotency + retry envelope for booking accept under concurrent provider races (currently conflict-safe via lock/update path)
-2. add migration `0002` for session TTL/expiry enforcement (`expires_at` usage + cleanup path) and cover with integration tests
+1. start Phase-2 orchestration: emit booking-accepted domain event and wire background-worker consumer stub with retry visibility
+2. add observability pass for booking/auth write paths (request id correlation + event log breadcrumbs) without widening public API surface

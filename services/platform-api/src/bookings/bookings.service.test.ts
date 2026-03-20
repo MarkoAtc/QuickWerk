@@ -4,13 +4,18 @@ import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
-const createSession = (role: AuthSession['role'], userId: string): AuthSession => ({
-  createdAt: new Date().toISOString(),
-  email: `${role}@quickwerk.local`,
-  role,
-  token: `${role}-token`,
-  userId,
-});
+const createSession = (role: AuthSession['role'], userId: string): AuthSession => {
+  const createdAt = new Date();
+
+  return {
+    createdAt: createdAt.toISOString(),
+    expiresAt: new Date(createdAt.getTime() + 1000 * 60 * 60).toISOString(),
+    email: `${role}@quickwerk.local`,
+    role,
+    token: `${role}-token`,
+    userId,
+  };
+};
 
 describe('BookingsService', () => {
   it('enforces role auth for create and accept flows', async () => {
@@ -45,7 +50,7 @@ describe('BookingsService', () => {
     }
   });
 
-  it('prevents conflicting accept transitions for the same booking', async () => {
+  it('keeps accept idempotent for retry by the same provider and conflicts for another provider', async () => {
     const service = new BookingsService(new InMemoryBookingRepository());
     const customer = createSession('customer', 'customer-1');
     const providerA = createSession('provider', 'provider-1');
@@ -62,9 +67,13 @@ describe('BookingsService', () => {
 
     const accepted = await service.acceptBooking(providerA, created.booking.bookingId);
     expect(accepted.ok).toBe(true);
-    if (accepted.ok) {
-      expect(accepted.booking.status).toBe('accepted');
-      expect(accepted.booking.providerUserId).toBe('provider-1');
+
+    const replayedAccept = await service.acceptBooking(providerA, created.booking.bookingId);
+    expect(replayedAccept.ok).toBe(true);
+    if (replayedAccept.ok) {
+      expect(replayedAccept.booking.status).toBe('accepted');
+      expect(replayedAccept.booking.providerUserId).toBe('provider-1');
+      expect(replayedAccept.booking.statusHistory).toHaveLength(2);
     }
 
     const conflictingAccept = await service.acceptBooking(providerB, created.booking.bookingId);
@@ -72,6 +81,44 @@ describe('BookingsService', () => {
     if (!conflictingAccept.ok) {
       expect(conflictingAccept.statusCode).toBe(409);
       expect(conflictingAccept.error).toContain('accepted');
+    }
+  });
+
+  it('handles near-simultaneous provider accept attempts deterministically', async () => {
+    const service = new BookingsService(new InMemoryBookingRepository());
+    const customer = createSession('customer', 'customer-1');
+    const providers = [
+      createSession('provider', 'provider-1'),
+      createSession('provider', 'provider-2'),
+    ] as const;
+
+    const created = await service.createBooking(customer, {
+      requestedService: 'Door lock change',
+    });
+
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const [attemptA, attemptB] = await Promise.all([
+      service.acceptBooking(providers[0], created.booking.bookingId),
+      service.acceptBooking(providers[1], created.booking.bookingId),
+    ]);
+
+    const successful = [attemptA, attemptB].filter((attempt) => attempt.ok);
+    const conflicted = [attemptA, attemptB].filter((attempt) => !attempt.ok);
+
+    expect(successful).toHaveLength(1);
+    expect(conflicted).toHaveLength(1);
+
+    if (successful[0]?.ok) {
+      expect(successful[0].booking.status).toBe('accepted');
+    }
+
+    if (conflicted[0] && !conflicted[0].ok) {
+      expect(conflicted[0].statusCode).toBe(409);
+      expect(conflicted[0].error).toContain('accepted');
     }
   });
 

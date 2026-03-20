@@ -500,3 +500,42 @@ Implement the first real Postgres adapter behind existing repository interfaces,
 2. wire adapter selection via environment flag (`in-memory` default, `postgres` optional)
 3. execute `0001` migration against a local Postgres instance and add a minimal adapter integration test slice
 4. keep current in-memory tests green as fallback behavior
+
+## 31. Concurrency + Session Lifecycle Hardening (Completed)
+
+This pass closes the two next persistence hardening slices without widening controller contracts:
+
+- booking accept concurrency/idempotency hardening:
+  - retries from the **same provider** are now idempotent (`ok: true`) and return the already-accepted booking without extra history writes
+  - competing providers still receive deterministic `transition-conflict`
+  - conflict payload now includes `currentProviderUserId` in repository results for deterministic diagnostics
+  - both adapters aligned:
+    - `src/bookings/infrastructure/in-memory-booking.repository.ts`
+    - `src/bookings/infrastructure/postgres-booking.repository.ts`
+  - tests added/updated for replay + near-simultaneous attempts:
+    - `src/bookings/bookings.service.test.ts`
+    - `src/bookings/infrastructure/postgres-booking.repository.test.ts`
+    - `src/persistence/postgres-mode.integration.test.ts`
+
+- auth session lifecycle enforcement:
+  - `AuthSession` now includes `expiresAt`
+  - session TTL defaults to 12h (`AUTH_SESSION_TTL_SECONDS` override supported)
+  - resolve now enforces expiry in both adapters
+  - deterministic on-access invalidation implemented:
+    - in-memory: remove expired token during resolve
+    - postgres: delete expired token on resolve before active lookup
+  - migration added:
+    - `services/platform-api/migrations/0002_session_expiry_enforcement.sql`
+    - enforces `sessions.expires_at` non-null + default + index
+  - tests added/updated:
+    - `src/auth/infrastructure/in-memory-auth-session.repository.test.ts`
+    - `src/auth/infrastructure/postgres-auth-session.repository.test.ts`
+
+### Updated exact next docking point
+
+Proceed to Phase-2 orchestration while preserving the current API surface:
+
+1. emit booking-accepted domain event after successful transition (including idempotent replay flag)
+2. wire background worker consumer stub with retry visibility and deterministic logging envelope
+3. add one end-to-end verification slice proving event emission + consumer handling path
+4. keep repository contracts async and parity-tested across in-memory/postgres modes

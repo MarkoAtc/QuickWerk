@@ -70,6 +70,7 @@ describe('PostgresBookingRepository', () => {
 
     expect(accepted.ok).toBe(true);
     if (accepted.ok) {
+      expect(accepted.replayed).toBe(false);
       expect(accepted.booking.status).toBe('accepted');
       expect(accepted.booking.providerUserId).toBe('33333333-3333-4333-8333-333333333333');
       expect(accepted.booking.statusHistory).toHaveLength(2);
@@ -77,9 +78,23 @@ describe('PostgresBookingRepository', () => {
       expect(accepted.booking.statusHistory[1]?.from).toBe('submitted');
     }
 
-    const conflict = await repository.acceptSubmittedBooking({
+    const replay = await repository.acceptSubmittedBooking({
       bookingId: created.bookingId,
       acceptedAt: '2026-03-20T12:06:00.000Z',
+      providerUserId: '33333333-3333-4333-8333-333333333333',
+      actorRole: 'provider',
+      actorUserId: '33333333-3333-4333-8333-333333333333',
+    });
+
+    expect(replay.ok).toBe(true);
+    if (replay.ok) {
+      expect(replay.replayed).toBe(true);
+      expect(replay.booking.statusHistory).toHaveLength(2);
+    }
+
+    const conflict = await repository.acceptSubmittedBooking({
+      bookingId: created.bookingId,
+      acceptedAt: '2026-03-20T12:07:00.000Z',
       providerUserId: '44444444-4444-4444-8444-444444444444',
       actorRole: 'provider',
       actorUserId: '44444444-4444-4444-8444-444444444444',
@@ -89,6 +104,7 @@ describe('PostgresBookingRepository', () => {
       ok: false,
       reason: 'transition-conflict',
       currentStatus: 'accepted',
+      currentProviderUserId: '33333333-3333-4333-8333-333333333333',
     });
 
     expect(history).toHaveLength(2);
@@ -156,7 +172,7 @@ async function queryAgainstState<T>(
     return { rows: [], rowCount: 1 };
   }
 
-  if (text.includes('SELECT status FROM bookings')) {
+  if (text.includes('SELECT status, provider_user_id::text FROM bookings')) {
     const bookingId = values[0] as string;
     const booking = bookings.get(bookingId);
     if (!booking) {
@@ -164,7 +180,7 @@ async function queryAgainstState<T>(
     }
 
     return {
-      rows: [{ status: booking.status }] as T[],
+      rows: [{ status: booking.status, provider_user_id: booking.providerUserId }] as T[],
       rowCount: 1,
     };
   }

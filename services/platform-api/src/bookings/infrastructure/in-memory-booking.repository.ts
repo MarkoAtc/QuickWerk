@@ -45,10 +45,19 @@ export class InMemoryBookingRepository implements BookingRepository {
     }
 
     if (current.status !== 'submitted') {
+      if (current.status === 'accepted' && current.providerUserId === input.providerUserId) {
+        return {
+          ok: true,
+          booking: current,
+          replayed: true,
+        };
+      }
+
       return {
         ok: false,
         reason: 'transition-conflict',
         currentStatus: current.status,
+        currentProviderUserId: current.providerUserId,
       };
     }
 
@@ -72,6 +81,7 @@ export class InMemoryBookingRepository implements BookingRepository {
     return {
       ok: true,
       booking: updated,
+      replayed: false,
     };
   }
 }
