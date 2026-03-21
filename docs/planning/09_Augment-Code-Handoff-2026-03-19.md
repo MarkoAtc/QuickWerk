@@ -79,13 +79,20 @@ Current expectation: all tests and typechecks pass before/after each small slice
 
 ## Recommended Next Docking Point (small, safe, consistent)
 
-Continue with one tiny deterministic parity increment:
+Latest tiny parity increment was completed:
 
-1. add **section-level alignment token** derived from section severity + section coverage band
-2. expose token in section UI with stable `testID`
-3. add focused tests for deterministic mapping
-4. update `README.md` and `08_Implementation-Handoff-and-Docking-Guide.md`
-5. run:
+1. added **section-level alignment token** derived from section severity + section coverage band
+2. exposed token in section UI with stable `testID`
+3. added focused tests for deterministic section mapping
+4. added **route-level status digest** for compact deterministic demo/debug snapshots
+5. synced `README.md` and `08_Implementation-Handoff-and-Docking-Guide.md`
+
+Recommended next tiny increment:
+
+1. add one deterministic human-readable section-route parity summary string in section card footer
+2. keep it read-only and token-backed (no backend expansion)
+3. add focused tests for deterministic summary output
+4. run:
    - `pnpm --filter @quickwerk/product-app test`
    - `pnpm check`
 

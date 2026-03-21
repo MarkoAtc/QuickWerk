@@ -27,45 +27,45 @@ const createPanelContent = (actionId, authEntryState) => {
   switch (actionId) {
     case 'sign-in':
       return {
-        title: 'Sign in',
-        description: 'Fast returning-customer entry, optimized for quick mobile access.',
+        title: 'Returning customer sign in',
+        description: 'Fast login path optimized for users who already know exactly what they need.',
         fields: [
           ['Email address', 'marko@quickwerk.local'],
           ['Password', '••••••••'],
         ],
-        buttonLabel: 'Continue with sign in',
-        footerNote: 'Need recovery instead? Switch to Password Reset.',
+        buttonLabel: 'Continue to dashboard',
+        footerNote: 'Ideal for repeat customers who book frequently.',
       };
     case 'sign-up':
       return {
-        title: 'Create account',
-        description: 'Shared registration surface reserved for future onboarding integration.',
+        title: 'New customer registration',
+        description: 'Simple account creation flow for first-time QuickWerk customers.',
         fields: [
           ['Full name', 'Marta Meister'],
           ['Email address', 'team@quickwerk.local'],
           ['Password', '••••••••'],
         ],
         buttonLabel: 'Create account',
-        footerNote: `Next step after account creation: ${authEntryState.recommendedOnboardingStep}.`,
+        footerNote: `Next step after signup: ${authEntryState.recommendedOnboardingStep}.`,
       };
     case 'password-reset':
       return {
-        title: 'Reset password',
-        description: 'Recovery surface for users who lost access credentials.',
+        title: 'Password recovery',
+        description: 'Quick recovery path that keeps customers in flow and minimizes drop-off.',
         fields: [['Email address', 'marko@quickwerk.local']],
         buttonLabel: 'Send reset link',
-        footerNote: 'Real delivery wiring can be connected in a later auth slice.',
+        footerNote: 'Recovery can be completed without leaving the app journey.',
       };
     default:
       return {
         title: 'Continue to marketplace',
-        description: 'Authenticated users continue into provider discovery and booking preview.',
+        description: 'Authenticated users continue directly to provider discovery and booking.',
         fields: [
           ['Session state', authEntryState.sessionState],
-          ['Recommended onboarding step', authEntryState.recommendedOnboardingStep],
+          ['Suggested next step', authEntryState.recommendedOnboardingStep],
         ],
         buttonLabel: 'Open marketplace',
-        footerNote: 'This remains demo-safe and can be swapped to real routing later.',
+        footerNote: 'This keeps the client conversation focused on customer value, not backend internals.',
       };
   }
 };
@@ -93,11 +93,9 @@ export function AuthActionPanel({ actionId, authEntryState }) {
       ))}
 
       <Pressable
-        accessibilityHint="Disabled placeholder for a future auth submission action."
+        accessibilityHint="Preview action for the selected auth path."
         accessibilityLabel={panelContent.buttonLabel}
         accessibilityRole="button"
-        accessibilityState={{ disabled: true }}
-        disabled
         testID={`auth-action-panel-cta-${actionId}`}
         style={{
           marginTop: 14,
@@ -105,7 +103,7 @@ export function AuthActionPanel({ actionId, authEntryState }) {
           paddingVertical: 12,
           borderRadius: 12,
           backgroundColor: productAppShell.theme.color.primary,
-          opacity: authEntryState.isLoading ? 0.7 : 0.8,
+          opacity: authEntryState.isLoading ? 0.75 : 0.95,
         }}
       >
         <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{panelContent.buttonLabel}</Text>

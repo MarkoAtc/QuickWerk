@@ -5,11 +5,14 @@ import { productAppShell } from './app-shell';
 
 const variants = {
   outline: {
-    borderColor: productAppShell.theme.color.primary,
+    borderColor: '#9CB3D8',
     borderWidth: 1,
+    backgroundColor: '#FFFFFF',
   },
   primary: {
     backgroundColor: productAppShell.theme.color.primary,
+    borderWidth: 1,
+    borderColor: productAppShell.theme.color.primary,
   },
 };
 
@@ -25,7 +28,7 @@ export function ProductRouteLink({ accessibilityHint, accessibilityLabel, descri
         accessibilityRole="button"
         testID={testID}
         style={{
-          marginTop: 16,
+          marginTop: 14,
           paddingHorizontal: 14,
           paddingVertical: 12,
           borderRadius: 12,
@@ -34,9 +37,9 @@ export function ProductRouteLink({ accessibilityHint, accessibilityLabel, descri
       >
         <Text
           style={{
-            color: isPrimary ? productAppShell.theme.color.surface : productAppShell.theme.color.primary,
-            fontSize: 18,
-            fontWeight: '600',
+            color: isPrimary ? '#FFFFFF' : '#12305C',
+            fontSize: 16,
+            fontWeight: '700',
           }}
         >
           {title}
@@ -44,8 +47,9 @@ export function ProductRouteLink({ accessibilityHint, accessibilityLabel, descri
         {description ? (
           <Text
             style={{
-              marginTop: 8,
-              color: isPrimary ? productAppShell.theme.color.surface : productAppShell.theme.color.text,
+              marginTop: 6,
+              color: isPrimary ? '#E7EEFF' : '#334155',
+              lineHeight: 20,
             }}
           >
             {description}

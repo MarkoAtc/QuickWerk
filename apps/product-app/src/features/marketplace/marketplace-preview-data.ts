@@ -14,6 +14,7 @@ export type MarketplacePreviewSection = {
   payloadCompletenessPercent?: number;
   readinessNote?: string;
   responseSlaHint?: string;
+  sectionAlignmentToken?: 'align-mixed' | 'align-risk' | 'align-strong';
   sectionHealthLevel?: 'critical' | 'good' | 'watch';
   sectionSeverityBadgeToken?: 'badge-critical' | 'badge-good' | 'badge-watch';
   title: string;
@@ -49,6 +50,7 @@ export type PreviewHealthIndicator = {
   narrative: string;
   riskHeadline: string;
   severityBadgeToken: 'badge-critical' | 'badge-good' | 'badge-watch';
+  statusDigest: string;
   summary: string;
   watchSections: number;
 };
@@ -72,7 +74,11 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
     dataFreshnessMinutes: 12,
     payloadCompletenessPercent: 92,
+    dataCoverageHint: 'Optional preview metadata is well-covered for this section.',
+    dataCoverageBandToken: 'coverage-high',
     sectionHealthLevel: 'good',
+    sectionSeverityBadgeToken: 'badge-good',
+    sectionAlignmentToken: 'align-strong',
     ctaLabel: 'Open provider card',
   },
   {
@@ -86,7 +92,11 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
     dataFreshnessMinutes: 5,
     payloadCompletenessPercent: 88,
+    dataCoverageHint: 'Optional preview metadata is well-covered for this section.',
+    dataCoverageBandToken: 'coverage-high',
     sectionHealthLevel: 'watch',
+    sectionSeverityBadgeToken: 'badge-watch',
+    sectionAlignmentToken: 'align-mixed',
     ctaLabel: 'Start booking flow',
   },
   {
@@ -95,10 +105,57 @@ export const fallbackMarketplacePreviewSections: readonly MarketplacePreviewSect
     description:
       'The first shared onboarding checkpoints are surfaced as read-only status pills so stakeholders can see trust-layer direction before backend wiring.',
     highlights: ['account setup', 'business profile', 'verification docs'],
+    dataCoverageHint: 'Optional preview metadata is minimal for this section.',
+    dataCoverageBandToken: 'coverage-low',
     sectionHealthLevel: 'good',
+    sectionSeverityBadgeToken: 'badge-good',
+    sectionAlignmentToken: 'align-risk',
     ctaLabel: 'Continue provider onboarding',
   },
 ];
+
+const deriveAlignmentToken = ({
+  severity,
+  coverage,
+}: {
+  coverage: 'coverage-high' | 'coverage-low' | 'coverage-medium';
+  severity: 'badge-critical' | 'badge-good' | 'badge-watch';
+}) => {
+  if (severity === 'badge-critical' || coverage === 'coverage-low') {
+    return 'align-risk' as const;
+  }
+
+  if (severity === 'badge-watch' || coverage === 'coverage-medium') {
+    return 'align-mixed' as const;
+  }
+
+  return 'align-strong' as const;
+};
+
+const buildPreviewStatusDigest = ({
+  level,
+  severityBadgeToken,
+  coverageBandToken,
+  alignmentToken,
+  goodSections,
+  watchSections,
+  criticalSections,
+  coverageWellSections,
+  coveragePartialSections,
+  coverageMinimalSections,
+}: {
+  alignmentToken: 'align-mixed' | 'align-risk' | 'align-strong';
+  coverageBandToken: 'coverage-high' | 'coverage-low' | 'coverage-medium';
+  coverageMinimalSections: number;
+  coveragePartialSections: number;
+  coverageWellSections: number;
+  criticalSections: number;
+  goodSections: number;
+  level: 'critical' | 'good' | 'watch';
+  severityBadgeToken: 'badge-critical' | 'badge-good' | 'badge-watch';
+  watchSections: number;
+}) =>
+  `${level}|${severityBadgeToken}|${coverageBandToken}|${alignmentToken}|g${goodSections}-w${watchSections}-c${criticalSections}|cw${coverageWellSections}-cp${coveragePartialSections}-cm${coverageMinimalSections}`;
 
 const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): PreviewHealthIndicator => {
   const completenessValues = sections
@@ -118,14 +175,14 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   const coverageWellSections = sections.filter((section) => section.dataCoverageHint?.includes('well-covered')).length;
   const coverageBandToken =
     coverageMinimalSections > 0 ? 'coverage-low' : coveragePartialSections > 0 ? 'coverage-medium' : 'coverage-high';
-  const alignmentToken =
-    criticalSections > 0 || coverageBandToken === 'coverage-low'
-      ? 'align-risk'
-      : watchSections > 0 || coverageBandToken === 'coverage-medium'
-        ? 'align-mixed'
-        : 'align-strong';
 
   if (criticalSections > 0) {
+    const severityBadgeToken = 'badge-critical' as const;
+    const alignmentToken = deriveAlignmentToken({
+      severity: severityBadgeToken,
+      coverage: coverageBandToken,
+    });
+
     return {
       level: 'critical',
       summary: 'Preview payload completeness is below target in at least one section.',
@@ -134,7 +191,19 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
           ? 'Critical preview risk: at least one section is low-completeness and metadata coverage is minimal.'
           : 'Critical preview risk: at least one section is low-completeness and should be corrected before demos.',
       riskHeadline: `Critical risk in ${criticalSections} section(s); watch ${watchSections} more.`,
-      severityBadgeToken: 'badge-critical',
+      severityBadgeToken,
+      statusDigest: buildPreviewStatusDigest({
+        level: 'critical',
+        severityBadgeToken,
+        coverageBandToken,
+        alignmentToken,
+        goodSections,
+        watchSections,
+        criticalSections,
+        coverageWellSections,
+        coveragePartialSections,
+        coverageMinimalSections,
+      }),
       coverageBandToken,
       alignmentToken,
       criticalSections,
@@ -147,6 +216,12 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
   }
 
   if (watchSections > 0 || (typeof averageCompleteness === 'number' && averageCompleteness < 90)) {
+    const severityBadgeToken = 'badge-watch' as const;
+    const alignmentToken = deriveAlignmentToken({
+      severity: severityBadgeToken,
+      coverage: coverageBandToken,
+    });
+
     return {
       level: 'watch',
       summary: 'Preview quality is acceptable but one or more sections should be monitored.',
@@ -155,7 +230,19 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
           ? 'Watch state: quality is usable, but sparse metadata in some sections may weaken stakeholder confidence.'
           : 'Watch state: quality is usable, with a few sections needing closer monitoring.',
       riskHeadline: `Watch state across ${watchSections} section(s); no critical sections currently.`,
-      severityBadgeToken: 'badge-watch',
+      severityBadgeToken,
+      statusDigest: buildPreviewStatusDigest({
+        level: 'watch',
+        severityBadgeToken,
+        coverageBandToken,
+        alignmentToken,
+        goodSections,
+        watchSections,
+        criticalSections,
+        coverageWellSections,
+        coveragePartialSections,
+        coverageMinimalSections,
+      }),
       coverageBandToken,
       alignmentToken,
       criticalSections,
@@ -167,6 +254,12 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
     };
   }
 
+  const severityBadgeToken = 'badge-good' as const;
+  const alignmentToken = deriveAlignmentToken({
+    severity: severityBadgeToken,
+    coverage: coverageBandToken,
+  });
+
   return {
     level: 'good',
     summary: 'Preview quality indicators are healthy for the current demo slice.',
@@ -175,7 +268,19 @@ const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): Pr
         ? 'Healthy baseline with minor metadata gaps that can be filled in subsequent slices.'
         : 'Healthy baseline: section quality and metadata coverage are aligned for demos.',
     riskHeadline: `No critical/watch sections; ${goodSections} section(s) currently healthy.`,
-    severityBadgeToken: 'badge-good',
+    severityBadgeToken,
+    statusDigest: buildPreviewStatusDigest({
+      level: 'good',
+      severityBadgeToken,
+      coverageBandToken,
+      alignmentToken,
+      goodSections,
+      watchSections,
+      criticalSections,
+      coverageWellSections,
+      coveragePartialSections,
+      coverageMinimalSections,
+    }),
     coverageBandToken,
     alignmentToken,
     criticalSections,
@@ -267,6 +372,11 @@ const normalizeMarketplacePreviewSection = (
         ? 'badge-watch'
         : 'badge-good';
 
+  const sectionAlignmentToken = deriveAlignmentToken({
+    severity: sectionSeverityBadgeToken,
+    coverage: dataCoverageBandToken,
+  });
+
   return {
     id: value.id,
     title: value.title,
@@ -278,6 +388,7 @@ const normalizeMarketplacePreviewSection = (
     dataFreshnessMinutes,
     dataFreshnessLabel,
     payloadCompletenessPercent,
+    sectionAlignmentToken,
     sectionHealthLevel,
     sectionSeverityBadgeToken,
     responseSlaHint: typeof value.responseSlaHint === 'string' ? value.responseSlaHint : undefined,

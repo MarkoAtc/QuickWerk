@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 
 import { AuthEntrySection } from './auth-entry-section';
 import { createAuthEntryState, initialAuthEntryState } from './auth-entry-state';
-import { productAppShell } from '../../shared/app-shell';
 import { ProductRouteLink } from '../../shared/product-route-link';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { defaultSessionBootstrap, loadSessionBootstrap } from '../../shared/session-bootstrap';
@@ -39,13 +38,13 @@ export function AuthEntryScreen() {
   return (
     <ProductScreenShell
       title="Welcome to QuickWerk"
-      subtitle="A polished shared auth entry for client demos — sign in, create account, or recover access in one clean flow."
+      subtitle="Sign in, create your account, or recover access in one clear mobile-first flow."
       testID="auth-entry-screen"
       contentContainerStyle={{ maxWidth: 920, alignSelf: 'center', width: '100%' }}
     >
       <View
         style={{
-          marginTop: 10,
+          marginTop: 6,
           borderRadius: 16,
           borderWidth: 1,
           borderColor: '#D7DFEA',
@@ -53,11 +52,9 @@ export function AuthEntryScreen() {
           padding: 16,
         }}
       >
-        <Text style={{ color: productAppShell.theme.color.accent }}>
-          Session bootstrap: {productAppShell.sessionBootstrapRequest.method} {productAppShell.sessionBootstrapRoute}
-        </Text>
+        <Text style={{ color: '#12305C', fontWeight: '700' }}>Customer entry point</Text>
         <Text style={{ marginTop: 6, color: '#334155' }}>
-          Current state: {authEntryState.sessionState} · Primary action: {authEntryState.primaryActionLabel}
+          This demo shows the first moments of the customer journey before entering provider discovery.
         </Text>
       </View>
 
@@ -66,17 +63,17 @@ export function AuthEntryScreen() {
       {authEntryState.primaryActionId === 'continue-to-marketplace' ? (
         <ProductRouteLink
           href="/marketplace-preview"
-          title="Continue to marketplace preview"
-          description="Open the client-facing post-auth marketplace surface."
+          title="Continue to marketplace"
+          description="Move into the provider discovery and booking walkthrough."
           testID="auth-entry-open-marketplace-preview-link"
         />
       ) : null}
 
       <ProductRouteLink
         href="/"
-        title="Back to product home"
+        title="Back to demo overview"
         variant="outline"
-        accessibilityHint="Returns to the shared product home route."
+        accessibilityHint="Returns to the QuickWerk demo overview screen."
         testID="auth-entry-back-home-link"
       />
     </ProductScreenShell>

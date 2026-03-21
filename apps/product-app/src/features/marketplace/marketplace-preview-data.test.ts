@@ -87,6 +87,7 @@ describe('loadMarketplacePreview', () => {
           trustBadges: ['ID verified'],
           sectionHealthLevel: 'good',
           sectionSeverityBadgeToken: 'badge-good',
+          sectionAlignmentToken: 'align-risk',
           dataCoverageHint: 'Optional preview metadata is minimal for this section.',
           dataCoverageBandToken: 'coverage-low',
           ctaLabel: 'Open API card',
@@ -140,6 +141,7 @@ describe('loadMarketplacePreview', () => {
           payloadCompletenessPercent: 95,
           sectionHealthLevel: 'good',
           sectionSeverityBadgeToken: 'badge-good',
+          sectionAlignmentToken: 'align-strong',
           dataCoverageHint: 'Optional preview metadata is well-covered for this section.',
           dataCoverageBandToken: 'coverage-high',
           ctaLabel: 'Open API card',
@@ -149,6 +151,9 @@ describe('loadMarketplacePreview', () => {
     });
     expect(result.previewHealth.coverageBandToken).toBe('coverage-high');
     expect(result.previewHealth.alignmentToken).toBe('align-strong');
+    expect(result.previewHealth.statusDigest).toBe(
+      'good|badge-good|coverage-high|align-strong|g1-w0-c0|cw1-cp0-cm0',
+    );
   });
 
   it('derives stable freshness label for mid-range freshness minutes', async () => {
@@ -209,6 +214,9 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.severityBadgeToken).toBe('badge-good');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
     expect(result.previewHealth.alignmentToken).toBe('align-mixed');
+    expect(result.previewHealth.statusDigest).toBe(
+      'good|badge-good|coverage-medium|align-mixed|g1-w0-c0|cw0-cp1-cm0',
+    );
   });
 
   it('marks preview health as critical when one section has low payload completeness', async () => {
@@ -246,9 +254,13 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.severityBadgeToken).toBe('badge-critical');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
     expect(result.previewHealth.alignmentToken).toBe('align-risk');
+    expect(result.previewHealth.statusDigest).toBe(
+      'critical|badge-critical|coverage-medium|align-risk|g0-w0-c1|cw0-cp1-cm0',
+    );
     expect(result.sections[0]?.sectionHealthLevel).toBe('critical');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-critical');
     expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
+    expect(result.sections[0]?.sectionAlignmentToken).toBe('align-risk');
   });
 
   it('marks preview health as watch when stale freshness appears without critical completeness drop', async () => {
@@ -286,8 +298,12 @@ describe('loadMarketplacePreview', () => {
     expect(result.previewHealth.severityBadgeToken).toBe('badge-watch');
     expect(result.previewHealth.coverageBandToken).toBe('coverage-medium');
     expect(result.previewHealth.alignmentToken).toBe('align-mixed');
+    expect(result.previewHealth.statusDigest).toBe(
+      'watch|badge-watch|coverage-medium|align-mixed|g0-w1-c0|cw0-cp1-cm0',
+    );
     expect(result.sections[0]?.sectionHealthLevel).toBe('watch');
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-watch');
     expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
+    expect(result.sections[0]?.sectionAlignmentToken).toBe('align-mixed');
   });
 });

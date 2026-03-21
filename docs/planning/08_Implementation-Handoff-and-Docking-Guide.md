@@ -399,17 +399,37 @@ One tiny deterministic route-level alignment token was added without widening sc
   - good/watch/critical tests now assert alignment token behavior
   - rich metadata mapping test asserts `align-strong`
 
-## 27. Updated Exact Next Docking Point
+## 27. Twenty-First Minimal Docking Increment (Completed)
+
+Two tiny deterministic parity signals were added without widening scope:
+
+- section-level parity signal:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `sectionAlignmentToken` derived from section severity + section coverage tokens
+  - mapping uses the same alignment policy used by route-level health (`align-risk` / `align-mixed` / `align-strong`)
+- route-level compact status signal:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.ts`
+  - added `previewHealth.statusDigest` as a deterministic normalized snapshot string
+  - includes level/severity/coverage/alignment + section and coverage counters for compact demo/debug reads
+- screen-level presentation updates:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-screen.js`
+  - each section now renders alignment token via `marketplace-preview-section-alignment-<section-id>`
+  - health panel now renders status digest via `marketplace-preview-status-digest`
+- focused tests expanded:
+  - `apps/product-app/src/features/marketplace/marketplace-preview-data.test.ts`
+  - added assertions for section alignment token mapping and deterministic status digest values in good/watch/critical flows
+
+## 28. Updated Exact Next Docking Point
 
 Continue with another minimal, low-risk increment that keeps the same constraints:
 
 1. keep `/marketplace-preview` demo-safe and read-only
-2. add exactly one tiny route-level normalized status digest string for deterministic compact logging/debug snapshots
+2. add one tiny deterministic section-route parity summary string in section card footer (human-readable + token-backed)
 3. retain route/shell reuse (no new parallel navigation or platform split)
 4. keep accessibility/testID instrumentation for every new interactive or state-bearing element
 5. add one focused test per changed module before widening scope
 
-## 28. Acceptance Criteria for the Next Contributor
+## 29. Acceptance Criteria for the Next Contributor
 
 - [ ] no deviation from shared product-app architecture
 - [ ] no hidden expansion of scope beyond one read-only slice increment
