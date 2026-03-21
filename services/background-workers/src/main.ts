@@ -5,6 +5,13 @@ function bootstrapWorkers() {
     ...backgroundWorkerRuntime,
     pipelineCount: workerPipelines.length,
     pipelines: workerPipelines,
+    consumers: [
+      {
+        eventName: 'booking.accepted',
+        handler: 'consumeBookingAcceptedAttempt',
+        retryVisibility: 'attempt/maxAttempts with structured status logs',
+      },
+    ],
   };
 
   console.log(JSON.stringify(summary));

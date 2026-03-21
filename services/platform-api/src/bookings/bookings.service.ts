@@ -1,0 +1,246 @@
+import { randomUUID } from 'node:crypto';
+
+import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
+import { Inject, Injectable } from '@nestjs/common';
+
+import { AuthSession } from '../auth/domain/auth-session.repository';
+import { logStructuredBreadcrumb } from '../observability/structured-log';
+import {
+  BOOKING_DOMAIN_EVENT_PUBLISHER,
+  BookingDomainEventPublisher,
+} from '../orchestration/domain-event.publisher';
+import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
+
+@Injectable()
+export class BookingsService {
+  constructor(
+    @Inject(BOOKING_REPOSITORY)
+    private readonly bookings: BookingRepository,
+    @Inject(BOOKING_DOMAIN_EVENT_PUBLISHER)
+    private readonly domainEvents: BookingDomainEventPublisher,
+  ) {}
+
+  getMarketplacePreview() {
+    return {
+      resource: 'marketplace-preview',
+      generatedAt: new Date().toISOString(),
+      sections: [
+        {
+          id: 'provider-discovery',
+          status: 'preview-ready',
+          title: 'Provider discovery preview',
+          description:
+            'Read-only fixture feed for comparing response speed, trust signals, and first-visit availability.',
+          highlights: ['3 local fixture providers', 'service area + response labels', 'review and trust badges'],
+          trustBadges: ['ID verified', 'Business docs reviewed'],
+          responseSlaHint: 'Median provider response under 8 minutes in pilot fixtures',
+          readinessNote: 'Provider card detail is demo-safe and read-only in this slice.',
+          dataFreshnessMinutes: 12,
+          payloadCompletenessPercent: 92,
+          ctaLabel: 'Open provider card',
+        },
+        {
+          id: 'booking-continuation',
+          status: 'preview-ready',
+          title: 'Booking continuation preview',
+          description:
+            'Read-only fixture slice showing urgent and scheduled handoff states after auth continuation.',
+          highlights: ['urgent + scheduled split', 'next-step summary', 'demo-safe booking context only'],
+          trustBadges: ['SLA monitored', 'Status transitions audited'],
+          responseSlaHint: 'Urgent preview flow targets first acknowledgement within 5 minutes',
+          readinessNote: 'Transition events are preview-only and do not trigger worker jobs yet.',
+          dataFreshnessMinutes: 5,
+          payloadCompletenessPercent: 88,
+          ctaLabel: 'Start booking flow',
+        },
+      ],
+    } as const;
+  }
+
+  async listBookings(session: AuthSession): Promise<BookingSummary[]> {
+    if (session.role === 'provider') {
+      return this.bookings.listBookings({ scope: 'submitted-only' });
+    }
+
+    // customer or operator sees their own bookings
+    return this.bookings.listBookings({ scope: 'customer-owned', customerUserId: session.userId });
+  }
+
+  async createBooking(
+    session: AuthSession,
+    input: { requestedService?: string },
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403; error: string }
+    | { ok: true; statusCode: 201; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'customer') {
+      logStructuredBreadcrumb({
+        event: 'booking.create.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only customers can create bookings.',
+      };
+    }
+
+    const created = await this.bookings.createSubmittedBooking({
+      createdAt: new Date().toISOString(),
+      customerUserId: session.userId,
+      requestedService: input.requestedService?.trim() || 'General handyman help',
+      actorRole: session.role,
+      actorUserId: session.userId,
+    });
+
+    logStructuredBreadcrumb({
+      event: 'booking.create.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: created.bookingId,
+        actorUserId: session.userId,
+      },
+    });
+
+    return {
+      ok: true,
+      statusCode: 201,
+      booking: this.serializeRecord(created),
+    };
+  }
+
+  async acceptBooking(
+    session: AuthSession,
+    bookingId: string,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'booking.accept.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+          bookingId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only providers can accept bookings.',
+      };
+    }
+
+    const accepted = await this.bookings.acceptSubmittedBooking({
+      bookingId,
+      acceptedAt: new Date().toISOString(),
+      providerUserId: session.userId,
+      actorRole: session.role,
+      actorUserId: session.userId,
+    });
+
+    if (!accepted.ok) {
+      if (accepted.reason === 'not-found') {
+        logStructuredBreadcrumb({
+          event: 'booking.accept.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'not-found',
+            bookingId,
+            actorUserId: session.userId,
+          },
+        });
+
+        return {
+          ok: false,
+          statusCode: 404,
+          error: 'Booking not found.',
+        };
+      }
+
+      logStructuredBreadcrumb({
+        event: 'booking.accept.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: accepted.currentStatus,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot transition from ${accepted.currentStatus} to accepted.`,
+      };
+    }
+
+    const acceptedEvent: BookingAcceptedDomainEvent = {
+      eventName: 'booking.accepted',
+      eventId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      correlationId,
+      replayed: accepted.replayed,
+      booking: {
+        bookingId: accepted.booking.bookingId,
+        customerUserId: accepted.booking.customerUserId,
+        providerUserId: accepted.booking.providerUserId ?? session.userId,
+        requestedService: accepted.booking.requestedService,
+        status: 'accepted',
+      },
+    };
+
+    await this.domainEvents.publishBookingAccepted(acceptedEvent);
+
+    logStructuredBreadcrumb({
+      event: 'booking.accept.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: accepted.booking.bookingId,
+        actorUserId: session.userId,
+        replayed: accepted.replayed,
+      },
+    });
+
+    return {
+      ok: true,
+      statusCode: 200,
+      booking: this.serializeRecord(accepted.booking),
+    };
+  }
+
+  private serializeRecord(record: BookingRecord) {
+    return {
+      bookingId: record.bookingId,
+      createdAt: record.createdAt,
+      customerUserId: record.customerUserId,
+      providerUserId: record.providerUserId,
+      requestedService: record.requestedService,
+      status: record.status,
+      statusHistory: record.statusHistory,
+    } as const;
+  }
+}

@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { AuthController } from './auth/auth.controller';
+import { AuthModule } from './auth/auth.module';
+import { BookingsModule } from './bookings/bookings.module';
 import { HealthController } from './health/health.controller';
-import { MarketplaceController } from './marketplace/marketplace.controller';
+import { RelayQueueOperatorController } from './operators/relay-queue.controller';
+import { PersistenceModule } from './persistence/persistence.module';
 
 @Module({
-  controllers: [AuthController, HealthController, MarketplaceController],
+  imports: [PersistenceModule, AuthModule, BookingsModule],
+  controllers: [HealthController, RelayQueueOperatorController],
 })
 export class AppModule {}

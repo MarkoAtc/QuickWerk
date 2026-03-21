@@ -5,11 +5,14 @@ import { AuthEntrySection } from './auth-entry-section';
 import { createAuthEntryState, initialAuthEntryState } from './auth-entry-state';
 import { ProductRouteLink } from '../../shared/product-route-link';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
-import { defaultSessionBootstrap, loadSessionBootstrap } from '../../shared/session-bootstrap';
+import { defaultSessionBootstrap, loadSessionBootstrap, signInWithSessionBootstrap } from '../../shared/session-bootstrap';
 
 export function AuthEntryScreen() {
+  const [actionStatusMessage, setActionStatusMessage] = useState();
   const [sessionBootstrap, setSessionBootstrap] = useState(defaultSessionBootstrap);
+  const [sessionToken, setSessionToken] = useState();
   const [isSessionBootstrapLoading, setIsSessionBootstrapLoading] = useState(true);
+  const [isSignInSubmitting, setIsSignInSubmitting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -35,6 +38,34 @@ export function AuthEntryScreen() {
     ? initialAuthEntryState
     : createAuthEntryState(sessionBootstrap, isSessionBootstrapLoading);
 
+  const handleSignInPress = () => {
+    if (isSignInSubmitting) {
+      return;
+    }
+
+    setActionStatusMessage(undefined);
+    setIsSignInSubmitting(true);
+
+    void signInWithSessionBootstrap()
+      .then((result) => {
+        setSessionBootstrap(result.sessionBootstrap);
+
+        if (result.sessionToken) {
+          setSessionToken(result.sessionToken);
+        }
+
+        if (result.errorMessage) {
+          setActionStatusMessage(`Sign-in warning: ${result.errorMessage}`);
+          return;
+        }
+
+        setActionStatusMessage('Live sign-in completed. Session token resolved and state is authenticated.');
+      })
+      .finally(() => {
+        setIsSignInSubmitting(false);
+      });
+  };
+
   return (
     <ProductScreenShell
       title="Welcome to QuickWerk"
@@ -56,9 +87,17 @@ export function AuthEntryScreen() {
         <Text style={{ marginTop: 6, color: '#334155' }}>
           This demo shows the first moments of the customer journey before entering provider discovery.
         </Text>
+        <Text testID="auth-entry-token-state" style={{ marginTop: 6, color: '#475569' }}>
+          Session token: {sessionToken ? `${sessionToken.slice(0, 8)}…` : 'not issued'}
+        </Text>
       </View>
 
-      <AuthEntrySection authEntryState={authEntryState} />
+      <AuthEntrySection
+        authEntryState={authEntryState}
+        actionStatusMessage={actionStatusMessage}
+        isSubmitting={isSignInSubmitting}
+        onPrimaryActionPress={handleSignInPress}
+      />
 
       {authEntryState.primaryActionId === 'continue-to-marketplace' ? (
         <ProductRouteLink

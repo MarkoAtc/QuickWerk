@@ -436,3 +436,666 @@ Continue with another minimal, low-risk increment that keeps the same constraint
 - [ ] explicit fallback behavior for all new remote reads
 - [ ] focused tests added and passing
 - [ ] README handoff section kept in sync with actual implementation state
+
+## 29. Phase-1 Thin Vertical Slice Foundation (Auth + Booking Transitions)
+
+A minimal but real backend-backed slice is now in place for auth and booking transitions:
+
+- platform-api refactor from controller literals to module/service structure:
+  - `services/platform-api/src/auth/auth.module.ts`
+  - `services/platform-api/src/auth/auth.service.ts`
+  - `services/platform-api/src/auth/session-store.service.ts`
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - `services/platform-api/src/bookings/bookings.service.ts`
+  - `services/platform-api/src/bookings/bookings.controller.ts`
+- hardcoded auth fixture replaced with token-based in-memory sessions:
+  - `GET /api/v1/auth/session` resolves bearer token into authenticated/anonymous state
+  - `POST /api/v1/auth/sign-in` issues session token
+  - `POST /api/v1/auth/sign-out` invalidates session token
+- booking flow foundation implemented with server-side transition enforcement:
+  - `POST /api/v1/bookings` (customer role only) creates booking in `submitted`
+  - `POST /api/v1/bookings/:bookingId/accept` (provider role only) transitions `submitted -> accepted`
+  - immutable in-memory `statusHistory` appended per transition event
+- api-client contracts expanded for this slice:
+  - sign-in/sign-out helpers
+  - create booking + accept booking request builders
+- product app minimal real action path wired:
+  - sign-in CTA now calls platform-api sign-in endpoint
+  - session bootstrap refresh uses bearer token and updates authenticated state in UI
+  - focused tests added for token header propagation + sign-in/bootstrap happy path
+
+This slice intentionally does **not** include payments, full onboarding orchestration, or persistence beyond in-memory state.
+
+## 30. DB-ready Architecture Slice (Completed)
+
+This pass moved backend architecture from pure in-memory wiring to DB-ready boundaries without changing controller/service contracts:
+
+- persistence direction locked via ADR:
+  - `docs/planning/10_ADR-Persistence-Path-Postgres-Redis-Object-Storage.md`
+  - decision: PostgreSQL (PostGIS-ready) + Redis + object storage, no Supabase runtime dependency
+  - deployment note: Vercel-hosted app surfaces remain valid with external DB/cache/storage
+- repository interfaces introduced in domain modules:
+  - auth: `src/auth/domain/auth-session.repository.ts`
+  - bookings: `src/bookings/domain/booking.repository.ts`
+- in-memory adapters remain default (drop-in for upcoming Postgres adapters):
+  - auth: `src/auth/infrastructure/in-memory-auth-session.repository.ts`
+  - bookings: `src/bookings/infrastructure/in-memory-booking.repository.ts`
+- Nest DI now binds services to repository tokens (contracts unchanged at controller level):
+  - `AuthService` consumes `AUTH_SESSION_REPOSITORY`
+  - `BookingsService` consumes `BOOKING_REPOSITORY`
+- initial SQL migration scaffolding added:
+  - `services/platform-api/migrations/0001_initial_auth_bookings.sql`
+  - `services/platform-api/migrations/README.md`
+  - tables: `users`, `sessions`, `bookings`, `booking_status_history`
+  - includes key constraints/indexes for current auth + booking transition behavior
+- backend unit tests added:
+  - `src/auth/auth.service.test.ts` (session resolution + sign-out invalidation)
+  - `src/bookings/bookings.service.test.ts` (create/accept authorization and transition conflict checks)
+
+### Updated exact next docking point
+
+Implement the first real Postgres adapter behind existing repository interfaces, with no controller/service API changes:
+
+1. add Postgres repository implementations for auth sessions and bookings
+2. wire adapter selection via environment flag (`in-memory` default, `postgres` optional)
+3. execute `0001` migration against a local Postgres instance and add a minimal adapter integration test slice
+4. keep current in-memory tests green as fallback behavior
+
+## 31. Concurrency + Session Lifecycle Hardening (Completed)
+
+This pass closes the two next persistence hardening slices without widening controller contracts:
+
+- booking accept concurrency/idempotency hardening:
+  - retries from the **same provider** are now idempotent (`ok: true`) and return the already-accepted booking without extra history writes
+  - competing providers still receive deterministic `transition-conflict`
+  - conflict payload now includes `currentProviderUserId` in repository results for deterministic diagnostics
+  - both adapters aligned:
+    - `src/bookings/infrastructure/in-memory-booking.repository.ts`
+    - `src/bookings/infrastructure/postgres-booking.repository.ts`
+  - tests added/updated for replay + near-simultaneous attempts:
+    - `src/bookings/bookings.service.test.ts`
+    - `src/bookings/infrastructure/postgres-booking.repository.test.ts`
+    - `src/persistence/postgres-mode.integration.test.ts`
+
+- auth session lifecycle enforcement:
+  - `AuthSession` now includes `expiresAt`
+  - session TTL defaults to 12h (`AUTH_SESSION_TTL_SECONDS` override supported)
+  - resolve now enforces expiry in both adapters
+  - deterministic on-access invalidation implemented:
+    - in-memory: remove expired token during resolve
+    - postgres: delete expired token on resolve before active lookup
+  - migration added:
+    - `services/platform-api/migrations/0002_session_expiry_enforcement.sql`
+    - enforces `sessions.expires_at` non-null + default + index
+  - tests added/updated:
+    - `src/auth/infrastructure/in-memory-auth-session.repository.test.ts`
+    - `src/auth/infrastructure/postgres-auth-session.repository.test.ts`
+
+### Updated exact next docking point
+
+Proceed to Phase-2 orchestration while preserving the current API surface:
+
+1. emit booking-accepted domain event after successful transition (including idempotent replay flag)
+2. wire background worker consumer stub with retry visibility and deterministic logging envelope
+3. add one end-to-end verification slice proving event emission + consumer handling path
+4. keep repository contracts async and parity-tested across in-memory/postgres modes
+
+## 32. Phase-2 Orchestration Kickoff + Observability Hardening (Completed)
+
+This slice implements the first minimal orchestration handoff and correlation breadcrumbs without changing public response contracts.
+
+- platform-api domain event emission from booking write path:
+  - `BookingsService.acceptBooking` now emits a `booking.accepted` domain event after each successful accept (first accept and idempotent replay)
+  - event envelope includes:
+    - `eventName`, `eventId`, `occurredAt`
+    - `correlationId`
+    - `replayed`
+    - accepted booking identity payload (`bookingId`, `customerUserId`, `providerUserId`, `requestedService`, `status`)
+  - emission is routed via a dedicated publisher boundary:
+    - `src/orchestration/domain-event.publisher.ts`
+    - `src/orchestration/logging-domain-event.publisher.ts`
+    - provider wired in `src/bookings/bookings.module.ts`
+
+- background-workers consumer stub with retry visibility semantics:
+  - added `consumeBookingAcceptedAttempt` in:
+    - `services/background-workers/src/workers/booking-accepted.worker.ts`
+  - structured status logging now makes retries explicit:
+    - start: includes `attempt`, `maxAttempts`, `eventId`, `bookingId`, `replayed`
+    - success: `processed`
+    - failure with retries left: `retry-scheduled`
+    - terminal failure: `dead-letter`
+  - worker pipeline registry updated to include `booking-accepted-orchestration`
+
+- correlation breadcrumb hardening (auth + booking write paths):
+  - new correlation utility:
+    - `services/platform-api/src/observability/correlation-id.ts`
+  - behavior:
+    - accepts sanitized client-provided `x-correlation-id`
+    - falls back deterministically to `corr-<sha256-prefix>` derived from request method/path/token/body
+  - write-path coverage:
+    - `POST /api/v1/auth/sign-in`
+    - `POST /api/v1/auth/sign-out`
+    - `POST /api/v1/bookings`
+    - `POST /api/v1/bookings/:bookingId/accept`
+  - response header propagation:
+    - `x-correlation-id` is echoed/generated for these write routes
+  - structured logs now include correlation breadcrumbs across:
+    - auth writes
+    - booking writes
+    - booking domain event emission
+    - worker attempt processing
+
+- tests added for this slice:
+  - `services/platform-api/src/bookings/bookings.service.test.ts`
+    - asserts domain event emission includes correlation id and replay flag behavior
+  - `services/platform-api/src/observability/correlation-id.test.ts`
+    - asserts header normalization and deterministic fallback generation
+
+## 33. Phase-2 Minimal Relay Execution Path + Correlation Continuity (Completed)
+
+This slice closes the next orchestration docking point by proving a runnable producer→consumer path without introducing queue infrastructure.
+
+- lightweight relay execution path (in-memory):
+  - platform-api now routes booking domain emission through:
+    - `services/platform-api/src/orchestration/relay-domain-event.publisher.ts`
+  - relay composes existing logging emission with direct in-memory consumer invocation:
+    - `consumeBookingAcceptedAttempt` from `@quickwerk/background-workers`
+  - bookings DI wiring now points `BOOKING_DOMAIN_EVENT_PUBLISHER` to the relay publisher:
+    - `services/platform-api/src/bookings/bookings.module.ts`
+  - public API payload contracts remain unchanged.
+
+- worker envelope contract hardening for deterministic retry + DLQ schema (stub-only):
+  - shared contract additions in domain package:
+    - `BookingAcceptedRetryBackoffMetadata`
+    - `BookingAcceptedDlqMarker`
+    - `BookingAcceptedWorkerEnvelope`
+    - file: `packages/domain/src/index.ts`
+  - background-worker consumer now builds deterministic envelope metadata and returns it in attempt results:
+    - strategy: `deterministic-exponential-v1`
+    - fields: `attempt`, `maxAttempts`, `backoffMs`, `nextAttemptAt`
+  - terminal DLQ marker schema now available via helper path (`markBookingAcceptedDlq`) and attached on terminal failures.
+
+- focused integration proof for correlation continuity:
+  - added test:
+    - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - verifies booking accept flow for both:
+    - caller-provided `x-correlation-id`
+    - generated fallback correlation id
+  - asserts same correlation id continuity through:
+    - booking accept response header
+    - emitted `booking.accepted.domain-event.emit` log
+    - worker `booking.accepted.worker-consume` started log
+    - relay result log (`booking.accepted.domain-event.relay`) + `workerCorrelationId`
+  - asserts deterministic retry metadata presence in relay result details.
+
+## 34. Phase-2 Failure/Terminal Relay Hardening (Completed)
+
+This slice completes the prior relay failure-path docking work while keeping infrastructure lightweight and public APIs unchanged.
+
+- retry progression relay behavior is now explicitly covered end-to-end:
+  - `RelayBookingDomainEventPublisher` now supports deterministic in-memory retry handoff attempts up to `maxAttempts=3`
+  - each attempt emits `booking.accepted.domain-event.relay.attempt` with structured retry details
+  - deterministic backoff progression is now asserted for attempt sequence `1 -> 2 -> 3` (`1000ms -> 2000ms -> 4000ms`)
+- terminal exhausted path is now integration-proven:
+  - forced exhausted attempts produce final `workerStatus: dead-letter`
+  - relay final details now propagate the DLQ marker payload (`terminal`, `queueName`, `reason`, `markedAt`)
+- no queue persistence infra added:
+  - no Redis/SQS/outbox/runtime queue dependency introduced
+  - behavior remains in-memory stub execution for this phase
+
+### Test coverage added in this pass
+
+- background-workers unit coverage:
+  - `services/background-workers/src/workers/booking-accepted.worker.test.ts`
+  - asserts deterministic backoff for attempts 2 and 3
+  - asserts terminal DLQ marker propagation on exhausted attempts
+- platform-api integration coverage:
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - adds retry progression scenario (`attempt 2..N`) with deterministic backoff assertions
+  - adds exhausted-attempt terminal scenario with `dead-letter` + DLQ propagation assertions
+
+## 35. Phase-2 Relay Attempt Policy + Fixed Clock Seams (Completed)
+
+This slice removes env-based retry simulation hacks and introduces deterministic timing seams while keeping relay execution in-memory and API contracts unchanged.
+
+- relay attempt policy seam introduced (DI-driven):
+  - `services/platform-api/src/orchestration/relay-attempt-policy.ts`
+  - adds token + contract:
+    - `BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY`
+    - `BookingAcceptedRelayAttemptPolicy`
+  - default runtime implementation:
+    - `NoopBookingAcceptedRelayAttemptPolicy`
+  - relay publisher now consumes policy decisions per attempt rather than reading process env.
+
+- fixed clock seam introduced for deterministic retry timing:
+  - `services/platform-api/src/orchestration/relay-clock.ts`
+  - adds token + contract:
+    - `BOOKING_ACCEPTED_RELAY_CLOCK`
+    - `BookingAcceptedRelayClock`
+  - default runtime implementation:
+    - `SystemBookingAcceptedRelayClock`
+  - relay passes injected clock timestamps into worker attempt input (`now`) so `nextAttemptAt` can be pinned in tests.
+
+- bookings module wiring updated:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - binds default relay policy + clock implementations via DI (`useExisting`) without changing external behavior.
+
+- integration tests migrated to seam injection and hardened:
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - env toggles removed (`BOOKING_ACCEPTED_RELAY_FORCE_FAILURES_BEFORE_SUCCESS` no longer used)
+  - retry/dead-letter scenarios now inject `createFailUntilAttemptPolicy(...)`
+  - adds fixed-clock boundary test that asserts exact `nextAttemptAt` values under retry progression.
+
+## 36. Phase-2 Relay Attempt Executor Boundary + Log Contract Freeze (Completed)
+
+This slice isolates relay attempt execution behind an adapter contract and adds payload-shape contract tests, while keeping relay runtime behavior in-memory.
+
+- relay attempt execution adapter boundary introduced:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - adds:
+    - `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR`
+    - `RelayAttemptExecutor`
+    - `InMemoryRelayAttemptExecutor`
+  - `RelayBookingDomainEventPublisher` now calls `relayAttemptExecutor.execute(...)` instead of directly invoking worker consume helpers.
+- DI wiring updated without behavior drift:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - binds default adapter via `useExisting: InMemoryRelayAttemptExecutor`
+  - keeps existing policy + clock seams intact.
+- structured-log contract tests added (integration level):
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+  - freezes payload shapes for:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+  - asserts stable top-level and nested key contracts (`details`, `retry`, `dlq`) and deterministic status/value expectations.
+- out-of-scope kept intact:
+  - no Redis/SQS/outbox persistence introduced in this pass
+  - no API contract change and no relay semantic change.
+
+## 37. Phase-2 Queue-Backed Relay Adapter + Feature-Flag Provider Swap (Completed)
+
+This slice introduces the first queue-backed adapter variant behind `RelayAttemptExecutor` without changing API contracts or publisher orchestration.
+
+- second relay attempt executor adapter added:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - adds `QueueBackedRelayAttemptExecutor` as lightweight in-process queue-backed execution path
+  - retains existing `InMemoryRelayAttemptExecutor` as default behavior.
+- adapter selection seam introduced via config/env:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.ts`
+  - adds:
+    - `RelayAttemptExecutorMode`
+    - `resolveRelayAttemptExecutorMode(...)`
+    - `resolveRelayAttemptExecutor(...)`
+  - env switch: `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE=in-memory|queue-backed`
+  - invalid values fail fast with explicit configuration error.
+- DI wiring updated while keeping orchestration untouched:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - both adapters are provided; token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR` is now resolved through factory provider.
+- test coverage added/expanded:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.test.ts`
+    - default mode remains in-memory
+    - queue-backed mode resolves alternate adapter
+    - invalid mode rejection coverage
+  - `services/platform-api/src/bookings/booking-accept-relay.integration.test.ts`
+    - queue-backed mode integration path proves retry progression + final relay result semantics remain parity-safe
+    - existing structured-log contract freeze tests remain unchanged and green.
+- compatibility and scope guardrails preserved:
+  - no public API payload contract change
+  - no structured log payload shape drift
+  - no external queue transport/persistence introduced in this slice.
+
+## 38. Phase-2 Postgres-Persistent Relay Transport (Completed)
+
+This slice replaces the lightweight in-process queue internals with a durable Postgres transport path while preserving existing API behavior and relay log contracts.
+
+- persistent transport model/migration added:
+  - `services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql`
+  - table `booking_accepted_relay_attempts` captures:
+    - status (`queued|processed|retry-scheduled|dead-letter`)
+    - attempt/max attempt counters
+    - `next_attempt_at`
+    - `correlation_id`
+    - payload snapshot (`payload_snapshot`)
+    - retry snapshot (`retry_snapshot`)
+    - DLQ snapshot (`dlq_snapshot`)
+    - terminal marker (`terminal_marker`)
+- new persistent executor adapter added behind the same seam:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - introduces `PostgresRelayAttemptExecutor`
+  - execution flow in persistent mode is enqueue-then-process:
+    1. write queued attempt row
+    2. execute worker consume attempt
+    3. finalize row with processed/retry/dead-letter status + retry/DLQ metadata
+- provider/mode selection updated with explicit opt-in safety:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.ts`
+  - supported modes:
+    - `in-memory` (default)
+    - `postgres-persistent` (explicit)
+  - legacy `queue-backed` mode string is accepted as alias -> `postgres-persistent`
+  - guardrail: `postgres-persistent` requires `PERSISTENCE_MODE=postgres`
+- DI wiring updated without orchestration drift:
+  - `services/platform-api/src/bookings/bookings.module.ts`
+  - token `BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR` now resolves between in-memory and Postgres-persistent adapters
+  - `RelayBookingDomainEventPublisher` orchestration remains unchanged except executor calls are now awaited to support async persistent writes
+- tests added/updated:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.provider.test.ts`
+    - covers default mode, persistent mode, legacy alias, invalid mode, and postgres guardrail
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts`
+    - covers queued->retry-scheduled persistence snapshot behavior
+    - covers queued->dead-letter persistence snapshot behavior + terminal marker
+    - verifies correlation continuity in persistent path
+  - existing structured-log payload contract tests remain unchanged and passing:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+
+## 39. Phase-2 Persistent Dequeue + Retry Drain Loop (Completed)
+
+This slice closes the first durable retry-processing gap for Postgres-persistent relay mode while keeping publisher orchestration and API payload contracts unchanged.
+
+- dequeue/claim loop added for due retries:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - `PostgresRelayAttemptExecutor` now drains due rows in bounded batches per `execute(...)` call
+  - due eligibility:
+    - `status = 'retry-scheduled'`
+    - `next_attempt_at <= now`
+    - no already-materialized successor attempt row (`NOT EXISTS event_id + attempt+1`)
+  - lock-safe claiming uses `FOR UPDATE SKIP LOCKED` inside transaction scope
+- durable progression semantics:
+  - claimed due rows materialize successor attempt rows (`attempt + 1`) with persisted payload snapshots
+  - successor processing reuses the same finalization path and status mapping:
+    - `processed`
+    - `retry-scheduled`
+    - `dead-letter`
+  - duplicate enqueue of same `(event_id, attempt)` is now idempotent (`ON CONFLICT DO NOTHING`) and resolves against persisted state
+- restart-safe deterministic reclaim semantics:
+  - if a row exists in `queued` state (crash between enqueue and finalize), subsequent execute calls reclaim and finalize it
+  - due retries are advanced only when successor attempt rows are absent, preventing double-advance after restart/race conditions
+- minimal observability added:
+  - emits queue breadcrumb `booking.accepted.domain-event.relay.queue.observability`
+  - details include:
+    - `depth`
+    - `dueCount`
+    - `deadLetterCount`
+    - `processingLagMs` (oldest due item lag hint)
+- tests added/expanded:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts`
+    - verifies lock-safe dequeue progression behavior and retry advancement continuity
+    - verifies correlation continuity remains intact for derived retry attempts
+    - keeps queued->retry and queued->dead-letter snapshot checks green
+
+## 40. Phase-2 Dedicated Queue Tick + Readiness Metrics + Contention Proof (Completed)
+
+This slice decouples durable retry draining from HTTP latency paths, exposes queue pressure signals via readiness, and adds real-Postgres contention proof coverage.
+
+- dequeue/retry draining moved off request path:
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+  - `execute(...)` now performs enqueue + immediate attempt processing only
+  - new `drainDueRetriesTick(...)` runs bounded dequeue batches with the same lock-safe claim semantics (`FOR UPDATE SKIP LOCKED` + successor existence guard)
+- dedicated worker tick path introduced:
+  - `services/platform-api/src/orchestration/relay-queue-worker.service.ts`
+  - periodic tick drains due retries when persistent mode is enabled (`postgres-persistent` + `PERSISTENCE_MODE=postgres`)
+  - in-flight guard prevents overlapping local tick executions
+- queue metrics exposed on readiness endpoint:
+  - `services/platform-api/src/health/health.controller.ts`
+  - adds `GET /health/readiness` with lightweight relay queue counters and lag:
+    - `depth`, `dueCount`, `deadLetterCount`, `lagMs`
+  - includes threshold guidance + derived readiness level (`good|watch|critical`)
+  - preserves legacy `GET /health` response contract unchanged
+- contention proof added (real Postgres, optional integration suite):
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres-contention.integration.test.ts`
+  - executes concurrent drain ticks from multiple executor instances against same due row
+  - asserts no double-advance (single successor attempt materialization) and correlation continuity
+- compatibility gates maintained:
+  - structured log contract tests for:
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+  - remain unchanged and green
+
+## 41. Phase-3 Operator Guardrails + Durable Queue Snapshot History + Dashboard/Smoke Handoff (Completed)
+
+This slice completes the previously docked operator hardening follow-up while preserving existing public API contracts for all previously shipped endpoints.
+
+- authN/authZ guardrails added for `/operators/relay-queue/*`:
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - `services/platform-api/src/operators/operator-access-policy.ts`
+  - default policy requires bearer session authentication and provider-role authorization
+  - env policy knobs:
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_AUTH_MODE=required|legacy-open`
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES=provider[,customer]`
+  - backward-safe override (`legacy-open`) retained for staged rollout
+- queue snapshot history persisted beyond process memory:
+  - `services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql`
+  - `services/platform-api/src/orchestration/relay-attempt-executor.ts`
+    - snapshots written to `booking_accepted_relay_queue_snapshots`
+    - `/operators/relay-queue/snapshots` now reads durable history from Postgres
+    - bounded retention cleanup on every insert via `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` (default `200`)
+- dashboard/alert mapping + smoke handoff added:
+  - `docs/ops/relay-queue-runbook.md`
+    - Grafana panel field mapping from snapshot payload
+    - Alertmanager mapping for watch/critical readiness signals
+    - updated operational notes for durable snapshot storage
+  - `scripts/smoke/operator-relay-queue-smoke.sh`
+    - quick auth-guarded smoke checks for `/operators/relay-queue/attempts` and `/operators/relay-queue/snapshots`
+- tests added/expanded:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts` (401/403 + legacy-open fallback + endpoint behavior)
+  - `services/platform-api/src/orchestration/relay-attempt-executor.postgres.test.ts` (durable snapshot retention enforcement)
+- compatibility notes:
+  - existing public endpoint contracts remain unchanged
+  - legacy `GET /health` response unchanged
+  - existing structured-log contract tests for
+    - `booking.accepted.domain-event.relay.attempt`
+    - `booking.accepted.domain-event.relay`
+    remain unchanged and green
+
+## 42. Phase-4 Operator Role Migration + SLO Windows + Bounded CSV Export (Completed)
+
+This slice executes the prior docking point end-to-end while preserving existing API behavior through additive, backward-safe changes.
+
+- dedicated operator-role migration (with transition safety):
+  - `services/platform-api/src/auth/domain/auth-session.repository.ts`
+  - `services/platform-api/src/auth/auth.service.ts`
+  - `services/platform-api/src/auth/infrastructure/postgres-auth-session.repository.ts`
+  - `services/platform-api/src/operators/operator-access-policy.ts`
+  - `services/platform-api/migrations/0005_operator_role_support.sql`
+  - role model now supports `operator` sessions while preserving current provider-session compatibility in transition mode
+  - policy knobs:
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ROLE_MODE=operator-provider-transition|operator-strict`
+    - `BOOKING_ACCEPTED_RELAY_OPERATOR_ALLOWED_ROLES` still supported for explicit rollout overrides
+- relay queue SLO window surfacing for readiness + operator views:
+  - `services/platform-api/src/health/readiness-thresholds.ts`
+    - adds rolling window config + summary derivation helpers
+  - `services/platform-api/src/health/health.controller.ts`
+    - adds `relayQueue.sloWindow` to `/health/readiness`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+    - adds `relayQueue.current.sloWindow` to `/operators/relay-queue/snapshots`
+  - SLO env knobs:
+    - `BOOKING_ACCEPTED_RELAY_SLO_WINDOW_MINUTES`
+    - `BOOKING_ACCEPTED_RELAY_SLO_SAMPLE_LIMIT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_WATCH_THRESHOLD_PERCENT`
+    - `BOOKING_ACCEPTED_RELAY_SLO_CRITICAL_THRESHOLD_PERCENT`
+- bounded CSV export follow-up (auth-guarded operator endpoint):
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+    - new `GET /operators/relay-queue/attempts.csv`
+    - dead-letter scoped by default (`status=dead-letter` only)
+    - bounded pagination (`limit` capped)
+    - allow-listed field export only (`fields` filter)
+  - `scripts/smoke/operator-relay-queue-smoke.sh`
+    - includes CSV endpoint smoke call
+- targeted tests added/expanded:
+  - `services/platform-api/src/operators/operator-access-policy.test.ts` (role migration behavior)
+  - `services/platform-api/src/health/readiness-thresholds.test.ts` (SLO window summary behavior)
+  - `services/platform-api/src/health/health.controller.test.ts` (readiness SLO payload)
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts` (SLO surfacing + CSV bounds/security)
+  - `services/platform-api/src/auth/auth.service.test.ts` (operator sign-in role)
+- compatibility notes:
+  - `GET /health` legacy payload unchanged
+  - existing structured-log contract tests remain unchanged and green
+  - no new queue infrastructure introduced (Postgres-only persistence retained)
+
+## 43. Phase-5 Operator Rollout Telemetry + Async CSV Handoff + SLO Trend Buckets (Completed)
+
+This slice executes all previously docked follow-ups in additive, backward-safe form without introducing new queue infra.
+
+- operator-auth rollout telemetry for `/operators/relay-queue/*`:
+  - `services/platform-api/src/operators/relay-queue-telemetry.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - role-mode usage counters and denied-role counters tracked + surfaced as `relayQueue.operatorAuthTelemetry`
+  - structured log payload emitted per auth decision:
+    - `booking.accepted.relay.operator.access.telemetry`
+- non-blocking CSV handoff path for larger incident windows:
+  - `services/platform-api/src/operators/relay-queue-export-handoff.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - adds:
+    - `GET /operators/relay-queue/attempts.csv/handoff`
+    - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
+    - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId?download=1`
+  - bounded (max `2000` rows), auth-guarded, dead-letter constrained, and non-blocking via staged handoff generation
+  - legacy `GET /operators/relay-queue/attempts.csv` contract preserved unchanged
+- pre-aggregated relay SLO trend payload:
+  - `services/platform-api/src/health/readiness-thresholds.ts`
+  - `services/platform-api/src/operators/relay-queue.controller.ts`
+  - `/operators/relay-queue/snapshots` now includes `relayQueue.current.sloTrend` with bucketed summaries
+  - env knob added: `BOOKING_ACCEPTED_RELAY_SLO_TREND_BUCKET_MINUTES` (default `5`, max `60`)
+- targeted tests added/updated:
+  - `services/platform-api/src/operators/relay-queue.controller.test.ts`
+    - telemetry counters
+    - export handoff behavior
+    - SLO trend payload shape
+  - `services/platform-api/src/health/readiness-thresholds.test.ts`
+    - bucketed SLO trend helper
+- compatibility notes:
+  - existing endpoint behavior/contracts are preserved (additive payloads/endpoints only)
+  - no Redis/SQS rollout; infra remains Postgres + in-memory handoff staging
+  - existing relay structured-log contract tests remain green
+
+### Updated exact next docking point
+
+1. persist async handoff job metadata/results in Postgres for cross-instance continuity
+2. add low-cardinality per-endpoint latency counters alongside auth telemetry for rollout risk triage
+3. ship dashboard presets for common incident windows (15m/1h/6h) built on `sloTrend` buckets
+
+## 44. Phase-1 Real Frontend User Journey (Completed)
+
+This slice replaces demo-only preview screens with real thin functional flows that consume the existing platform-api endpoints end-to-end.
+
+### Auth flow (real sign-in)
+- new sign-in screen with email + role selector (customer/provider) + submit:
+  - `apps/product-app/src/features/auth/sign-in-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/auth/sign-in-screen-actions.ts`
+  - calls `POST /api/v1/auth/sign-in`, extracts bearer token
+- route file:
+  - `apps/product-app/app/sign-in.js`
+- in-memory session store (module-scoped, no persistence):
+  - `apps/product-app/src/shared/session-context.ts`
+- state helpers:
+  - `apps/product-app/src/features/auth/sign-in-state.ts`
+
+### Customer booking flow (real)
+- booking screen with service description form + submit:
+  - `apps/product-app/src/features/booking/booking-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/booking/booking-screen-actions.ts`
+  - calls `POST /api/v1/bookings` with bearer token, shows created booking with `submitted` status
+- route file:
+  - `apps/product-app/app/booking.js`
+- state helpers:
+  - `apps/product-app/src/features/booking/booking-state.ts`
+
+### Provider accept flow (real)
+- provider screen with booking ID input + accept button:
+  - `apps/product-app/src/features/provider/provider-screen.js`
+- real API action layer:
+  - `apps/product-app/src/features/provider/provider-screen-actions.ts`
+  - calls `POST /api/v1/bookings/:id/accept`, shows `accepted` status
+- route file:
+  - `apps/product-app/app/provider.js`
+- state helpers:
+  - `apps/product-app/src/features/provider/provider-state.ts`
+
+### Home routing
+- `apps/product-app/app/index.js` now implements routing logic:
+  - unauthenticated → `/sign-in`
+  - authenticated customer → `/booking`
+  - authenticated provider → `/provider`
+
+### Tests added
+- `src/features/auth/sign-in-state.test.ts` (4 tests)
+- `src/features/auth/sign-in-screen-actions.test.ts` (4 tests)
+- `src/features/booking/booking-state.test.ts` (4 tests)
+- `src/features/booking/booking-screen-actions.test.ts` (4 tests)
+- `src/features/provider/provider-state.test.ts` (4 tests)
+- `src/features/provider/provider-screen-actions.test.ts` (5 tests)
+
+### Validation
+- `corepack pnpm --filter @quickwerk/product-app test` → 42 tests passing (9 test files)
+- `corepack pnpm --filter @quickwerk/product-app typecheck` → clean
+- `corepack pnpm check` → all workspace typechecks clean
+
+### Scope controls preserved
+- no persistent session storage (module-scoped only)
+- no payment/onboarding/profile flows changed
+- existing demo/preview routes (`/auth`, `/marketplace-preview`) remain untouched
+- no package boundary restructuring
+
+## 45. Provider Booking Discovery + List Endpoint (Completed)
+
+This slice closes the UX gap where providers had no way to discover open bookings without knowing the ID upfront.
+
+### Backend: `GET /api/v1/bookings`
+- new endpoint in `BookingsController` — bearer auth required (401 on missing/invalid session)
+- role-scoped responses:
+  - providers receive all `submitted` bookings (available to accept)
+  - customers receive their own bookings (all statuses)
+- returns array of booking summaries: `bookingId`, `status`, `requestedService`, `createdAt`, `customerUserId`
+- added `BookingSummary` type and `ListBookingsFilter` union to `booking.repository.ts`
+- `listBookings(filter)` implemented in both:
+  - `InMemoryBookingRepository` — in-memory filter by status/ownership
+  - `PostgresBookingRepository` — SQL query with WHERE clause variants
+- `BookingsService.listBookings(session)` routes to correct filter based on role
+
+### API Client: `packages/api-client/src/index.ts`
+- added `bookingApiRoutes.list` route (= `GET /api/v1/bookings`)
+- added `createListBookingsRequest(sessionToken)` builder
+
+### Frontend: Provider screen redesign
+- `apps/product-app/src/features/provider/provider-screen-actions.ts`
+  - added `listBookingsRequest(sessionToken, fetchImpl?)` action
+  - exported `BookingSummaryItem` and `ListBookingsResult` types
+- `apps/product-app/src/features/provider/provider-screen.js`
+  - on mount: fetches open bookings list via new endpoint
+  - displays list of submitted bookings (service description + truncated ID per row)
+  - each row has an inline "Accept" button — no manual ID entry required
+  - loading/empty/error states with retry/refresh affordances
+  - accepted booking confirmation with "Accept another" reset flow
+  - sign-out button preserved
+
+### Tests added
+- `services/platform-api/src/bookings/bookings.service.test.ts`
+  - `listBookings — provider sees all submitted bookings, customer sees only their own` (3 actors)
+  - `listBookings — provider does not see accepted bookings`
+  - `listBookings — returns empty array when no bookings exist`
+- `apps/product-app/src/features/provider/provider-screen-actions.test.ts`
+  - `listBookingsRequest — returns array of booking summaries on success`
+  - `listBookingsRequest — returns empty array when no bookings exist`
+  - `listBookingsRequest — returns error on non-OK response`
+  - `listBookingsRequest — returns error when response is not an array`
+  - `listBookingsRequest — returns error when fetch throws`
+
+### Validation
+- `corepack pnpm --filter @quickwerk/platform-api test` → 70 tests passing (+3 new)
+- `corepack pnpm --filter @quickwerk/platform-api typecheck` → clean
+- `corepack pnpm --filter @quickwerk/product-app test` → 47 tests passing (+5 new)
+- `corepack pnpm check` → all workspace typechecks clean
+
+### Scope controls preserved
+- no persistent session storage changes
+- no payment/onboarding/profile flows touched
+- existing demo/preview routes untouched
+- no package boundary restructuring
+
+## 46. Updated Exact Next Docking Point
+
+1. add React Context-based session provider to replace module-global session store (makes testing and server rendering safer)
+2. add sign-out on the booking screen that calls `POST /api/v1/auth/sign-out`
+3. add e2e smoke test that runs sign-in → create booking → list bookings (provider) → accept booking against a running local API
+4. add `GET /api/v1/bookings/:bookingId` single-booking read endpoint for customers to check their booking status

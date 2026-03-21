@@ -120,6 +120,12 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 - exact safe next docking point
 - guardrails to preserve architecture/scope
 
+### `10_ADR-Persistence-Path-Postgres-Redis-Object-Storage.md`
+
+- locks the backend persistence path (PostgreSQL/PostGIS-ready + Redis + object storage)
+- captures deployment compatibility for Vercel app surfaces with external data services
+- records ORM/query-layer direction and rationale for the Postgres transition
+
 ## Global Delivery Assumptions
 
 - `A-01` MVP launches in one pilot region before expansion.

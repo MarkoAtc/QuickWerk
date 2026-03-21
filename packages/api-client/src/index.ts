@@ -13,16 +13,62 @@ export const authApiRoutes = {
   signOut: `${apiRoutes.auth}/sign-out`,
 } as const;
 
-export const marketplaceApiRoutes = {
+export const bookingApiRoutes = {
   preview: `${apiRoutes.bookings}/preview`,
+  list: apiRoutes.bookings,
+  create: apiRoutes.bookings,
+  accept: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/accept`,
 } as const;
 
-export const createSessionBootstrapRequest = () => ({
+export type SessionRole = 'customer' | 'provider';
+
+export type SignInRequestBody = {
+  email?: string;
+  role?: SessionRole;
+};
+
+export type CreateBookingRequestBody = {
+  requestedService?: string;
+};
+
+export const createSessionBootstrapRequest = (sessionToken?: string) => ({
   method: 'GET',
   path: authApiRoutes.session,
+  headers: sessionToken ? { authorization: `Bearer ${sessionToken}` } : undefined,
+}) as const;
+
+export const createSignInRequest = (body: SignInRequestBody) => ({
+  method: 'POST',
+  path: authApiRoutes.signIn,
+  body,
+}) as const;
+
+export const createSignOutRequest = (sessionToken: string) => ({
+  method: 'POST',
+  path: authApiRoutes.signOut,
+  headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 
 export const createMarketplacePreviewRequest = () => ({
   method: 'GET',
-  path: marketplaceApiRoutes.preview,
+  path: bookingApiRoutes.preview,
+}) as const;
+
+export const createBookingRequest = (sessionToken: string, body: CreateBookingRequestBody) => ({
+  method: 'POST',
+  path: bookingApiRoutes.create,
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
+}) as const;
+
+export const createListBookingsRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.list,
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createAcceptBookingRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'POST',
+  path: bookingApiRoutes.accept(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
