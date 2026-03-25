@@ -1,22 +1,27 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { submitBookingRequest } from './booking-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
-import { sessionStore } from '../../shared/session-context';
+import { useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 export function BookingScreen() {
   const router = useRouter();
-  const session = sessionStore.get();
+  const { session, signOut } = useSession();
   const [requestedService, setRequestedService] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(undefined);
   const [createdBooking, setCreatedBooking] = useState(undefined);
 
+  useEffect(() => {
+    if (session.status !== 'authenticated') {
+      router.replace('/auth');
+    }
+  }, [session.status]);
+
   if (session.status !== 'authenticated') {
-    router.replace('/sign-in');
     return null;
   }
 
@@ -29,7 +34,7 @@ export function BookingScreen() {
     setIsSubmitting(true);
 
     submitBookingRequest({
-      sessionToken: session.sessionToken,
+      sessionToken: session.token,
       requestedService: requestedService.trim(),
     })
       .then((result) => {
@@ -49,8 +54,8 @@ export function BookingScreen() {
   };
 
   const handleSignOut = () => {
-    sessionStore.clear();
-    router.replace('/sign-in');
+    signOut();
+    router.replace('/auth');
   };
 
   return (

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Plus+Jakarta+Sans:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f9faf8;
+            color: #191c1b;
+        }
+        h1, h2, h3, .font-serif {
+            font-family: 'Newsreader', serif;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#f9faf8",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e1e3e1",
+                        "inverse-primary": "#aacfb7",
+                        "inverse-on-surface": "#f0f1ef",
+                        "on-tertiary-container": "#fffbff",
+                        "on-surface-variant": "#424843",
+                        "outline-variant": "#c1c8c1",
+                        "on-primary-container": "#f6fff6",
+                        "on-tertiary-fixed-variant": "#7b2e17",
+                        "on-error": "#ffffff",
+                        "primary-container": "#5a7c67",
+                        "surface-dim": "#d9dad8",
+                        "secondary-container": "#d6e0f6",
+                        "surface-container": "#edeeec",
+                        "on-background": "#191c1b",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e7e8e6",
+                        "secondary": "#555f71",
+                        "on-primary-fixed": "#002112",
+                        "secondary-fixed": "#d9e3f9",
+                        "surface": "#f9faf8",
+                        "tertiary": "#96432a",
+                        "on-secondary-container": "#596376",
+                        "on-surface": "#191c1b",
+                        "inverse-surface": "#2e3130",
+                        "tertiary-fixed": "#ffdbd1",
+                        "on-tertiary-fixed": "#3b0900",
+                        "error-container": "#ffdad6",
+                        "background": "#f9faf8",
+                        "outline": "#727973",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#b55a40",
+                        "secondary-fixed-dim": "#bdc7dc",
+                        "primary-fixed-dim": "#aacfb7",
+                        "primary-fixed": "#c6ebd2",
+                        "primary": "#42634f",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#2c4d3b",
+                        "tertiary-fixed-dim": "#ffb5a0",
+                        "surface-variant": "#e1e3e1",
+                        "on-secondary-fixed": "#121c2c",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#446652",
+                        "surface-container-low": "#f3f4f2",
+                        "on-secondary-fixed-variant": "#3d4759"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md shadow-sm dark:shadow-none">
+<div class="flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Provider profile photo" class="w-full h-full object-cover" data-alt="professional headshot of a friendly maintenance expert in a clean uniform with a warm smile and blurred workshop background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-PQXFf6y2n5skeLM5Q-K9Uj5yVN5DkBUf8VpggtEmlXIBo7jcxo77fVj6wO224kqMOxXVlNdvOXKUCABAyCovtFC6FG32qxdB-iryIVST0333eZnetDhIt2TT8HRKNLrLLy-JQ9GLHfbckSQxfic4nTHPeUUWNp1b9aFxwB5WHO7BFa19Q1SZk4EhLJs6avoX6kekgEc6j1v1lpwYk8D5icnM4WQhSAHbIvZkYw7B81bZN0nYmILOAB-r3XBz2qdcvLGNsxgvDJ-V"/>
+</div>
+<h1 class="font-serif italic text-2xl text-emerald-900 dark:text-emerald-500">QuickWerk</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center bg-primary-fixed px-3 py-1 rounded-full gap-2 transition-all active:scale-95 duration-200">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-xs font-bold text-on-primary-fixed tracking-tight">Online</span>
+</div>
+<div class="bg-surface-container-high px-3 py-1 rounded-full">
+<span class="text-xs font-semibold text-on-surface">127 EUR</span>
+</div>
+</div>
+</div>
+<div class="bg-stone-100 dark:bg-stone-800 h-px"></div>
+</header>
+<main class="pt-24 px-6 max-w-md mx-auto space-y-10">
+<!-- Section: NEW JOB REQUEST -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-xs font-bold tracking-[0.2em] text-outline uppercase">New Job Request</h2>
+<span class="text-[10px] text-outline-variant font-medium">Received 2 min ago</span>
+</div>
+<!-- Urgent Card -->
+<div class="relative bg-surface-container-lowest rounded-lg overflow-hidden p-6 shadow-[0px_24px_48px_rgba(25,28,27,0.04)] ring-1 ring-outline-variant/15">
+<!-- Peace of Mind Badge (Urgency) -->
+<div class="absolute top-4 right-4 bg-tertiary-container px-3 py-1 rounded-full">
+<span class="text-[10px] font-bold text-on-tertiary-container tracking-wider uppercase">High Urgency</span>
+</div>
+<div class="flex items-start gap-4 mb-6">
+<div class="w-14 h-14 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl" data-icon="water_drop">water_drop</span>
+</div>
+<div>
+<h3 class="text-xl font-serif text-on-surface leading-tight">Burst Pipe</h3>
+<p class="text-sm text-on-surface-variant mt-1">Maria K. • 2.3km away</p>
+</div>
+</div>
+<div class="space-y-4 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="location_on">location_on</span>
+<span class="text-sm">7th District, Vienna</span>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-lg" data-icon="payments">payments</span>
+<span class="text-sm font-semibold text-primary">Est. 85.00 EUR</span>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-2 gap-3">
+<button class="bg-primary text-on-primary font-bold py-4 rounded-lg active:scale-95 transition-all shadow-md shadow-primary/10">
+                        Accept Job
+                    </button>
+<button class="bg-transparent border border-outline-variant text-on-surface-variant font-medium py-4 rounded-lg active:scale-95 transition-all">
+                        Decline
+                    </button>
+</div>
+</div>
+</section>
+<!-- Section: Active Jobs -->
+<section class="space-y-6">
+<h2 class="text-xs font-bold tracking-[0.2em] text-outline uppercase">Active Jobs</h2>
+<div class="bg-surface-container-low rounded-lg p-5 border border-outline-variant/10 flex items-center gap-4 transition-colors hover:bg-surface-container">
+<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="bolt">bolt</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<h4 class="font-serif text-lg text-on-surface">Johann S.</h4>
+<div class="flex items-center gap-1.5 bg-emerald-100/50 px-2 py-0.5 rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wide">In Progress</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant">Electrical Fault</p>
+<p class="text-xs text-outline mt-1 italic">Mariahilfer Str. 45</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant" data-icon="chevron_right">chevron_right</span>
+</div>
+</section>
+<!-- Section: Insights (Bento Style) -->
+<section class="grid grid-cols-2 gap-4">
+<div class="bg-secondary-container rounded-lg p-5 flex flex-col justify-between h-32">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="schedule">schedule</span>
+<div>
+<span class="block text-2xl font-serif text-on-secondary-container">4.5h</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-secondary-container/70">Time on Clock</span>
+</div>
+</div>
+<div class="bg-tertiary-fixed rounded-lg p-5 flex flex-col justify-between h-32">
+<span class="material-symbols-outlined text-on-tertiary-fixed" data-icon="star">star</span>
+<div>
+<span class="block text-2xl font-serif text-on-tertiary-fixed">4.92</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-tertiary-fixed/70">Rating</span>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white dark:bg-stone-950 rounded-t-[32px] shadow-[0px_-4px_16px_rgba(0,0,0,0.04)] border-t border-stone-100 dark:border-stone-800">
+<!-- Requests (Active Tab) -->
+<a class="flex flex-col items-center justify-center text-emerald-900 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded-full px-4 py-1 transition-all cubic-bezier(0.4, 0, 0.2, 1)" href="#">
+<span class="material-symbols-outlined" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-sans text-[11px] uppercase tracking-wider weight-medium mt-1">Requests</span>
+</a>
+<!-- Earnings -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-sans text-[11px] uppercase tracking-wider weight-medium mt-1">Earnings</span>
+</a>
+<!-- Schedule -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-sans text-[11px] uppercase tracking-wider weight-medium mt-1">Schedule</span>
+</a>
+<!-- Account -->
+<a class="flex flex-col items-center justify-center text-stone-400 dark:text-stone-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-sans text-[11px] uppercase tracking-wider weight-medium mt-1">Account</span>
+</a>
+</nav>
+</body></html>

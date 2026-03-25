@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Calm Resolution - Conversational Booking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13e761",
+              "background-light": "#f6f8f7",
+              "background-dark": "#102217",
+            },
+            fontFamily: {
+              "display": ["Work Sans", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "1rem", 
+              "lg": "2rem", 
+              "xl": "3rem", 
+              "full": "9999px"
+            },
+            boxShadow: {
+              'soft': '0 8px 30px rgba(45, 55, 72, 0.08)',
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background-color: #f6f8f7; /* background-light */
+            color: #2D3748;
+        }
+        /* Custom styles for the specific design requests */
+        .option-tile {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-tile:active {
+            transform: scale(0.98);
+        }
+        .option-tile.selected {
+            border-color: #13e761; /* primary */
+            background-color: rgba(19, 231, 97, 0.05); /* light primary tint */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light min-h-screen flex flex-col items-center">
+<!-- Main Container -->
+<div class="w-full max-w-md mx-auto h-screen flex flex-col bg-background-light relative overflow-hidden">
+<!-- Top App Bar / Progress Header (Replaced Shared Component with minimal Back-to-Main header for focused view) -->
+<header class="flex flex-col pt-6 pb-2 px-6 shrink-0 z-10 bg-background-light">
+<div class="flex items-center justify-between mb-6">
+<button aria-label="Go back" class="w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-soft text-[#2D3748] hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<div class="text-sm font-medium text-[#A0AEC0]">Step 1 of 3</div>
+<div class="w-12 h-12"></div> <!-- Spacer for centering -->
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 33.33%;"></div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto px-6 pt-6 pb-24 relative">
+<!-- Question Container -->
+<div class="mb-10 animate-[slideInRight_0.4s_ease-out]">
+<h1 class="font-display text-[28px] font-bold leading-[1.2] text-[#2D3748]">
+                    What's the main issue?
+                </h1>
+<p class="text-[#A0AEC0] mt-3 text-base">
+                    Select the option that best describes your plumbing emergency.
+                </p>
+</div>
+<!-- Options Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Option 1 -->
+<button class="option-tile bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 border-transparent hover:border-gray-100 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-3 text-blue-500 group-hover:bg-blue-100 transition-colors">
+<span class="material-symbols-outlined text-[28px]">water_drop</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">Burst Pipe</span>
+</button>
+<!-- Option 2 -->
+<button class="option-tile bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 border-transparent hover:border-gray-100 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3 text-amber-500 group-hover:bg-amber-100 transition-colors">
+<span class="material-symbols-outlined text-[28px]">plumbing</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">Blocked Drain</span>
+</button>
+<!-- Option 3 (Simulated Selected State for demonstration) -->
+<button class="option-tile selected bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-3 text-primary transition-colors">
+<span class="material-symbols-outlined text-[28px]">wc</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">Toilet Overflow</span>
+</button>
+<!-- Option 4 -->
+<button class="option-tile bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 border-transparent hover:border-gray-100 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3 text-red-500 group-hover:bg-red-100 transition-colors">
+<span class="material-symbols-outlined text-[28px]">thermostat</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">No Hot Water</span>
+</button>
+<!-- Option 5 -->
+<button class="option-tile bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 border-transparent hover:border-gray-100 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-3 text-gray-500 group-hover:bg-gray-100 transition-colors">
+<span class="material-symbols-outlined text-[28px]">water_damage</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">Severe Leak</span>
+</button>
+<!-- Option 6 -->
+<button class="option-tile bg-white rounded-[24px] p-5 h-[140px] flex flex-col items-center justify-center text-center shadow-soft border-2 border-transparent hover:border-gray-100 group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<div class="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-3 text-gray-500 group-hover:bg-gray-100 transition-colors">
+<span class="material-symbols-outlined text-[28px]">help</span>
+</div>
+<span class="font-medium text-[#2D3748] text-sm">Something Else</span>
+</button>
+</div>
+</main>
+<!-- Bottom Gradient for smooth scrolling effect -->
+<div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background-light to-transparent pointer-events-none"></div>
+</div>
+</body></html>

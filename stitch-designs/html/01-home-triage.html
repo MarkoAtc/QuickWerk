@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Calm Resolution - Home / Triage</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#13e761",
+          "background-light": "#f6f8f7",
+          "background-dark": "#102217",
+        },
+        fontFamily: {
+          "display": ["Work Sans", "sans-serif"]
+        },
+        borderRadius: {
+          "DEFAULT": "1rem", 
+          "lg": "2rem", 
+          "xl": "3rem", 
+          "full": "9999px"
+        },
+        boxShadow: {
+          'soft': '0 8px 30px rgba(45, 55, 72, 0.08)',
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    font-family: 'Work Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .service-card {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  }
+  .service-card:active {
+    transform: scale(0.96);
+    box-shadow: 0 4px 15px rgba(45, 55, 72, 0.05);
+  }
+  .pulse-dot {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light text-[#2D3748] antialiased min-h-screen flex flex-col mx-auto max-w-md relative overflow-hidden">
+<!-- Header Area -->
+<header class="pt-12 px-6 pb-6 z-10 relative">
+<div class="flex items-center justify-between mb-8">
+<button class="flex items-center justify-center gap-x-2 rounded-full bg-white px-5 py-2.5 shadow-soft border border-gray-100 hover:bg-gray-50 transition-colors">
+<span class="text-sm font-semibold text-[#2D3748] tracking-wide">1010 Vienna, AT</span>
+<span class="material-symbols-outlined text-[#A0AEC0] text-[20px]" data-icon="expand_more">expand_more</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center border border-gray-100 text-[#A0AEC0] hover:text-[#2D3748] transition-colors relative">
+<span class="material-symbols-outlined text-[22px]" data-icon="notifications">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full border border-white"></span>
+</button>
+</div>
+<h1 class="text-3xl font-bold leading-tight text-[#2D3748] mb-2 font-display">
+      Hello! Where do<br/>you need help?
+    </h1>
+<p class="text-[#A0AEC0] text-sm font-medium">Select an emergency service</p>
+</header>
+<!-- Main Content: Service Cards -->
+<main class="px-6 flex-1 flex flex-col gap-4 z-10 relative pb-32">
+<!-- Plumbing Card -->
+<button class="service-card w-full h-[160px] bg-white rounded-3xl shadow-soft p-6 flex items-center border border-transparent hover:border-primary/20 focus:outline-none focus:ring-4 focus:ring-primary/10 relative overflow-hidden group text-left">
+<div class="absolute -right-6 -bottom-6 w-40 h-40 bg-[#e8f8fc] rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+<div class="flex-1 z-10">
+<h2 class="text-[22px] font-bold text-[#2D3748] mb-1 font-display">Plumbing</h2>
+<p class="text-[#A0AEC0] text-sm font-medium mb-3">Burst pipes, leaks, clogs</p>
+<div class="flex items-center gap-1.5 text-primary text-xs font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary pulse-dot"></span>
+          12 Pros nearby
+        </div>
+</div>
+<div class="w-20 h-20 rounded-2xl bg-[#f0f9fb] flex items-center justify-center z-10 text-[#5C7C8A]">
+<span class="material-symbols-outlined text-[40px]" data-icon="plumbing">plumbing</span>
+</div>
+</button>
+<!-- Electrical Card -->
+<button class="service-card w-full h-[160px] bg-white rounded-3xl shadow-soft p-6 flex items-center border border-transparent hover:border-primary/20 focus:outline-none focus:ring-4 focus:ring-primary/10 relative overflow-hidden group text-left">
+<div class="absolute -right-6 -bottom-6 w-40 h-40 bg-[#fdf5e6] rounded-full opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+<div class="flex-1 z-10">
+<h2 class="text-[22px] font-bold text-[#2D3748] mb-1 font-display">Electrical</h2>
+<p class="text-[#A0AEC0] text-sm font-medium mb-3">Outages, sparks, wiring</p>
+<div class="flex items-center gap-1.5 text-primary text-xs font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary pulse-dot"></span>
+          8 Pros nearby
+        </div>
+</div>
+<div class="w-20 h-20 rounded-2xl bg-[#fcf8f0] flex items-center justify-center z-10 text-[#E27D60]">
+<span class="material-symbols-outlined text-[40px]" data-icon="bolt">bolt</span>
+</div>
+</button>
+</main>
+<!-- Map Peek (Bottom Anchored) -->
+<div class="absolute bottom-0 left-0 right-0 h-[45%] bg-[#e5eadd] rounded-t-[40px] overflow-hidden shadow-[0_-8px_30px_rgba(45,55,72,0.08)] border-t border-white/50 z-0">
+<!-- Map Image Background -->
+<div class="absolute inset-0 bg-cover bg-center opacity-80 mix-blend-multiply" data-alt="Muted stylized map view of Vienna streets in soft pastel colors with minimal labels" data-location="Vienna, Austria" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAVaKv7s5ZfOB2Fx_5Og5t6Zj0VtD04CI-uqzA8nN0HVR-aZHgXRBP_49Q9ZWOzo60NQqc_niy6KJg7hzTYQcwvto3Q74-ZepuwDc14Cx-DC8-NExfVWPqLffkRvE0TJPcHsnpLRkmO_DKXy8cIhM8vxmZs0hlVi5cwkaAA-xLzHrX22RqiHaXHbA6j_EjL4CK_4GhbmQap0ZZXFwNSGlGS5QAD6AQvy743xR8xmh-PPKekjYHTdqQY5bfb7fD2oP0LZKEZNkXwhjk-');">
+</div>
+<!-- Map Overlay Gradient to fade top edge -->
+<div class="absolute inset-0 bg-gradient-to-b from-[#e5eadd]/90 via-transparent to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-white/40 to-transparent"></div>
+<!-- Map Markers / Avatars -->
+<!-- Marker 1 -->
+<div class="absolute top-[35%] left-[20%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="relative w-12 h-12 rounded-full border-2 border-white shadow-soft overflow-hidden z-10">
+<img alt="Provider Avatar" class="w-full h-full object-cover" data-alt="Portrait of a smiling male professional with short hair wearing a blue work shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvmI9DYfzVi3tLaQc6fRyVtdfkhq4crHpU6WFK1KE6az53oJ_GFm4wI-ZaQKcvVj8OS37xAANCKdBXncZBA0PVziZenNddZu6f3ZFIgKYq5RydThxLaaKXQ0ZYL43NeaELEB1ZQEDLYhJAeVA-NlshAFihJej6fj0v0_LSdpMb1csoqFETPhMmsYvtexJ4FUYvp_U79JAub2FidvYs0YLGBXwc7oS-roKZG6dCIG4lbjGPxljNGa6e08iLRpgLf01lBShIjPQnqyPb"/>
+</div>
+<div class="w-4 h-4 bg-primary border-2 border-white rounded-full absolute bottom-[-4px] right-[-4px] z-20 shadow-sm"></div>
+<div class="mt-1 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg shadow-sm text-[10px] font-bold text-[#2D3748]">3 min</div>
+</div>
+<!-- Marker 2 -->
+<div class="absolute top-[25%] right-[25%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="relative w-10 h-10 rounded-full border-2 border-white shadow-soft overflow-hidden z-10">
+<img alt="Provider Avatar" class="w-full h-full object-cover" data-alt="Portrait of a confident female professional wearing a uniform shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8vvg-aQFFJlx_4LlHF9hNQst5LD3Q7u1gRrRYoaVGu6jzAT1BJVdySjK4hw7tKvfVoHYV5MxyAN0LIz3KHUyI0p21KrErdK0Pc7Fc_noC_9amsThEGZD3hU1QS-jF9vV6OiujnbqJZKA8niwx80RvkgikzZq8j-LRNcnwvpbqjcnXLygqBxbs_mUuyKSdsolOcBba9H5aK7CLFXcFpqeXo9AZ4eUOSdZJN09yx-XysdRltY3bhZkY0-JmA4RlEqeweeAZ_fzNXPs3"/>
+</div>
+<div class="w-3.5 h-3.5 bg-primary border-2 border-white rounded-full absolute bottom-[-2px] right-[-2px] z-20 shadow-sm"></div>
+<div class="mt-1 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg shadow-sm text-[10px] font-bold text-[#2D3748]">8 min</div>
+</div>
+<!-- Marker 3 -->
+<div class="absolute bottom-[40%] left-[50%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="relative w-14 h-14 rounded-full border-2 border-white shadow-soft overflow-hidden z-10">
+<img alt="Provider Avatar" class="w-full h-full object-cover" data-alt="Portrait of an older male professional with a slight smile in work attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWnJaWXIQk5q5rSAvrpfprrUvTcfnMMqkwoEAMErpe0DmRfK6RZH10xcBFw3pauv1g4UiX7ep7R818GF1XO9YIQeZzJKPdjWHEdCTyUUXdJ7sGMLfxdMbGrDtLKhPyQ0QY4p4XyREVxX4DAO4xTx6dKW1xziup3x1hWJEpf2uUliYW5AjT8lDgJfD42-U48Bojp5BVOii9ItMpRTLB0fqREI0gxdMEwRu--zg_Js1IiiQPWIsELYZV36XNk1_UFhuRW3xmTGHAQYCc"/>
+</div>
+<div class="w-4 h-4 bg-primary border-2 border-white rounded-full absolute bottom-[-2px] right-0 z-20 shadow-sm"></div>
+<div class="mt-1 bg-white/90 backdrop-blur px-2 py-0.5 rounded-lg shadow-sm text-[10px] font-bold text-[#2D3748]">5 min</div>
+</div>
+<!-- User Location Pin -->
+<div class="absolute top-[50%] left-[40%] transform -translate-x-1/2 -translate-y-1/2">
+<div class="w-6 h-6 bg-[#2D3748] rounded-full flex items-center justify-center shadow-lg border-2 border-white relative z-10">
+<div class="w-2 h-2 bg-white rounded-full"></div>
+</div>
+<div class="absolute inset-0 bg-[#2D3748]/20 rounded-full animate-ping z-0 scale-150"></div>
+</div>
+<!-- Drag Handle / Hint -->
+<div class="absolute top-3 left-1/2 transform -translate-x-1/2 w-12 h-1.5 bg-gray-300/80 rounded-full z-20 backdrop-blur-sm"></div>
+<div class="absolute top-8 left-0 right-0 text-center z-20 pointer-events-none">
+<span class="inline-flex items-center gap-1.5 bg-white/80 backdrop-blur-md px-4 py-1.5 rounded-full shadow-sm text-xs font-semibold text-[#5C7C8A]">
+<span class="material-symbols-outlined text-[16px]" data-icon="map">map</span>
+        24 Pros currently active
+      </span>
+</div>
+</div>
+<!-- Note: Shared Navigation is EXCLUDED as per instructions for Task-Flow / Focused Views (Triage/Booking entry point). -->
+</body></html>

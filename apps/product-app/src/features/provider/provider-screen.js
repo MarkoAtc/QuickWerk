@@ -4,12 +4,12 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 
 import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
-import { sessionStore } from '../../shared/session-context';
+import { useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 export function ProviderScreen() {
   const router = useRouter();
-  const session = sessionStore.get();
+  const { session, signOut } = useSession();
 
   const [bookings, setBookings] = useState(undefined);
   const [listError, setListError] = useState(undefined);
@@ -19,8 +19,13 @@ export function ProviderScreen() {
   const [acceptError, setAcceptError] = useState(undefined);
   const [acceptedBooking, setAcceptedBooking] = useState(undefined);
 
+  useEffect(() => {
+    if (session.status !== 'authenticated') {
+      router.replace('/auth');
+    }
+  }, [session.status]);
+
   if (session.status !== 'authenticated') {
-    router.replace('/sign-in');
     return null;
   }
 
@@ -30,7 +35,7 @@ export function ProviderScreen() {
     setListError(undefined);
     setIsLoading(true);
 
-    listBookingsRequest(session.sessionToken)
+    listBookingsRequest(session.token)
       .then((result) => {
         if (result.errorMessage) {
           setListError(result.errorMessage);
@@ -56,7 +61,7 @@ export function ProviderScreen() {
     setAcceptError(undefined);
     setAcceptingId(bookingId);
 
-    acceptBookingRequest({ sessionToken: session.sessionToken, bookingId })
+    acceptBookingRequest({ sessionToken: session.token, bookingId })
       .then((result) => {
         if (result.errorMessage) {
           setAcceptError(result.errorMessage);
@@ -75,8 +80,8 @@ export function ProviderScreen() {
   };
 
   const handleSignOut = () => {
-    sessionStore.clear();
-    router.replace('/sign-in');
+    signOut();
+    router.replace('/auth');
   };
 
   const handleReset = () => {

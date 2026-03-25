@@ -1,16 +1,16 @@
 import { Redirect } from 'expo-router';
 
-import { sessionStore } from '../src/shared/session-context';
+import { useSession } from '../src/shared/session-provider';
 
 export default function ProductHomeScreen() {
-  const session = sessionStore.get();
+  const { session } = useSession();
 
   if (session.status === 'authenticated') {
     if (session.role === 'provider') {
       return <Redirect href="/provider" />;
     }
-    return <Redirect href="/booking" />;
+    return <Redirect href="/home-triage" />;
   }
 
-  return <Redirect href="/sign-in" />;
+  return <Redirect href="/auth" />;
 }
