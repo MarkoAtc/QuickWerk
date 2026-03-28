@@ -8,6 +8,8 @@ export type DocumentMetadata = {
   description?: string;
 };
 
+export type VerificationActorRole = 'provider' | 'operator';
+
 export type ProviderVerificationRecord = {
   verificationId: string;
   providerUserId: string;
@@ -21,7 +23,7 @@ export type ProviderVerificationRecord = {
   reviewedAt?: string;
   reviewedByUserId?: string;
   reviewNote?: string;
-  statusHistory: VerificationStatusEvent[];
+  statusHistory: readonly VerificationStatusEvent[];
 };
 
 export type VerificationStatusEvent = {
@@ -29,7 +31,7 @@ export type VerificationStatusEvent = {
   from: VerificationStatus | null;
   to: VerificationStatus;
   actorUserId: string;
-  actorRole: string;
+  actorRole: VerificationActorRole;
   note?: string;
 };
 
@@ -46,7 +48,7 @@ export type SubmitProviderVerificationInput = {
 export type ReviewVerificationInput = {
   verificationId: string;
   reviewedByUserId: string;
-  reviewedByRole: string;
+  reviewedByRole: VerificationActorRole;
   decision: 'approved' | 'rejected';
   reviewNote?: string;
   reviewedAt: string;

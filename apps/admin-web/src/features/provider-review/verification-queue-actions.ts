@@ -6,7 +6,7 @@ import {
 import { VerificationQueueState, VerificationSummary, applyReviewDecision, createEmptyQueueState, createLoadedQueueState, createQueueErrorState } from './verification-queue-state';
 
 const PLATFORM_API_BASE_URL =
-  typeof process !== 'undefined' ? (process.env['NEXT_PUBLIC_PLATFORM_API_BASE_URL'] ?? 'http://localhost:3101') : 'http://localhost:3101';
+  typeof process !== 'undefined' ? (process.env['NEXT_PUBLIC_PLATFORM_API_BASE_URL'] ?? 'http://127.0.0.1:3101') : 'http://127.0.0.1:3101';
 
 type LoadQueueResult =
   | { verifications: VerificationSummary[]; errorMessage?: undefined }

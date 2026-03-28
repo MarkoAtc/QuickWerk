@@ -10,13 +10,38 @@ import {
   VerificationRecord,
   createCheckingState,
   createErrorState,
-  createSubmittingState,
   resolveVerificationStateFromRecord,
 } from './onboarding-state';
 
 type FetchVerificationStatusResult =
   | { verification: VerificationRecord | null; errorMessage?: undefined }
   | { verification?: undefined; errorMessage: string };
+
+function isVerificationRecord(value: unknown): value is VerificationRecord {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (typeof record['verificationId'] !== 'string') {
+    return false;
+  }
+
+  if (record['status'] !== 'pending' && record['status'] !== 'approved' && record['status'] !== 'rejected') {
+    return false;
+  }
+
+  if (typeof record['submittedAt'] !== 'string') {
+    return false;
+  }
+
+  if (!Array.isArray(record['tradeCategories']) || !Array.isArray(record['documents'])) {
+    return false;
+  }
+
+  return true;
+}
 
 export async function fetchVerificationStatus(
   sessionToken: string,
@@ -46,8 +71,11 @@ export async function fetchVerificationStatus(
       return { verification: null };
     }
 
-    const record = payload as VerificationRecord;
-    return { verification: record };
+    if (!isVerificationRecord(payload)) {
+      return { errorMessage: 'Invalid verification record format.' };
+    }
+
+    return { verification: payload };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown error fetching verification status.',
@@ -84,8 +112,13 @@ export async function submitVerificationRequest(
       return { errorMessage: message };
     }
 
-    const verification = (await response.json()) as VerificationRecord;
-    return { verification };
+    const payload = (await response.json()) as unknown;
+
+    if (!isVerificationRecord(payload)) {
+      return { errorMessage: 'Invalid verification record format.' };
+    }
+
+    return { verification: payload };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown error submitting verification.',
@@ -111,9 +144,6 @@ export async function submitOnboarding(
   formData: OnboardingFormData,
   fetchImpl?: typeof fetch,
 ): Promise<ProviderOnboardingState> {
-  const submitting = createSubmittingState(formData);
-  void submitting; // transition to submitting state before awaiting
-
   const result = await submitVerificationRequest(sessionToken, formData, fetchImpl);
 
   if (result.errorMessage) {

@@ -32,6 +32,7 @@ Phase 1 exit criteria are now fully met. This document summarizes what was deliv
 **Registered in:** `src/app.module.ts`
 
 **API endpoints:**
+
 | Method | Path | Role | Description |
 |---|---|---|---|
 | POST | `/api/v1/providers/me/verification` | provider | Submit onboarding verification |
@@ -105,7 +106,7 @@ Run with: `QW_PLATFORM_API_BASE_URL=http://127.0.0.1:3101 bash scripts/smoke/pro
 
 ## Test Results
 
-```
+```text
 platform-api: 19 test files passed (21 total, 2 skipped Postgres integration) | 99 tests
   - includes: 10 provider repo tests + 16 provider service tests (26 new)
 

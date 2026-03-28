@@ -83,5 +83,7 @@ export function resolveVerificationStateFromRecord(
       return createApprovedState(record);
     case 'rejected':
       return createRejectedState(record);
+    default:
+      return createErrorState(`Unknown verification status: ${(record as { status: unknown }).status}`);
   }
 }
