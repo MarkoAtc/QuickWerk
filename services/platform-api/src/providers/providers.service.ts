@@ -339,6 +339,27 @@ export class ProvidersService {
     return { ok: true, statusCode: 200, profile: this.serializeProfile(profile) };
   }
 
+  async listPublicProviders(
+    filter?: { tradeCategory?: string },
+    context?: { correlationId?: string },
+  ): Promise<{ ok: true; statusCode: 200; providers: ReturnType<ProvidersService['serializeProfile']>[] }> {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    const profiles = await this.profiles.listPublicProfiles(filter);
+
+    logStructuredBreadcrumb({
+      event: 'provider.discovery.list-public',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        count: profiles.length,
+        tradeCategory: filter?.tradeCategory ?? null,
+      },
+    });
+
+    return { ok: true, statusCode: 200, providers: profiles.map((p) => this.serializeProfile(p)) };
+  }
+
   async getMyProfile(
     session: AuthSession,
     context?: { correlationId?: string },
