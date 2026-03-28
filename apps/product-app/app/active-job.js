@@ -6,11 +6,16 @@ export default function ActiveJobRoute() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  const toFiniteNumber = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
   const booking = {
     providerName: params.providerName ?? 'David',
-    etaMin: Number(params.etaMin ?? 12),
+    etaMin: toFiniteNumber(params.etaMin, 12),
     delayed: params.delayed === 'true',
-    delayMin: Number(params.delayMin ?? 5),
+    delayMin: toFiniteNumber(params.delayMin, 5),
   };
 
   return (
