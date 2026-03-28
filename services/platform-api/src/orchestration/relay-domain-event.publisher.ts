@@ -124,15 +124,17 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
   async publishBookingDeclined(event: BookingDeclinedDomainEvent): Promise<void> {
     await this.loggingPublisher.publishBookingDeclined(event);
 
-    const now = this.relayClock.now();
-
     let finalWorkerResult = consumeBookingDeclinedAttempt({
       event,
       attempt: 1,
       maxAttempts: relayMaxAttempts,
       baseBackoffMs: relayBaseBackoffMs,
-      shouldFail: false,
-      now,
+      shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+        event,
+        attempt: 1,
+        maxAttempts: relayMaxAttempts,
+      }),
+      now: this.relayClock.now(),
     });
 
     logStructuredBreadcrumb({
@@ -154,8 +156,12 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
         attempt,
         maxAttempts: relayMaxAttempts,
         baseBackoffMs: relayBaseBackoffMs,
-        shouldFail: false,
-        now,
+        shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+          event,
+          attempt,
+          maxAttempts: relayMaxAttempts,
+        }),
+        now: this.relayClock.now(),
       });
 
       logStructuredBreadcrumb({

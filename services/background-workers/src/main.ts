@@ -11,6 +11,11 @@ function bootstrapWorkers() {
         handler: 'consumeBookingAcceptedAttempt',
         retryVisibility: 'attempt/maxAttempts with structured status logs',
       },
+      {
+        eventName: 'booking.declined',
+        handler: 'consumeBookingDeclinedAttempt',
+        retryVisibility: 'attempt/maxAttempts with structured status logs',
+      },
     ],
   };
 
