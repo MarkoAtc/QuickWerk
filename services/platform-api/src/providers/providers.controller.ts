@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Put, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Put, Query, Req, Res } from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
 import { extractBearerToken } from '../http/auth-header';
@@ -45,6 +45,34 @@ export class ProvidersController {
     private readonly authService: AuthService,
     private readonly providersService: ProvidersService,
   ) {}
+
+  /**
+   * GET /api/v1/providers
+   * Public provider discovery endpoint. Returns all public provider profiles.
+   * Optionally filtered by trade category via ?tradeCategory=<value>.
+   * No authentication required — this is a public read-only route for customer discovery.
+   */
+  @Get()
+  async listPublicProviders(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Query('tradeCategory') tradeCategory?: string,
+  ) {
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const filter = tradeCategory?.trim() ? { tradeCategory: tradeCategory.trim() } : undefined;
+
+    const result = await this.providersService.listPublicProviders(filter, { correlationId });
+
+    return result.providers;
+  }
 
   /**
    * POST /api/v1/providers/me/verification

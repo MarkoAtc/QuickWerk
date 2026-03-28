@@ -7,6 +7,7 @@ export const apiRoutes = {
 } as const;
 
 export const providerApiRoutes = {
+  listPublicProviders: apiRoutes.providers,
   submitVerification: `${apiRoutes.providers}/me/verification`,
   myVerificationStatus: `${apiRoutes.providers}/me/verification`,
   listPending: `${apiRoutes.providers}/verifications/pending`,
@@ -179,3 +180,38 @@ export const createGetMyProviderProfileRequest = (sessionToken: string) => ({
   path: providerApiRoutes.myProfile,
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
+
+// --- Public Provider Discovery ---
+
+export type PublicProviderProfile = {
+  providerUserId: string;
+  displayName: string;
+  bio?: string;
+  tradeCategories: string[];
+  serviceArea?: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ListPublicProvidersFilter = {
+  tradeCategory?: string;
+};
+
+/**
+ * Builds a request descriptor for listing public provider profiles.
+ * No authentication required — public discovery route.
+ * Optionally filter by tradeCategory query parameter.
+ */
+export const createListPublicProvidersRequest = (filter?: ListPublicProvidersFilter) => {
+  const basePath = providerApiRoutes.listPublicProviders;
+  const path =
+    filter?.tradeCategory?.trim()
+      ? `${basePath}?tradeCategory=${encodeURIComponent(filter.tradeCategory.trim())}`
+      : basePath;
+
+  return {
+    method: 'GET',
+    path,
+  } as const;
+};
