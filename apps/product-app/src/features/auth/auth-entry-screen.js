@@ -89,10 +89,11 @@ function TrustBadge({ label }) {
   );
 }
 
-export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
+export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false }) {
   const [role, setRole] = useState('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const isSignInDisabled = isSigningIn || !email.trim() || !password;
 
   const handleSignIn = () => {
     if (onSignIn) {
@@ -176,6 +177,7 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
         accessibilityLabel="Email address"
         autoCapitalize="none"
         autoCorrect={false}
+        editable={!isSigningIn}
         keyboardType="email-address"
         onChangeText={setEmail}
         placeholder="Email Address"
@@ -198,6 +200,7 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
       {/* Password input */}
       <TextInput
         accessibilityLabel="Password"
+        editable={!isSigningIn}
         secureTextEntry
         onChangeText={setPassword}
         placeholder="Password"
@@ -220,12 +223,14 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
       {/* Sign In CTA */}
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel="Sign in"
+        accessibilityLabel={isSigningIn ? 'Signing in' : 'Sign in'}
+        accessibilityState={{ disabled: isSignInDisabled, busy: isSigningIn }}
+        disabled={isSignInDisabled}
         onPress={handleSignIn}
         testID="auth-entry-sign-in"
         activeOpacity={0.85}
         style={{
-          backgroundColor: colors.primary,
+          backgroundColor: isSignInDisabled ? colors.muted : colors.primary,
           borderRadius: radius.pill,
           height: 56,
           alignItems: 'center',
@@ -241,7 +246,7 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
             fontWeight: typography.fontWeight.bold,
           }}
         >
-          Sign In
+          {isSigningIn ? 'Signing In…' : 'Sign In'}
         </Text>
       </TouchableOpacity>
 
@@ -250,6 +255,8 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount }) {
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Create an account"
+          accessibilityState={{ disabled: isSigningIn }}
+          disabled={isSigningIn}
           onPress={handleCreateAccount}
           testID="auth-entry-create-account"
         >

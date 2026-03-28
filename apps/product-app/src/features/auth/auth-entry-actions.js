@@ -20,7 +20,7 @@ export async function signInWithCredentials({ email, password, role }, sessionAp
       return { ok: false, error: 'Sign-in response did not include a session token.' };
     }
 
-    return { ok: true, token: payload.token, role: payload.role ?? role };
+    return { ok: true, sessionToken: payload.token, role: payload.role ?? role };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : 'Unknown sign-in failure.' };
   }

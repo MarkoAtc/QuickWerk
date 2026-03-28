@@ -2,6 +2,11 @@ import { runtimeConfig } from '../../shared/runtime-config';
 
 export async function submitBooking({ issueType, urgency, address, category }, token, sessionApiBase) {
   const baseUrl = sessionApiBase ?? runtimeConfig.platformApiBaseUrl;
+
+  if (!token) {
+    return { ok: false, error: 'Missing authenticated session token.' };
+  }
+
   const requestedService = [category, issueType, urgency].filter(Boolean).join(' / ');
 
   try {

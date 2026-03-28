@@ -92,7 +92,7 @@ function OptionTile({ option, selected, onPress }) {
   );
 }
 
-function LocationStep({ address, onEdit, onConfirm }) {
+function LocationStep({ address, onEdit, onConfirm, isSubmitting = false }) {
   return (
     <View style={{ flex: 1 }}>
       <TouchableOpacity
@@ -145,12 +145,14 @@ function LocationStep({ address, onEdit, onConfirm }) {
 
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel="Confirm and find pros"
+        accessibilityLabel={isSubmitting ? 'Finding pros' : 'Confirm and find pros'}
+        accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
+        disabled={isSubmitting}
         onPress={onConfirm ?? (() => {})}
         testID="booking-wizard-confirm"
         activeOpacity={0.85}
         style={{
-          backgroundColor: colors.primary,
+          backgroundColor: isSubmitting ? colors.muted : colors.primary,
           borderRadius: radius.pill,
           height: 56,
           alignItems: 'center',
@@ -165,14 +167,14 @@ function LocationStep({ address, onEdit, onConfirm }) {
             fontWeight: typography.fontWeight.bold,
           }}
         >
-          Confirm & Find Pros
+          {isSubmitting ? 'Finding Pros…' : 'Confirm & Find Pros'}
         </Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-export function BookingWizard({ category, onComplete, onBack }) {
+export function BookingWizard({ category, onComplete, onBack, isSubmitting = false }) {
   const [step, setStep] = useState(0);
   const [issueType, setIssueType] = useState(null);
   const [urgency, setUrgency] = useState(null);
@@ -317,7 +319,7 @@ export function BookingWizard({ category, onComplete, onBack }) {
             >
               We'll send pros to this address.
             </Text>
-            <LocationStep address={address} onConfirm={handleConfirm} />
+            <LocationStep address={address} onConfirm={handleConfirm} isSubmitting={isSubmitting} />
           </>
         )}
       </ScrollView>

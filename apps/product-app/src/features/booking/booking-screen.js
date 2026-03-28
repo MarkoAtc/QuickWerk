@@ -4,7 +4,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { submitBookingRequest } from './booking-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
-import { useSession } from '../../shared/session-provider';
+import { resolveSessionToken, useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 export function BookingScreen() {
@@ -30,11 +30,19 @@ export function BookingScreen() {
       return;
     }
 
+    const sessionToken = resolveSessionToken(session);
+    if (!sessionToken) {
+      setErrorMessage('Your session has expired. Please sign in again.');
+      signOut();
+      router.replace('/auth');
+      return;
+    }
+
     setErrorMessage(undefined);
     setIsSubmitting(true);
 
     submitBookingRequest({
-      sessionToken: session.token,
+      sessionToken,
       requestedService: requestedService.trim(),
     })
       .then((result) => {

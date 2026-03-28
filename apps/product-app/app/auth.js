@@ -26,7 +26,11 @@ export default function ProductAuthScreen() {
       return;
     }
 
-    setSession({ status: 'authenticated', token: result.token, role: result.role });
+    setSession({
+      status: 'authenticated',
+      sessionToken: result.sessionToken,
+      role: result.role,
+    });
 
     if (result.role === 'provider') {
       router.replace('/provider');
@@ -37,7 +41,7 @@ export default function ProductAuthScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AuthEntryScreen onSignIn={handleSignIn} />
+      <AuthEntryScreen onSignIn={handleSignIn} isSigningIn={loading} />
       {error ? (
         <View
           style={{

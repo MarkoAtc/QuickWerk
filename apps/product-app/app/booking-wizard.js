@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { BookingWizard } from '../src/features/booking/booking-wizard-screen';
 import { submitBooking } from '../src/features/booking/booking-wizard-actions';
-import { useSession } from '../src/shared/session-provider';
+import { resolveSessionToken, useSession } from '../src/shared/session-provider';
 
 export default function BookingWizardRoute() {
   const router = useRouter();
@@ -16,7 +16,14 @@ export default function BookingWizardRoute() {
 
   const handleComplete = async ({ issueType, urgency, address }) => {
     if (loading) return;
-    const token = session.status === 'authenticated' ? session.token : null;
+
+    const token = resolveSessionToken(session);
+    if (!token) {
+      setError('Your session has expired. Please sign in again.');
+      router.replace('/auth');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -43,6 +50,7 @@ export default function BookingWizardRoute() {
         category={params.category}
         onComplete={handleComplete}
         onBack={() => router.back()}
+        isSubmitting={loading}
       />
       {error ? (
         <View

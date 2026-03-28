@@ -4,11 +4,19 @@ import { runtimeConfig } from './runtime-config';
 
 export const SessionContext = createContext({ status: 'unauthenticated' });
 
+export function resolveSessionToken(session) {
+  if (!session || session.status !== 'authenticated') {
+    return null;
+  }
+
+  return session.sessionToken ?? session.token ?? null;
+}
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState({ status: 'unauthenticated' });
 
   function signOut() {
-    const token = session.status === 'authenticated' ? session.token : null;
+    const token = resolveSessionToken(session);
     setSession({ status: 'unauthenticated' });
     if (token) {
       fetch(`${runtimeConfig.platformApiBaseUrl}/api/v1/auth/sign-out`, {
