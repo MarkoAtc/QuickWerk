@@ -3,32 +3,82 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-const STEPS = [
-  {
-    id: 'issue',
-    question: "What's the main issue?",
-    subtitle: 'Select the option that best describes your plumbing emergency.',
-    options: [
-      { id: 'burst-pipe', label: 'Burst Pipe', icon: '💧' },
-      { id: 'blocked-drain', label: 'Blocked Drain', icon: '🚿' },
-      { id: 'toilet-overflow', label: 'Toilet Overflow', icon: '🚽' },
-      { id: 'no-hot-water', label: 'No Hot Water', icon: '🔥' },
-      { id: 'severe-leak', label: 'Severe Leak', icon: '💦' },
-      { id: 'something-else', label: 'Something Else', icon: '❓' },
-    ],
-  },
-  {
-    id: 'urgency',
-    question: "How urgent is it?",
-    subtitle: "We'll match you with the right availability.",
-    options: [
-      { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
-      { id: 'today', label: 'Today', icon: '⏰' },
-      { id: 'this-week', label: 'This week', icon: '📅' },
-      { id: 'schedule', label: 'Schedule it', icon: '🗓' },
-    ],
-  },
-];
+const STEPS_BY_CATEGORY = {
+  plumbing: [
+    {
+      id: 'issue',
+      question: "What's the main issue?",
+      subtitle: 'Select the option that best describes your plumbing emergency.',
+      options: [
+        { id: 'burst-pipe', label: 'Burst Pipe', icon: '💧' },
+        { id: 'blocked-drain', label: 'Blocked Drain', icon: '🚿' },
+        { id: 'toilet-overflow', label: 'Toilet Overflow', icon: '🚽' },
+        { id: 'no-hot-water', label: 'No Hot Water', icon: '🔥' },
+        { id: 'severe-leak', label: 'Severe Leak', icon: '💦' },
+        { id: 'something-else', label: 'Something Else', icon: '❓' },
+      ],
+    },
+    {
+      id: 'urgency',
+      question: "How urgent is it?",
+      subtitle: "We'll match you with the right availability.",
+      options: [
+        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
+        { id: 'today', label: 'Today', icon: '⏰' },
+        { id: 'this-week', label: 'This week', icon: '📅' },
+        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+      ],
+    },
+  ],
+  electrical: [
+    {
+      id: 'issue',
+      question: "What's the main issue?",
+      subtitle: 'Select the option that best describes your electrical issue.',
+      options: [
+        { id: 'power-outage', label: 'Power Outage', icon: '⚡' },
+        { id: 'sparking', label: 'Sparking / Burning', icon: '🔥' },
+        { id: 'lighting-failure', label: 'Lighting Failure', icon: '💡' },
+        { id: 'circuit-breaker', label: 'Circuit Breaker Tripped', icon: '🔌' },
+        { id: 'outlet-dead', label: 'Dead Outlet', icon: '🖥️' },
+        { id: 'something-else', label: 'Something Else', icon: '❓' },
+      ],
+    },
+    {
+      id: 'urgency',
+      question: "How urgent is it?",
+      subtitle: "We'll match you with the right availability.",
+      options: [
+        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
+        { id: 'today', label: 'Today', icon: '⏰' },
+        { id: 'this-week', label: 'This week', icon: '📅' },
+        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+      ],
+    },
+  ],
+  default: [
+    {
+      id: 'issue',
+      question: "What's the main issue?",
+      subtitle: 'Tell us what you need help with.',
+      options: [
+        { id: 'general', label: 'General Issue', icon: '🔧' },
+        { id: 'something-else', label: 'Something Else', icon: '❓' },
+      ],
+    },
+    {
+      id: 'urgency',
+      question: "How urgent is it?",
+      subtitle: "We'll match you with the right availability.",
+      options: [
+        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
+        { id: 'today', label: 'Today', icon: '⏰' },
+        { id: 'this-week', label: 'This week', icon: '📅' },
+        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+      ],
+    },
+  ],
+};
 
 const DEFAULT_ADDRESS = '1010 Vienna, AT';
 
@@ -174,12 +224,15 @@ function LocationStep({ address, onEdit, onConfirm, isSubmitting = false }) {
   );
 }
 
-export function BookingWizard({ category, onComplete, onBack, isSubmitting = false }) {
+export function BookingWizard({ category, onComplete, onBack, onEdit, isSubmitting = false }) {
   const [step, setStep] = useState(0);
   const [issueType, setIssueType] = useState(null);
   const [urgency, setUrgency] = useState(null);
   const address = DEFAULT_ADDRESS;
   const totalSteps = 3;
+
+  const categoryKey = category && STEPS_BY_CATEGORY[category] ? category : 'default';
+  const steps = STEPS_BY_CATEGORY[categoryKey];
 
   const handleBack = () => {
     if (step === 0) {
@@ -205,7 +258,7 @@ export function BookingWizard({ category, onComplete, onBack, isSubmitting = fal
     }
   };
 
-  const currentStep = STEPS[step];
+  const currentStep = steps[step];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -319,7 +372,7 @@ export function BookingWizard({ category, onComplete, onBack, isSubmitting = fal
             >
               We'll send pros to this address.
             </Text>
-            <LocationStep address={address} onConfirm={handleConfirm} isSubmitting={isSubmitting} />
+            <LocationStep address={address} onEdit={onEdit} onConfirm={handleConfirm} isSubmitting={isSubmitting} />
           </>
         )}
       </ScrollView>

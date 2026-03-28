@@ -18,30 +18,38 @@ export default function ProductAuthScreen() {
     setLoading(true);
     setError(null);
 
-    const result = await signInWithCredentials({ email, password, role });
-    setLoading(false);
+    try {
+      const result = await signInWithCredentials({ email, password, role });
 
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setSession({
+        status: 'authenticated',
+        sessionToken: result.sessionToken,
+        role: result.role,
+      });
+
+      if (result.role === 'provider') {
+        router.replace('/provider');
+      } else {
+        router.replace('/home-triage');
+      }
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setSession({
-      status: 'authenticated',
-      sessionToken: result.sessionToken,
-      role: result.role,
-    });
-
-    if (result.role === 'provider') {
-      router.replace('/provider');
-    } else {
-      router.replace('/home-triage');
-    }
+  const handleCreateAccount = (role) => {
+    // TODO: wire to sign-up flow once registration endpoint is available
+    setError('Account creation is not yet available. Please sign in.');
   };
 
   return (
     <View style={{ flex: 1 }}>
-      <AuthEntryScreen onSignIn={handleSignIn} isSigningIn={loading} />
+      <AuthEntryScreen onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} isSigningIn={loading} />
       {error ? (
         <View
           style={{

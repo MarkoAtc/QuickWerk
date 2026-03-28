@@ -50,6 +50,10 @@ export default function BookingWizardRoute() {
         category={params.category}
         onComplete={handleComplete}
         onBack={() => router.back()}
+        onEdit={() => {
+          // TODO: open location picker modal (requires maps integration)
+          console.warn('[booking-wizard] onEdit: location picker not yet implemented');
+        }}
         isSubmitting={loading}
       />
       {error ? (

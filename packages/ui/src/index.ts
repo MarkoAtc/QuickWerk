@@ -63,7 +63,7 @@ export const designTokens = {
   color: {
     primary: colors.primary,
     accent: colors.accent,
-    surface: colors.background,
+    surface: colors.surface,
     text: colors.text,
   },
   radius: {
@@ -73,6 +73,7 @@ export const designTokens = {
   },
 } as const;
 
+export type Shadow = typeof shadow;
 export type Colors = typeof colors;
 export type Spacing = typeof spacing;
 export type Radius = typeof radius;

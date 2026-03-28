@@ -11,7 +11,9 @@ export default function HomeTriageRoute() {
         router.push({ pathname: '/booking-wizard', params: { category: categoryId } });
       }}
       onChangeAddress={() => {
-        // TODO: open location picker modal
+        // TODO: open location picker modal (requires maps/location integration)
+        // Until implemented: use DEFAULT_ADDRESS in booking wizard
+        console.warn('[home-triage] onChangeAddress: location picker not yet implemented');
       }}
     />
   );
