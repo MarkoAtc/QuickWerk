@@ -339,6 +339,43 @@ export class ProvidersService {
     return { ok: true, statusCode: 200, profile: this.serializeProfile(profile) };
   }
 
+  async getPublicProviderById(
+    providerUserId: string,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 404; error: string }
+    | { ok: true; statusCode: 200; provider: ReturnType<ProvidersService['serializeProfile']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const trimmedId = providerUserId?.trim();
+
+    if (!trimmedId) {
+      return { ok: false, statusCode: 404, error: 'Provider not found.' };
+    }
+
+    const profile = await this.profiles.getPublicProfileByProviderId(trimmedId);
+
+    if (!profile) {
+      logStructuredBreadcrumb({
+        event: 'provider.discovery.get-public',
+        correlationId,
+        status: 'failed',
+        details: { providerUserId: trimmedId, reason: 'not-found' },
+      });
+
+      return { ok: false, statusCode: 404, error: 'Provider not found.' };
+    }
+
+    logStructuredBreadcrumb({
+      event: 'provider.discovery.get-public',
+      correlationId,
+      status: 'succeeded',
+      details: { providerUserId: trimmedId },
+    });
+
+    return { ok: true, statusCode: 200, provider: this.serializeProfile(profile) };
+  }
+
   async listPublicProviders(
     filter?: { tradeCategory?: string },
     context?: { correlationId?: string },

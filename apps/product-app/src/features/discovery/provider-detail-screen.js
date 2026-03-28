@@ -227,6 +227,34 @@ export function ProviderDetailScreen() {
             </View>
           ) : null}
 
+          {/* Book this provider CTA */}
+          <Pressable
+            accessibilityLabel={`Book ${provider.displayName}`}
+            accessibilityRole="button"
+            testID="provider-detail-book-cta"
+            onPress={() =>
+              router.push({
+                pathname: '/booking-wizard',
+                params: {
+                  providerUserId: provider.providerUserId,
+                  providerName: provider.displayName,
+                  category: provider.tradeCategories[0] ?? '',
+                },
+              })
+            }
+            style={{
+              marginTop: 24,
+              backgroundColor: productAppShell.theme.color.primary,
+              borderRadius: 10,
+              paddingVertical: 14,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
+              Book {provider.displayName}
+            </Text>
+          </Pressable>
+
           {/* Provider ID (small, for QA purposes) */}
           <Text
             testID="provider-detail-id"

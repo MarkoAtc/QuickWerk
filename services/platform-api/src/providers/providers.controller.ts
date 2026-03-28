@@ -303,6 +303,40 @@ export class ProvidersController {
   }
 
   /**
+   * GET /api/v1/providers/:providerUserId
+   * Public read: returns a single public provider profile by providerUserId.
+   * No authentication required.
+   * Returns 404 if the provider is not found or their profile is not public.
+   *
+   * NOTE: This route is declared before /me/profile (but after all specific /me/* and
+   * /verifications/* routes) so that static segments take precedence over this param route.
+   * NestJS resolves static segments first, so /me/profile and /me/verification always win.
+   */
+  @Get(':providerUserId')
+  async getPublicProvider(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Param('providerUserId') providerUserId: string,
+  ) {
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const result = await this.providersService.getPublicProviderById(providerUserId, { correlationId });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.provider;
+  }
+
+  /**
    * GET /api/v1/providers/me/profile
    * Provider retrieves their own profile.
    */

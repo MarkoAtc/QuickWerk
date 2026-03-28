@@ -34,6 +34,14 @@ export class InMemoryProviderProfileRepository implements ProviderProfileReposit
     return this.profiles.get(providerUserId) ?? null;
   }
 
+  async getPublicProfileByProviderId(providerUserId: string): Promise<ProviderProfile | null> {
+    const profile = this.profiles.get(providerUserId);
+    if (!profile || !profile.isPublic) {
+      return null;
+    }
+    return profile;
+  }
+
   async listPublicProfiles(filter?: { tradeCategory?: string }): Promise<ProviderProfile[]> {
     const all = Array.from(this.profiles.values()).filter((p) => p.isPublic);
 

@@ -8,6 +8,7 @@ export const apiRoutes = {
 
 export const providerApiRoutes = {
   listPublicProviders: apiRoutes.providers,
+  getPublicProvider: (providerUserId: string) => `${apiRoutes.providers}/${providerUserId}`,
   submitVerification: `${apiRoutes.providers}/me/verification`,
   myVerificationStatus: `${apiRoutes.providers}/me/verification`,
   listPending: `${apiRoutes.providers}/verifications/pending`,
@@ -197,6 +198,16 @@ export type PublicProviderProfile = {
 export type ListPublicProvidersFilter = {
   tradeCategory?: string;
 };
+
+/**
+ * Builds a request descriptor for fetching a single public provider profile by providerUserId.
+ * No authentication required — public read route.
+ * Returns 404 if provider does not exist or is not public.
+ */
+export const createGetPublicProviderRequest = (providerUserId: string) => ({
+  method: 'GET',
+  path: providerApiRoutes.getPublicProvider(providerUserId),
+}) as const;
 
 /**
  * Builds a request descriptor for listing public provider profiles.
