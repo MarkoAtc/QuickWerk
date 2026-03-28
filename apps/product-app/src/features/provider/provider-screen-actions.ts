@@ -150,6 +150,34 @@ export type SaveProfileResult =
   | { profile: ProviderProfilePayload; errorMessage?: undefined }
   | { profile?: undefined; errorMessage: string };
 
+/**
+ * Parses a raw provider profile payload from the API.
+ * Returns null if required fields are missing or invalid.
+ */
+function parseProviderProfilePayload(payload: Record<string, unknown>): ProviderProfilePayload | null {
+  const providerUserId = typeof payload['providerUserId'] === 'string' ? payload['providerUserId'] : '';
+  const displayName = typeof payload['displayName'] === 'string' ? payload['displayName'] : '';
+  const createdAt = typeof payload['createdAt'] === 'string' ? payload['createdAt'] : '';
+  const updatedAt = typeof payload['updatedAt'] === 'string' ? payload['updatedAt'] : '';
+
+  if (!providerUserId || !displayName || !createdAt || !updatedAt) {
+    return null;
+  }
+
+  return {
+    providerUserId,
+    displayName,
+    bio: typeof payload['bio'] === 'string' ? payload['bio'] : undefined,
+    tradeCategories: Array.isArray(payload['tradeCategories'])
+      ? (payload['tradeCategories'] as string[])
+      : [],
+    serviceArea: typeof payload['serviceArea'] === 'string' ? payload['serviceArea'] : undefined,
+    isPublic: Boolean(payload['isPublic']),
+    createdAt,
+    updatedAt,
+  };
+}
+
 export async function loadMyProviderProfile(
   sessionToken: string,
   fetchImpl: typeof fetch = fetch,
@@ -177,24 +205,13 @@ export async function loadMyProviderProfile(
       return { profile: null };
     }
 
-    if (!payload['providerUserId'] || !payload['displayName']) {
+    const profile = parseProviderProfilePayload(payload);
+
+    if (!profile) {
       return { errorMessage: 'Profile response missing required fields.' };
     }
 
-    return {
-      profile: {
-        providerUserId: String(payload['providerUserId']),
-        displayName: String(payload['displayName']),
-        bio: typeof payload['bio'] === 'string' ? payload['bio'] : undefined,
-        tradeCategories: Array.isArray(payload['tradeCategories'])
-          ? (payload['tradeCategories'] as string[])
-          : [],
-        serviceArea: typeof payload['serviceArea'] === 'string' ? payload['serviceArea'] : undefined,
-        isPublic: Boolean(payload['isPublic']),
-        createdAt: String(payload['createdAt'] ?? ''),
-        updatedAt: String(payload['updatedAt'] ?? ''),
-      },
-    };
+    return { profile };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown load profile failure.',
@@ -222,24 +239,13 @@ export async function saveMyProviderProfile(
 
     const payload = (await response.json()) as Record<string, unknown>;
 
-    if (!payload['providerUserId'] || !payload['displayName']) {
+    const profile = parseProviderProfilePayload(payload);
+
+    if (!profile) {
       return { errorMessage: 'Save profile response missing required fields.' };
     }
 
-    return {
-      profile: {
-        providerUserId: String(payload['providerUserId']),
-        displayName: String(payload['displayName']),
-        bio: typeof payload['bio'] === 'string' ? payload['bio'] : undefined,
-        tradeCategories: Array.isArray(payload['tradeCategories'])
-          ? (payload['tradeCategories'] as string[])
-          : [],
-        serviceArea: typeof payload['serviceArea'] === 'string' ? payload['serviceArea'] : undefined,
-        isPublic: Boolean(payload['isPublic']),
-        createdAt: String(payload['createdAt'] ?? ''),
-        updatedAt: String(payload['updatedAt'] ?? ''),
-      },
-    };
+    return { profile };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown save profile failure.',

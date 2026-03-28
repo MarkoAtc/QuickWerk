@@ -197,7 +197,13 @@ export class BookingsController {
       throw new HttpException('Sign-in required before declining bookings.', 401);
     }
 
-    const result = await this.bookingsService.declineBooking(session, bookingId, { declineReason: body.declineReason }, {
+    const safeBody = body != null && typeof body === 'object' ? body : {};
+    const declineReason =
+      typeof (safeBody as DeclineBookingRequestBody).declineReason === 'string'
+        ? (safeBody as DeclineBookingRequestBody).declineReason
+        : undefined;
+
+    const result = await this.bookingsService.declineBooking(session, bookingId, { declineReason }, {
       correlationId,
     });
 

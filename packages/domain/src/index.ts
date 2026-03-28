@@ -12,6 +12,7 @@ export const bookingStatuses = [
   'submitted',
   'broadcast',
   'accepted',
+  'declined',
   'en_route',
   'in_progress',
   'completed',
@@ -67,6 +68,7 @@ export type BookingDeclinedDomainEvent = {
     providerUserId: string;
     requestedService: string;
     status: 'declined';
+    declineReason?: string;
   };
 };
 

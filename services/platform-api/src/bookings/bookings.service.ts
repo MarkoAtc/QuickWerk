@@ -341,6 +341,7 @@ export class BookingsService {
         providerUserId: declined.booking.providerUserId ?? session.userId,
         requestedService: declined.booking.requestedService,
         status: 'declined',
+        declineReason: declined.booking.declineReason,
       },
     };
 

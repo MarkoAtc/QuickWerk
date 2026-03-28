@@ -4,6 +4,17 @@ import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@qu
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
 
+type BookingDomainEvent = BookingAcceptedDomainEvent | BookingDeclinedDomainEvent;
+
+function buildEventLogDetails(event: BookingDomainEvent) {
+  return {
+    eventName: event.eventName,
+    eventId: event.eventId,
+    replayed: event.replayed,
+    bookingId: event.booking.bookingId,
+  };
+}
+
 @Injectable()
 export class LoggingBookingDomainEventPublisher implements BookingDomainEventPublisher {
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
@@ -11,12 +22,7 @@ export class LoggingBookingDomainEventPublisher implements BookingDomainEventPub
       event: 'booking.accepted.domain-event.emit',
       correlationId: event.correlationId,
       status: 'succeeded',
-      details: {
-        eventName: event.eventName,
-        eventId: event.eventId,
-        replayed: event.replayed,
-        bookingId: event.booking.bookingId,
-      },
+      details: buildEventLogDetails(event),
     });
   }
 
@@ -25,12 +31,7 @@ export class LoggingBookingDomainEventPublisher implements BookingDomainEventPub
       event: 'booking.declined.domain-event.emit',
       correlationId: event.correlationId,
       status: 'succeeded',
-      details: {
-        eventName: event.eventName,
-        eventId: event.eventId,
-        replayed: event.replayed,
-        bookingId: event.booking.bookingId,
-      },
+      details: buildEventLogDetails(event),
     });
   }
 }

@@ -44,7 +44,16 @@ describe('ProviderProfileScreenState factories', () => {
       expect(state.form.displayName).toBe('Max Muster');
       expect(state.form.bio).toBe('Expert plumber');
       expect(state.form.tradeCategories).toEqual(['plumbing']);
+      expect(state.form.serviceArea).toBe('Vienna');
       expect(state.form.isPublic).toBe(true);
+    }
+  });
+
+  it('createLoadedProfileState clones tradeCategories to avoid shared mutable ref', () => {
+    const state = createLoadedProfileState(sampleProfile);
+    if (state.status === 'loaded') {
+      expect(state.form.tradeCategories).toEqual(sampleProfile.tradeCategories);
+      expect(state.form.tradeCategories).not.toBe(sampleProfile.tradeCategories);
     }
   });
 

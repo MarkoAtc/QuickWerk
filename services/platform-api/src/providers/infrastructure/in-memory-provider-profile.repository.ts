@@ -16,11 +16,11 @@ export class InMemoryProviderProfileRepository implements ProviderProfileReposit
     const updated: ProviderProfile = {
       providerUserId: input.providerUserId,
       displayName: input.displayName,
-      bio: input.bio?.trim() || existing?.bio,
+      bio: input.bio !== undefined ? (input.bio.trim() || undefined) : existing?.bio,
       tradeCategories: (input.tradeCategories ?? existing?.tradeCategories ?? [])
         .map((c) => c.trim())
         .filter(Boolean),
-      serviceArea: input.serviceArea?.trim() || existing?.serviceArea,
+      serviceArea: input.serviceArea !== undefined ? (input.serviceArea.trim() || undefined) : existing?.serviceArea,
       isPublic: input.isPublic ?? existing?.isPublic ?? false,
       createdAt: existing?.createdAt ?? input.now,
       updatedAt: input.now,

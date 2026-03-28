@@ -160,7 +160,7 @@ export const createDeclineBookingRequest = (
 }) as const;
 
 export type UpsertProviderProfileBody = {
-  displayName: string;
+  displayName?: string;
   bio?: string;
   tradeCategories?: string[];
   serviceArea?: string;

@@ -24,6 +24,7 @@ type BookingRow = {
   requested_service: string;
   status: BookingStatus;
   created_at: Date | string;
+  decline_reason: string | null;
 };
 
 type BookingStatusHistoryRow = {
@@ -191,9 +192,10 @@ export class PostgresBookingRepository implements BookingRepository {
       await client.query(
         `UPDATE bookings
          SET status = 'declined',
-             provider_user_id = $2::uuid
+             provider_user_id = $2::uuid,
+             decline_reason = $3
          WHERE id = $1::uuid`,
-        [input.bookingId, input.providerUserId],
+        [input.bookingId, input.providerUserId, input.declineReason?.trim() ?? null],
       );
 
       await this.insertStatusEvent(client, {
@@ -299,7 +301,8 @@ export class PostgresBookingRepository implements BookingRepository {
               provider_user_id::text,
               requested_service,
               status,
-              created_at
+              created_at,
+              decline_reason
        FROM bookings
        WHERE id = $1::uuid
        LIMIT 1`,
@@ -335,7 +338,8 @@ export class PostgresBookingRepository implements BookingRepository {
               provider_user_id::text,
               requested_service,
               status,
-              created_at
+              created_at,
+              decline_reason
        FROM bookings
        WHERE id = $1::uuid
        LIMIT 1`,
@@ -411,6 +415,7 @@ function mapBookingRecord(booking: BookingRow, historyRows: BookingStatusHistory
     providerUserId: booking.provider_user_id ?? undefined,
     requestedService: booking.requested_service,
     status: booking.status,
+    declineReason: booking.decline_reason ?? undefined,
     statusHistory,
   };
 }

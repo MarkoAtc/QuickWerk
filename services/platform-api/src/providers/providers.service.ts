@@ -310,6 +310,12 @@ export class ProvidersService {
 
     const displayName = input.displayName?.trim();
     if (!displayName) {
+      logStructuredBreadcrumb({
+        event: 'provider.profile.upsert',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'invalid-display-name', actorUserId: session.userId },
+      });
       return { ok: false, statusCode: 400, error: 'displayName is required.' };
     }
 

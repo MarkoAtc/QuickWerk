@@ -2,6 +2,9 @@ export {
   buildBookingAcceptedWorkerEnvelope,
   consumeBookingAcceptedAttempt,
   markBookingAcceptedDlq,
+  buildBookingDeclinedWorkerEnvelope,
+  consumeBookingDeclinedAttempt,
+  markBookingDeclinedDlq,
   workerPipelines,
 } from './workers/index.js';
 

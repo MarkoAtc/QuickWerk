@@ -56,7 +56,7 @@ export const createLoadedProfileState = (profile: ProviderProfile): ProviderProf
     displayName: profile.displayName,
     bio: profile.bio ?? '',
     serviceArea: profile.serviceArea ?? '',
-    tradeCategories: profile.tradeCategories,
+    tradeCategories: [...profile.tradeCategories],
     isPublic: profile.isPublic,
   },
 });

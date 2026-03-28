@@ -3,6 +3,14 @@ import { createBookingRequest, createDeclineBookingRequest } from '@quickwerk/ap
 import type { CreatedBooking } from './booking-state';
 import { runtimeConfig } from '../../shared/runtime-config';
 
+const knownBookingStatuses = ['submitted', 'accepted', 'declined'] as const;
+type KnownBookingStatus = typeof knownBookingStatuses[number];
+
+function parseBookingStatus(raw: string | undefined): KnownBookingStatus | null {
+  if (!raw) return null;
+  return (knownBookingStatuses as readonly string[]).includes(raw) ? (raw as KnownBookingStatus) : null;
+}
+
 type SubmitBookingInput = {
   sessionToken: string;
   requestedService: string;
@@ -38,7 +46,9 @@ export async function submitBookingRequest(
       customerUserId?: string;
     };
 
-    if (!payload.bookingId || !payload.status) {
+    const status = parseBookingStatus(payload.status);
+
+    if (!payload.bookingId || !status) {
       return { errorMessage: 'Booking response missing required fields.' };
     }
 
@@ -46,7 +56,7 @@ export async function submitBookingRequest(
       booking: {
         bookingId: payload.bookingId,
         requestedService: payload.requestedService ?? input.requestedService,
-        status: payload.status,
+        status,
         customerUserId: payload.customerUserId ?? '',
       },
     };
@@ -94,7 +104,9 @@ export async function declineBookingRequest(
       declineReason?: string;
     };
 
-    if (!payload.bookingId || !payload.status) {
+    const declineStatus = parseBookingStatus(payload.status);
+
+    if (!payload.bookingId || !declineStatus) {
       return { errorMessage: 'Decline response missing required fields.' };
     }
 
@@ -102,7 +114,7 @@ export async function declineBookingRequest(
       booking: {
         bookingId: payload.bookingId,
         requestedService: payload.requestedService ?? '',
-        status: payload.status,
+        status: declineStatus,
         customerUserId: payload.customerUserId ?? '',
         declineReason: payload.declineReason,
       },

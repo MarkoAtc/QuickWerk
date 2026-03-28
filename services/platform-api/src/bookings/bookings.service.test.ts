@@ -94,6 +94,7 @@ describe('BookingsService', () => {
     if (replayedAccept.ok) {
       expect(replayedAccept.booking.status).toBe('accepted');
       expect(replayedAccept.booking.providerUserId).toBe('provider-1');
+      // Replay must NOT add a new statusHistory entry
       expect(replayedAccept.booking.statusHistory).toHaveLength(2);
     }
 
@@ -316,6 +317,7 @@ describe('BookingsService', () => {
     expect(declined.booking.statusHistory).toHaveLength(2);
     expect(declinedEvents).toHaveLength(1);
     expect(declinedEvents[0]?.booking.status).toBe('declined');
+    expect(declinedEvents[0]?.booking.declineReason).toBe('Outside service area');
     expect(declinedEvents[0]?.correlationId).toBe('corr-decline-1');
   });
 
