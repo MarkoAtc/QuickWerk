@@ -3,14 +3,41 @@ import {
   createReviewVerificationRequest,
 } from '@quickwerk/api-client';
 
-import { VerificationQueueState, VerificationSummary, applyReviewDecision, createEmptyQueueState, createLoadedQueueState, createQueueErrorState } from './verification-queue-state';
+import {
+  VerificationQueueState,
+  VerificationSummary,
+  applyReviewDecision,
+  createEmptyQueueState,
+  createLoadedQueueState,
+  createQueueErrorState,
+} from './verification-queue-state';
 
 const PLATFORM_API_BASE_URL =
-  typeof process !== 'undefined' ? (process.env['NEXT_PUBLIC_PLATFORM_API_BASE_URL'] ?? 'http://127.0.0.1:3101') : 'http://127.0.0.1:3101';
+  typeof process !== 'undefined'
+    ? (process.env['NEXT_PUBLIC_PLATFORM_API_BASE_URL'] ?? 'http://127.0.0.1:3101')
+    : 'http://127.0.0.1:3101';
 
 type LoadQueueResult =
   | { verifications: VerificationSummary[]; errorMessage?: undefined }
   | { verifications?: undefined; errorMessage: string };
+
+const isVerificationSummary = (value: unknown): value is VerificationSummary => {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record['verificationId'] === 'string' &&
+    typeof record['providerUserId'] === 'string' &&
+    typeof record['providerEmail'] === 'string' &&
+    Array.isArray(record['tradeCategories']) &&
+    Array.isArray(record['documents']) &&
+    (record['status'] === 'pending' || record['status'] === 'approved' || record['status'] === 'rejected') &&
+    typeof record['submittedAt'] === 'string'
+  );
+};
+
+const isVerificationSummaryArray = (value: unknown): value is VerificationSummary[] =>
+  Array.isArray(value) && value.every(isVerificationSummary);
 
 export async function loadPendingVerifications(
   sessionToken: string,
@@ -30,11 +57,11 @@ export async function loadPendingVerifications(
 
     const payload = (await response.json()) as unknown;
 
-    if (!Array.isArray(payload)) {
+    if (!isVerificationSummaryArray(payload)) {
       return { errorMessage: 'Unexpected response format for pending verifications.' };
     }
 
-    return { verifications: payload as VerificationSummary[] };
+    return { verifications: payload };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown error loading verification queue.',
@@ -71,8 +98,13 @@ export async function reviewVerification(
       return { errorMessage: message, statusCode: response.status };
     }
 
-    const verification = (await response.json()) as VerificationSummary;
-    return { verification };
+    const verificationPayload = (await response.json()) as unknown;
+
+    if (!isVerificationSummary(verificationPayload)) {
+      return { errorMessage: 'Unexpected response format for review action.', statusCode: response.status };
+    }
+
+    return { verification: verificationPayload };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown error during review action.',

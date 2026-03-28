@@ -32,6 +32,24 @@ describe('verification-queue-actions', () => {
     expect(next.reviewAction.status).toBe('error');
   });
 
+  it('removes stale queue item on 404 not found', async () => {
+    const state = createLoadedQueueState([makeSummary('v-1'), makeSummary('v-2')]);
+
+    const fetchImpl = async () =>
+      ({
+        ok: false,
+        status: 404,
+        json: async () => ({ message: 'Verification not found.' }),
+      }) as Response;
+
+    const next = await submitReviewDecision(state, 'token', 'v-1', 'approved', undefined, fetchImpl as typeof fetch);
+
+    expect(next.status).toBe('loaded');
+    if (next.status !== 'loaded') return;
+    expect(next.verifications.map((v) => v.verificationId)).toEqual(['v-2']);
+    expect(next.reviewAction.status).toBe('error');
+  });
+
   it('keeps queue item on generic review error', async () => {
     const state = createLoadedQueueState([makeSummary('v-1')]);
 
