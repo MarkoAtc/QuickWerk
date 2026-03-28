@@ -49,6 +49,18 @@ function createResponse(): ResponseLike {
   };
 }
 
+function extractProviderCredentials(signInResult: unknown): { token: string; userId: string } {
+  const result = signInResult as { token?: string; session?: { userId?: string } };
+  const token = result.token;
+  const userId = result.session?.userId;
+
+  if (!token || !userId) {
+    throw new Error('sign-in did not return expected fields');
+  }
+
+  return { token, userId };
+}
+
 describe('ProvidersController GET /:providerUserId', () => {
   it('returns 200 with the provider profile for a known public provider', async () => {
     const moduleRef = await Test.createTestingModule({
@@ -64,9 +76,7 @@ describe('ProvidersController GET /:providerUserId', () => {
       role: 'provider',
     });
     // signIn returns { ..., token, session: { userId, email, role } }
-    const providerToken = signInResult.token;
-    const providerUserId = (signInResult as { session?: { userId?: string } }).session?.userId;
-    if (!providerToken || !providerUserId) throw new Error('sign-in did not return expected fields');
+    const { token: providerToken, userId: providerUserId } = extractProviderCredentials(signInResult);
 
     // Upsert public profile via controller
     await controller.upsertProfile(
@@ -131,9 +141,7 @@ describe('ProvidersController GET /:providerUserId', () => {
       email: 'private-provider-detail@quickwerk.local',
       role: 'provider',
     });
-    const providerToken = signInResult.token;
-    const providerUserId = (signInResult as { session?: { userId?: string } }).session?.userId;
-    if (!providerToken || !providerUserId) throw new Error('sign-in did not return expected fields');
+    const { token: providerToken, userId: providerUserId } = extractProviderCredentials(signInResult);
 
     await controller.upsertProfile(
       createRequest({ method: 'PUT', path: '/api/v1/providers/me/profile' }),

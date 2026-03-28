@@ -94,7 +94,9 @@ describe('loadProviderDetail', () => {
   });
 
   it('returns errorMessage when providerUserId is whitespace only', async () => {
-    const fetchMock = makeProviderResponse([]);
+    const fetchMock = (() => {
+      throw new Error('fetch should not be called for whitespace providerUserId');
+    }) as typeof fetch;
 
     const result = await loadProviderDetail('   ', fetchMock);
 

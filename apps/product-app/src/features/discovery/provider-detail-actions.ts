@@ -54,14 +54,26 @@ export async function loadProviderDetail(
     return { errorMessage: 'Invalid JSON response from server.' };
   }
 
-  if (
-    !data ||
-    typeof data !== 'object' ||
-    typeof (data as Record<string, unknown>).providerUserId !== 'string' ||
-    typeof (data as Record<string, unknown>).displayName !== 'string'
-  ) {
+  if (!isPublicProviderSummary(data)) {
     return { errorMessage: 'Invalid provider profile data received.' };
   }
 
-  return { provider: data as PublicProviderSummary };
+  return { provider: data };
+}
+
+function isPublicProviderSummary(value: unknown): value is PublicProviderSummary {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.providerUserId === 'string' &&
+    typeof record.displayName === 'string' &&
+    Array.isArray(record.tradeCategories) &&
+    typeof record.isPublic === 'boolean' &&
+    typeof record.createdAt === 'string' &&
+    typeof record.updatedAt === 'string'
+  );
 }
