@@ -1,4 +1,4 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
@@ -191,7 +191,7 @@ function MapPeek() {
   );
 }
 
-export function HomeTriage({ onSelectCategory, onChangeAddress }) {
+export function HomeTriage({ onSelectCategory, onChangeAddress, onBrowseProviders }) {
   const address = '1010 Vienna, AT';
 
   return (
@@ -256,6 +256,31 @@ export function HomeTriage({ onSelectCategory, onChangeAddress }) {
 
       {/* Map peek */}
       <MapPeek />
+
+      {/* Browse all providers link */}
+      {onBrowseProviders ? (
+        <Pressable
+          accessibilityLabel="Browse all providers"
+          accessibilityRole="button"
+          onPress={onBrowseProviders}
+          testID="home-triage-browse-providers"
+          style={{
+            marginTop: spacing.lg,
+            alignItems: 'center',
+            paddingVertical: spacing.md,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.primary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            Browse all providers →
+          </Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }

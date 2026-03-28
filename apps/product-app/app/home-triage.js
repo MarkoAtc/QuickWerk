@@ -15,6 +15,9 @@ export default function HomeTriageRoute() {
         // Until implemented: use DEFAULT_ADDRESS in booking wizard
         console.warn('[home-triage] onChangeAddress: location picker not yet implemented');
       }}
+      onBrowseProviders={() => {
+        router.push('/discovery');
+      }}
     />
   );
 }
