@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
@@ -250,6 +250,120 @@ export class BookingsService {
     };
   }
 
+  async declineBooking(
+    session: AuthSession,
+    bookingId: string,
+    input: { declineReason?: string },
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'booking.decline.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+          bookingId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only providers can decline bookings.',
+      };
+    }
+
+    const declined = await this.bookings.declineSubmittedBooking({
+      bookingId,
+      declinedAt: new Date().toISOString(),
+      providerUserId: session.userId,
+      actorRole: session.role,
+      actorUserId: session.userId,
+      declineReason: input.declineReason,
+    });
+
+    if (!declined.ok) {
+      if (declined.reason === 'not-found') {
+        logStructuredBreadcrumb({
+          event: 'booking.decline.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'not-found',
+            bookingId,
+            actorUserId: session.userId,
+          },
+        });
+
+        return {
+          ok: false,
+          statusCode: 404,
+          error: 'Booking not found.',
+        };
+      }
+
+      logStructuredBreadcrumb({
+        event: 'booking.decline.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: declined.currentStatus,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot transition from ${declined.currentStatus} to declined.`,
+      };
+    }
+
+    const declinedEvent: BookingDeclinedDomainEvent = {
+      eventName: 'booking.declined',
+      eventId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      correlationId,
+      replayed: declined.replayed,
+      booking: {
+        bookingId: declined.booking.bookingId,
+        customerUserId: declined.booking.customerUserId,
+        providerUserId: declined.booking.providerUserId ?? session.userId,
+        requestedService: declined.booking.requestedService,
+        status: 'declined',
+      },
+    };
+
+    await this.domainEvents.publishBookingDeclined(declinedEvent);
+
+    logStructuredBreadcrumb({
+      event: 'booking.decline.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: declined.booking.bookingId,
+        actorUserId: session.userId,
+        replayed: declined.replayed,
+      },
+    });
+
+    return {
+      ok: true,
+      statusCode: 200,
+      booking: this.serializeRecord(declined.booking),
+    };
+  }
+
   private serializeRecord(record: BookingRecord) {
     return {
       bookingId: record.bookingId,
@@ -258,6 +372,7 @@ export class BookingsService {
       providerUserId: record.providerUserId,
       requestedService: record.requestedService,
       status: record.status,
+      declineReason: record.declineReason,
       statusHistory: record.statusHistory,
     } as const;
   }

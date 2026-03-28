@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Post, Put, Req, Res } from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
 import { extractBearerToken } from '../http/auth-header';
@@ -19,6 +19,14 @@ type SubmitVerificationBody = {
 type ReviewVerificationBody = {
   decision?: string;
   reviewNote?: string;
+};
+
+type UpsertProfileBody = {
+  displayName?: string;
+  bio?: string;
+  tradeCategories?: string[];
+  serviceArea?: string;
+  isPublic?: boolean;
 };
 
 type RequestLike = {
@@ -227,5 +235,77 @@ export class ProvidersController {
     }
 
     return result.verification;
+  }
+
+  /**
+   * PUT /api/v1/providers/me/profile
+   * Provider creates or updates their public-facing profile.
+   */
+  @Put('me/profile')
+  @HttpCode(200)
+  async upsertProfile(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Body() body: UpsertProfileBody,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+    if (!session) {
+      throw new HttpException('Sign-in required to manage profile.', 401);
+    }
+
+    const result = await this.providersService.upsertProfile(session, body, { correlationId });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.profile;
+  }
+
+  /**
+   * GET /api/v1/providers/me/profile
+   * Provider retrieves their own profile.
+   */
+  @Get('me/profile')
+  async getMyProfile(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+    if (!session) {
+      throw new HttpException('Sign-in required to view profile.', 401);
+    }
+
+    const result = await this.providersService.getMyProfile(session, { correlationId });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.profile ?? { status: 'not-set' };
   }
 }

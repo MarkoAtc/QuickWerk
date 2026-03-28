@@ -12,6 +12,7 @@ export const providerApiRoutes = {
   listPending: `${apiRoutes.providers}/verifications/pending`,
   getVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}`,
   reviewVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}/review`,
+  myProfile: `${apiRoutes.providers}/me/profile`,
 } as const;
 
 export type VerificationStatus = 'pending' | 'approved' | 'rejected';
@@ -45,6 +46,7 @@ export const bookingApiRoutes = {
   get: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}`,
   create: apiRoutes.bookings,
   accept: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/accept`,
+  decline: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/decline`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -140,4 +142,40 @@ export const createReviewVerificationRequest = (
   path: providerApiRoutes.reviewVerification(verificationId),
   headers: { authorization: `Bearer ${sessionToken}` },
   body,
+}) as const;
+
+export type DeclineBookingRequestBody = {
+  declineReason?: string;
+};
+
+export const createDeclineBookingRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body?: DeclineBookingRequestBody,
+) => ({
+  method: 'POST',
+  path: bookingApiRoutes.decline(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body: body ?? {},
+}) as const;
+
+export type UpsertProviderProfileBody = {
+  displayName: string;
+  bio?: string;
+  tradeCategories?: string[];
+  serviceArea?: string;
+  isPublic?: boolean;
+};
+
+export const createUpsertProviderProfileRequest = (sessionToken: string, body: UpsertProviderProfileBody) => ({
+  method: 'PUT',
+  path: providerApiRoutes.myProfile,
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
+}) as const;
+
+export const createGetMyProviderProfileRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: providerApiRoutes.myProfile,
+  headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;

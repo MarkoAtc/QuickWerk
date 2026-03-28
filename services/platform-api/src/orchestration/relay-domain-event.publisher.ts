@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
@@ -113,5 +113,15 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
         dlq: finalWorkerResult.envelope.dlq,
       },
     });
+  }
+
+  /**
+   * Publish a booking.declined domain event.
+   * For now this delegates to the logging publisher (structured audit log).
+   * A full relay pipeline (with retry + DLQ) mirrors booking.accepted and can be
+   * wired in a follow-up slice once the booking.declined worker is production-ready.
+   */
+  async publishBookingDeclined(event: BookingDeclinedDomainEvent): Promise<void> {
+    await this.loggingPublisher.publishBookingDeclined(event);
   }
 }
