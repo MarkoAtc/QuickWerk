@@ -24,13 +24,22 @@ export function ProviderDetailScreen() {
   const [notFound, setNotFound] = useState(false);
 
   function fetchDetail(id) {
-    if (!id || isLoading) return;
+    const normalizedId = typeof id === 'string' ? id.trim() : '';
+
+    if (!normalizedId) {
+      setErrorMessage('Missing provider id');
+      setNotFound(true);
+      setProvider(undefined);
+      return;
+    }
+
+    if (isLoading) return;
 
     setErrorMessage(undefined);
     setNotFound(false);
     setIsLoading(true);
 
-    loadProviderDetail(id)
+    loadProviderDetail(normalizedId)
       .then((result) => {
         if (result.notFound) {
           setNotFound(true);
@@ -54,9 +63,16 @@ export function ProviderDetailScreen() {
 
   // Load on mount whenever providerUserId is available
   useEffect(() => {
-    if (providerUserId) {
-      fetchDetail(providerUserId);
+    const normalizedParam = Array.isArray(providerUserId) ? providerUserId[0] : providerUserId;
+
+    if (!normalizedParam || typeof normalizedParam !== 'string') {
+      setErrorMessage('Missing provider id');
+      setNotFound(true);
+      setProvider(undefined);
+      return;
     }
+
+    fetchDetail(normalizedParam);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerUserId]);
 
@@ -129,7 +145,7 @@ export function ProviderDetailScreen() {
           <Pressable
             accessibilityLabel="Retry loading provider"
             accessibilityRole="button"
-            onPress={() => fetchDetail(providerUserId)}
+            onPress={() => fetchDetail(Array.isArray(providerUserId) ? providerUserId[0] : providerUserId)}
             testID="provider-detail-retry"
             style={{ marginTop: 8 }}
           >

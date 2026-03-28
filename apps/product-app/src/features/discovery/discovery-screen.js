@@ -31,20 +31,25 @@ export function DiscoveryScreen() {
 
   // Debounce timer ref so rapid typing only fires one fetch
   const debounceRef = useRef(undefined);
+  const requestIdRef = useRef(0);
 
   /**
    * Fetches providers with the given trade-category filter (trimmed; undefined if empty).
    */
   function fetchProviders(filterValue) {
     const tradeCategory = filterValue?.trim() || undefined;
-
-    if (isLoading) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
     setErrorMessage(undefined);
     setIsLoading(true);
 
     loadPublicProviders(tradeCategory ? { tradeCategory } : undefined)
       .then((result) => {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
         if (result.errorMessage) {
           setErrorMessage(result.errorMessage);
           return;
@@ -52,18 +57,31 @@ export function DiscoveryScreen() {
         setProviders(result.providers);
       })
       .catch((err) => {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
         setErrorMessage(
           err instanceof Error ? err.message : 'Unexpected error loading providers.',
         );
       })
       .finally(() => {
-        setIsLoading(false);
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
       });
   }
 
   // Initial load on mount (no filter)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchProviders(''); }, []);
+
+  useEffect(() => () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = undefined;
+    }
+  }, []);
 
   /**
    * When filter input changes, debounce the fetch so we don't hammer on every keystroke.

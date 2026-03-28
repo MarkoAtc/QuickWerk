@@ -89,6 +89,15 @@ describe('loadProviderDetail', () => {
     expect(result.provider).toBeUndefined();
   });
 
+  it('returns error when providerUserId is whitespace only', async () => {
+    const fetchMock = makeListResponse([]);
+
+    const result = await loadProviderDetail('   ', fetchMock);
+
+    expect(result.errorMessage).toMatch(/required/i);
+    expect(result.provider).toBeUndefined();
+  });
+
   it('returns notFound when list is empty', async () => {
     const fetchMock = makeListResponse([]);
 

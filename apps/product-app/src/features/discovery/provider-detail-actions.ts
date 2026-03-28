@@ -22,7 +22,9 @@ export async function loadProviderDetail(
   providerUserId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<LoadProviderDetailResult> {
-  if (!providerUserId?.trim()) {
+  const trimmedProviderUserId = providerUserId?.trim();
+
+  if (!trimmedProviderUserId) {
     return { errorMessage: 'providerUserId is required.' };
   }
 
@@ -32,7 +34,7 @@ export async function loadProviderDetail(
     return { errorMessage: result.errorMessage };
   }
 
-  const provider = result.providers!.find((p) => p.providerUserId === providerUserId);
+  const provider = result.providers!.find((p) => p.providerUserId === trimmedProviderUserId);
 
   if (!provider) {
     return { notFound: true };

@@ -36,12 +36,17 @@ export const applyFilterInputChange = (
   filterInput,
 });
 
+const normalizeTradeCategory = (tradeCategory?: string): string | undefined => {
+  const trimmed = tradeCategory?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+};
+
 export const applyDiscoveryLoading = (
   state: DiscoveryScreenState,
   tradeCategory?: string,
 ): DiscoveryScreenState => ({
   ...state,
-  discoveryState: createLoadingDiscoveryState(tradeCategory || undefined),
+  discoveryState: createLoadingDiscoveryState(normalizeTradeCategory(tradeCategory)),
 });
 
 export const applyDiscoveryLoaded = (
@@ -50,7 +55,7 @@ export const applyDiscoveryLoaded = (
   tradeCategory?: string,
 ): DiscoveryScreenState => ({
   ...state,
-  discoveryState: createLoadedDiscoveryState(providers, tradeCategory || undefined),
+  discoveryState: createLoadedDiscoveryState(providers, normalizeTradeCategory(tradeCategory)),
 });
 
 export const applyDiscoveryError = (
@@ -59,7 +64,7 @@ export const applyDiscoveryError = (
   tradeCategory?: string,
 ): DiscoveryScreenState => ({
   ...state,
-  discoveryState: createErrorDiscoveryState(errorMessage, tradeCategory || undefined),
+  discoveryState: createErrorDiscoveryState(errorMessage, normalizeTradeCategory(tradeCategory)),
 });
 
 /**
@@ -68,7 +73,4 @@ export const applyDiscoveryError = (
  */
 export const resolveActiveFilter = (
   state: DiscoveryScreenState,
-): string | undefined => {
-  const trimmed = state.filterInput.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-};
+): string | undefined => normalizeTradeCategory(state.filterInput);
