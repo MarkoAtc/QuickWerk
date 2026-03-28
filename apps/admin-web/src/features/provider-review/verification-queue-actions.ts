@@ -43,8 +43,8 @@ export async function loadPendingVerifications(
 }
 
 type ReviewResult =
-  | { verification: VerificationSummary; errorMessage?: undefined }
-  | { verification?: undefined; errorMessage: string };
+  | { verification: VerificationSummary; errorMessage?: undefined; statusCode?: undefined }
+  | { verification?: undefined; errorMessage: string; statusCode?: number };
 
 export async function reviewVerification(
   sessionToken: string,
@@ -68,7 +68,7 @@ export async function reviewVerification(
         typeof errorBody['message'] === 'string'
           ? errorBody['message']
           : `Review action failed: HTTP ${response.status}.`;
-      return { errorMessage: message };
+      return { errorMessage: message, statusCode: response.status };
     }
 
     const verification = (await response.json()) as VerificationSummary;
@@ -111,6 +111,15 @@ export async function submitReviewDecision(
     if (currentState.status !== 'loaded') {
       return createQueueErrorState(result.errorMessage);
     }
+
+    if (result.statusCode === 404 || result.statusCode === 409) {
+      return {
+        ...currentState,
+        verifications: currentState.verifications.filter((v) => v.verificationId !== verificationId),
+        reviewAction: { status: 'error', verificationId, errorMessage: result.errorMessage },
+      };
+    }
+
     return {
       ...currentState,
       reviewAction: { status: 'error', verificationId, errorMessage: result.errorMessage },
