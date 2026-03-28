@@ -202,7 +202,25 @@ export class PostgresBookingRepository implements BookingRepository {
     }));
   }
 
+  async getBooking(bookingId: string): Promise<BookingRecord | null> {
+    if (!isUuid(bookingId)) {
+      return null;
+    }
+
+    return this.loadBookingRecord(bookingId);
+  }
+
   private async loadBookingOrThrow(bookingId: string): Promise<BookingRecord> {
+    const booking = await this.loadBookingRecord(bookingId);
+
+    if (!booking) {
+      throw new Error(`Booking ${bookingId} was not found after write.`);
+    }
+
+    return booking;
+  }
+
+  private async loadBookingRecord(bookingId: string): Promise<BookingRecord | null> {
     const result = await this.postgresClient.query<BookingRow>(
       this.postgresConfig,
       `SELECT id::text,
@@ -220,7 +238,7 @@ export class PostgresBookingRepository implements BookingRepository {
     const booking = result.rows[0];
 
     if (!booking) {
-      throw new Error(`Booking ${bookingId} was not found after write.`);
+      return null;
     }
 
     const historyResult = await this.postgresClient.query<BookingStatusHistoryRow>(

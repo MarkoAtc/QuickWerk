@@ -1,0 +1,299 @@
+import { Inject, Injectable } from '@nestjs/common';
+
+import { AuthSession } from '../auth/domain/auth-session.repository';
+import { logStructuredBreadcrumb } from '../observability/structured-log';
+import {
+  PROVIDER_VERIFICATION_REPOSITORY,
+  ProviderVerificationRecord,
+  ProviderVerificationRepository,
+} from './domain/provider-verification.repository';
+
+type SubmitVerificationInput = {
+  businessName?: string;
+  tradeCategories?: string[];
+  serviceArea?: string;
+  documents?: Array<{
+    filename?: string;
+    mimeType?: string;
+    description?: string;
+  }>;
+};
+
+@Injectable()
+export class ProvidersService {
+  constructor(
+    @Inject(PROVIDER_VERIFICATION_REPOSITORY)
+    private readonly verifications: ProviderVerificationRepository,
+  ) {}
+
+  async submitVerification(
+    session: AuthSession,
+    input: SubmitVerificationInput,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 409; error: string }
+    | { ok: true; statusCode: 201; verification: ReturnType<ProvidersService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.submit',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only providers can submit verifications.',
+      };
+    }
+
+    // Prevent duplicate pending submissions
+    const existing = await this.verifications.getVerificationByProviderId(session.userId);
+    if (existing && existing.status === 'pending') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.submit',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'duplicate-pending',
+          actorUserId: session.userId,
+          existingVerificationId: existing.verificationId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: 'A pending verification already exists for this provider.',
+      };
+    }
+
+    const documents = (input.documents ?? []).map((d) => ({
+      filename: d.filename?.trim() || 'document',
+      mimeType: d.mimeType?.trim() || 'application/octet-stream',
+      description: d.description?.trim(),
+    }));
+
+    const record = await this.verifications.submitVerification({
+      providerUserId: session.userId,
+      providerEmail: session.email,
+      businessName: input.businessName?.trim(),
+      tradeCategories: (input.tradeCategories ?? []).map((c) => c.trim()).filter(Boolean),
+      serviceArea: input.serviceArea?.trim(),
+      documents,
+      submittedAt: new Date().toISOString(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'provider.verification.submit',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        verificationId: record.verificationId,
+        actorUserId: session.userId,
+        documentCount: record.documents.length,
+      },
+    });
+
+    return { ok: true, statusCode: 201, verification: this.serializeRecord(record) };
+  }
+
+  async getMyVerificationStatus(
+    session: AuthSession,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | { ok: true; statusCode: 200; verification: ReturnType<ProvidersService['serializeRecord']> | null }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.get-status',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'role-forbidden', actorRole: session.role, actorUserId: session.userId },
+      });
+
+      return { ok: false, statusCode: 403, error: 'Only providers can check their verification status.' };
+    }
+
+    const record = await this.verifications.getVerificationByProviderId(session.userId);
+
+    return { ok: true, statusCode: 200, verification: record ? this.serializeRecord(record) : null };
+  }
+
+  async listPendingVerifications(
+    session: AuthSession,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403; error: string }
+    | { ok: true; statusCode: 200; verifications: ReturnType<ProvidersService['serializeRecord']>[] }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'operator') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.list-pending',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'role-forbidden', actorRole: session.role, actorUserId: session.userId },
+      });
+
+      return { ok: false, statusCode: 403, error: 'Only operators can view the verification queue.' };
+    }
+
+    const records = await this.verifications.listPendingVerifications();
+
+    logStructuredBreadcrumb({
+      event: 'provider.verification.list-pending',
+      correlationId,
+      status: 'succeeded',
+      details: { actorUserId: session.userId, count: records.length },
+    });
+
+    return { ok: true, statusCode: 200, verifications: records.map((r) => this.serializeRecord(r)) };
+  }
+
+  async reviewVerification(
+    session: AuthSession,
+    verificationId: string,
+    input: { decision: 'approved' | 'rejected'; reviewNote?: string },
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: true; statusCode: 200; verification: ReturnType<ProvidersService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'operator') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.review',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+          verificationId,
+          decision: input.decision,
+        },
+      });
+
+      return { ok: false, statusCode: 403, error: 'Only operators can review verifications.' };
+    }
+
+    const result = await this.verifications.reviewVerification({
+      verificationId,
+      reviewedByUserId: session.userId,
+      reviewedByRole: session.role,
+      decision: input.decision,
+      reviewNote: input.reviewNote,
+      reviewedAt: new Date().toISOString(),
+    });
+
+    if (!result.ok) {
+      if (result.reason === 'not-found') {
+        logStructuredBreadcrumb({
+          event: 'provider.verification.review',
+          correlationId,
+          status: 'failed',
+          details: { reason: 'not-found', verificationId, actorUserId: session.userId },
+        });
+        return { ok: false, statusCode: 404, error: 'Verification not found.' };
+      }
+
+      logStructuredBreadcrumb({
+        event: 'provider.verification.review',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'already-decided',
+          verificationId,
+          actorUserId: session.userId,
+          currentStatus: result.currentStatus,
+        },
+      });
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Verification has already been decided (status: ${result.currentStatus}).`,
+      };
+    }
+
+    logStructuredBreadcrumb({
+      event: 'provider.verification.review',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        verificationId,
+        actorUserId: session.userId,
+        decision: input.decision,
+        hasNote: Boolean(input.reviewNote),
+      },
+    });
+
+    return { ok: true, statusCode: 200, verification: this.serializeRecord(result.record) };
+  }
+
+  async getVerificationById(
+    session: AuthSession,
+    verificationId: string,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | { ok: true; statusCode: 200; verification: ReturnType<ProvidersService['serializeRecord']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'operator') {
+      logStructuredBreadcrumb({
+        event: 'provider.verification.get-by-id',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'role-forbidden', actorRole: session.role, actorUserId: session.userId },
+      });
+      return { ok: false, statusCode: 403, error: 'Only operators can view verification details.' };
+    }
+
+    const record = await this.verifications.getVerification(verificationId);
+
+    if (!record) {
+      return { ok: false, statusCode: 404, error: 'Verification not found.' };
+    }
+
+    return { ok: true, statusCode: 200, verification: this.serializeRecord(record) };
+  }
+
+  private serializeRecord(record: ProviderVerificationRecord) {
+    return {
+      verificationId: record.verificationId,
+      providerUserId: record.providerUserId,
+      providerEmail: record.providerEmail,
+      businessName: record.businessName,
+      tradeCategories: record.tradeCategories,
+      serviceArea: record.serviceArea,
+      documents: record.documents.map((d) => ({
+        documentId: d.documentId,
+        filename: d.filename,
+        mimeType: d.mimeType,
+        description: d.description,
+        uploadedAt: d.uploadedAt,
+      })),
+      status: record.status,
+      submittedAt: record.submittedAt,
+      reviewedAt: record.reviewedAt,
+      reviewedByUserId: record.reviewedByUserId,
+      reviewNote: record.reviewNote,
+      statusHistory: record.statusHistory,
+    } as const;
+  }
+}
