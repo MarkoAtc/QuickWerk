@@ -4,12 +4,12 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 
 import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
-import { sessionStore } from '../../shared/session-context';
+import { resolveSessionToken, useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 export function ProviderScreen() {
   const router = useRouter();
-  const session = sessionStore.get();
+  const { session, signOut } = useSession();
 
   const [bookings, setBookings] = useState(undefined);
   const [listError, setListError] = useState(undefined);
@@ -19,18 +19,31 @@ export function ProviderScreen() {
   const [acceptError, setAcceptError] = useState(undefined);
   const [acceptedBooking, setAcceptedBooking] = useState(undefined);
 
+  useEffect(() => {
+    if (session.status !== 'authenticated') {
+      router.replace('/auth');
+    }
+  }, [session.status]);
+
   if (session.status !== 'authenticated') {
-    router.replace('/sign-in');
     return null;
   }
 
   const loadOpenBookings = () => {
     if (isLoading) return;
 
+    const sessionToken = resolveSessionToken(session);
+    if (!sessionToken) {
+      setListError('Your session has expired. Please sign in again.');
+      signOut();
+      router.replace('/auth');
+      return;
+    }
+
     setListError(undefined);
     setIsLoading(true);
 
-    listBookingsRequest(session.sessionToken)
+    listBookingsRequest(sessionToken)
       .then((result) => {
         if (result.errorMessage) {
           setListError(result.errorMessage);
@@ -56,7 +69,17 @@ export function ProviderScreen() {
     setAcceptError(undefined);
     setAcceptingId(bookingId);
 
-    acceptBookingRequest({ sessionToken: session.sessionToken, bookingId })
+    const sessionToken = resolveSessionToken(session);
+
+    if (!sessionToken) {
+      setAcceptError('Your session has expired. Please sign in again.');
+      setAcceptingId(undefined);
+      signOut();
+      router.replace('/auth');
+      return;
+    }
+
+    acceptBookingRequest({ sessionToken, bookingId })
       .then((result) => {
         if (result.errorMessage) {
           setAcceptError(result.errorMessage);
@@ -75,8 +98,8 @@ export function ProviderScreen() {
   };
 
   const handleSignOut = () => {
-    sessionStore.clear();
-    router.replace('/sign-in');
+    signOut();
+    router.replace('/auth');
   };
 
   const handleReset = () => {
@@ -221,9 +244,9 @@ export function ProviderScreen() {
                     </Text>
                   </View>
                   <Pressable
-                    accessibilityLabel={`Accept booking ${booking.bookingId}`}
+                    accessibilityLabel={acceptingId === booking.bookingId ? `Accepting booking ${booking.bookingId}` : `Accept booking ${booking.bookingId}`}
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: acceptingId === booking.bookingId }}
+                    accessibilityState={{ disabled: !!acceptingId, busy: acceptingId === booking.bookingId }}
                     disabled={!!acceptingId}
                     onPress={() => handleAccept(booking.bookingId)}
                     testID={`provider-accept-${booking.bookingId}`}
@@ -237,7 +260,7 @@ export function ProviderScreen() {
                     }}
                   >
                     <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
-                      {acceptingId === booking.bookingId ? '…' : 'Accept'}
+                      {acceptingId === booking.bookingId ? 'Accepting…' : 'Accept'}
                     </Text>
                   </Pressable>
                 </View>

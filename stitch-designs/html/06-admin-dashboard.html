@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickWerk Operations Command</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Plus+Jakarta+Sans:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed-dim": "#bdc7dc",
+                        "secondary-container": "#d6e0f6",
+                        "on-background": "#191c1b",
+                        "on-primary-container": "#f6fff6",
+                        "background": "#f9faf8",
+                        "on-primary-fixed": "#002112",
+                        "tertiary-fixed-dim": "#ffb5a0",
+                        "on-surface": "#191c1b",
+                        "primary-fixed": "#c6ebd2",
+                        "outline-variant": "#c1c8c1",
+                        "on-surface-variant": "#424843",
+                        "surface-container": "#edeeec",
+                        "primary": "#42634f",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3d4759",
+                        "tertiary-container": "#b55a40",
+                        "secondary": "#555f71",
+                        "on-tertiary-fixed-variant": "#7b2e17",
+                        "secondary-fixed": "#d9e3f9",
+                        "inverse-primary": "#aacfb7",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#aacfb7",
+                        "primary-container": "#5a7c67",
+                        "error": "#ba1a1a",
+                        "inverse-surface": "#2e3130",
+                        "on-tertiary-container": "#fffbff",
+                        "on-tertiary-fixed": "#3b0900",
+                        "on-primary-fixed-variant": "#2c4d3b",
+                        "tertiary-fixed": "#ffdbd1",
+                        "on-secondary-container": "#596376",
+                        "surface-dim": "#d9dad8",
+                        "surface-bright": "#f9faf8",
+                        "tertiary": "#96432a",
+                        "outline": "#727973",
+                        "surface-container-low": "#f3f4f2",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "surface": "#f9faf8",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e1e3e1",
+                        "surface-container-high": "#e7e8e6",
+                        "inverse-on-surface": "#f0f1ef",
+                        "surface-variant": "#e1e3e1",
+                        "surface-tint": "#446652",
+                        "on-secondary-fixed": "#121c2c"
+                    },
+                    fontFamily: {
+                        "headline": ["Newsreader", "serif"],
+                        "body": ["Plus Jakarta Sans", "sans-serif"],
+                        "label": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift {
+            transition: background-color 0.3s ease;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #191c1b;
+        }
+        h1, h2, h3, .font-serif {
+            font-family: 'Newsreader', serif;
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex">
+<!-- SideNavBar Component -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 px-4 bg-stone-50 dark:bg-stone-950 h-screen w-64 border-r-0 z-50">
+<div class="mb-10 px-4">
+<h1 class="text-xl font-bold font-serif text-emerald-900 dark:text-emerald-100 italic">Admin Panel</h1>
+<p class="text-xs font-semibold text-stone-400 mt-1 uppercase tracking-widest">Emergency Services</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active: Overview -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-emerald-900 dark:text-emerald-100 font-bold border-r-4 border-emerald-800 dark:border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/20 transition-transform duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="work">work</span>
+<span class="text-sm font-medium">Jobs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="engineering">engineering</span>
+<span class="text-sm font-medium">Providers</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-sm font-medium">Users</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-sm font-medium">Finance</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-stone-500 dark:text-stone-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+<span class="text-sm font-medium">Support</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<button class="w-full bg-primary text-on-primary py-4 rounded-full font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+                New Urgent Job
+            </button>
+<div class="mt-8 flex items-center gap-3 pt-6 border-t border-stone-200/50">
+<img class="w-10 h-10 rounded-full object-cover border-2 border-primary-container" data-alt="close-up portrait of a professional male administrator in a brightly lit modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdsDBaRCyLVfnQdNb5CoEl48m04NDkENKJhvPx7DraxoQcO-TZAR-Smfrx_BsZU_Pfyum_Wnsr5q6z-pbF_ka07r-2fFRD3umBkOEcfKZy9cYjD1r_uO4DVBku91pPMFcF6SVv2ZuPFZpWDg6AkWPootOXSBR3ukdMhWeBGmRwFnCCVCUAPuxKpWIXEfe9FMORavMZlFqpbmUQb4_IBsSbAsrQBbcLQIs1jCYhDXrPbPyx6PYXeTISHl6bzHHaIZfKhavK2W20ugYA"/>
+<div>
+<p class="text-xs font-bold text-emerald-900">Admin user profile</p>
+<p class="text-[10px] text-stone-400 uppercase tracking-wider">Super Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 ml-64 min-h-screen relative flex flex-col">
+<!-- TopNavBar Component -->
+<header class="w-full h-16 sticky top-0 z-40 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md flex items-center justify-between px-8 shadow-sm shadow-stone-200/50 dark:shadow-none">
+<div class="flex items-center gap-8">
+<span class="text-lg font-serif italic text-emerald-900 dark:text-emerald-100">Operations Command</span>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-stone-400 text-sm" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-full text-xs font-semibold w-64 focus:ring-1 focus:ring-emerald-200 outline-none transition-all" placeholder="Search operations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="relative text-stone-400 hover:text-emerald-600 transition-opacity">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary rounded-full"></span>
+</button>
+<button class="text-stone-400 hover:text-emerald-600 transition-opacity">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-stone-200"></div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-semibold text-emerald-800">QuickWerk Ops</span>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-[10px] font-bold">QW</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<section class="p-8 space-y-8 flex-1">
+<!-- Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-4">
+<div class="p-3 bg-primary-fixed rounded-xl text-primary">
+<span class="material-symbols-outlined" data-icon="electric_bolt">electric_bolt</span>
+</div>
+<span class="text-xs font-bold text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span> +12%
+                        </span>
+</div>
+<p class="text-stone-500 text-xs font-semibold uppercase tracking-widest mb-1">Active Jobs</p>
+<h2 class="text-4xl font-serif text-emerald-900">12</h2>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-4">
+<div class="p-3 bg-secondary-fixed rounded-xl text-secondary">
+<span class="material-symbols-outlined" data-icon="person_search">person_search</span>
+</div>
+<span class="text-xs font-bold text-stone-400 flex items-center gap-1">Stable</span>
+</div>
+<p class="text-stone-500 text-xs font-semibold uppercase tracking-widest mb-1">Available Pros</p>
+<h2 class="text-4xl font-serif text-emerald-900">34</h2>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-tertiary/10">
+<div class="flex justify-between items-start mb-4">
+<div class="p-3 bg-tertiary-fixed rounded-xl text-tertiary">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+</div>
+<div class="bg-tertiary-container px-2 py-1 rounded text-[10px] text-white font-bold uppercase">Critical</div>
+</div>
+<p class="text-stone-500 text-xs font-semibold uppercase tracking-widest mb-1">Urgent Alerts</p>
+<h2 class="text-4xl font-serif text-tertiary">2</h2>
+</div>
+</div>
+<!-- Main Layout: Map & Queue -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- Left: Map -->
+<div class="xl:col-span-8 bg-surface-container rounded-lg overflow-hidden relative min-h-[500px] border border-outline-variant/10">
+<div class="absolute inset-0 bg-stone-200 flex items-center justify-center">
+<img class="w-full h-full object-cover mix-blend-multiply opacity-80" data-alt="stylized architectural map of vienna with soft muted colors and clean lines showcasing urban planning" data-location="Vienna" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeHPv5L_fVJf6m9KhwrKQN8U19TBhyoi6xJ1P408jbX0_bnzvFCh804Dtdl1myl70BGYTylvJMI5zarI1V9K6NimkPbIvnJRBtld-KIFJH6ideetn6g63H1_iagojjK-IkqnhUf9edcBQqfW0lJX1VkZrDRopZcGLSgB5IwE2vsvyIVl5FY_sruVWvcUe3exnJC1YTS3pHPCDr1b_O7NINnK0OtHn4eNGqAk_pumPeGoNy8F9exEDfPh62t5_lR08UH6_x_0qXeF06"/>
+<!-- Map Markers -->
+<div class="absolute top-[30%] left-[45%] group cursor-pointer">
+<div class="w-4 h-4 bg-primary rounded-full ring-4 ring-primary/20 animate-pulse"></div>
+<div class="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white p-2 rounded shadow-lg text-[10px] font-bold whitespace-nowrap">Active Job: Water Leak</div>
+</div>
+<div class="absolute top-[60%] left-[25%]">
+<div class="w-4 h-4 bg-secondary rounded-full ring-4 ring-secondary/20"></div>
+</div>
+<div class="absolute top-[20%] left-[70%]">
+<div class="w-4 h-4 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<div class="absolute top-[50%] left-[60%]">
+<div class="w-4 h-4 bg-secondary rounded-full ring-4 ring-secondary/20"></div>
+</div>
+</div>
+<!-- Map Controls Overlay -->
+<div class="absolute top-4 left-4 flex flex-col gap-2">
+<div class="bg-white/80 backdrop-blur p-2 rounded-lg flex flex-col gap-2 shadow-sm">
+<button class="p-1 hover:bg-stone-100 rounded text-stone-600"><span class="material-symbols-outlined" data-icon="add">add</span></button>
+<div class="h-[1px] bg-stone-200"></div>
+<button class="p-1 hover:bg-stone-100 rounded text-stone-600"><span class="material-symbols-outlined" data-icon="remove">remove</span></button>
+</div>
+<div class="bg-white/80 backdrop-blur p-2 rounded-lg shadow-sm">
+<button class="p-1 hover:bg-stone-100 rounded text-stone-600"><span class="material-symbols-outlined" data-icon="my_location">my_location</span></button>
+</div>
+</div>
+<div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur p-4 rounded-lg shadow-sm border border-stone-100 flex gap-6">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary rounded-full"></div>
+<span class="text-[10px] font-bold text-stone-600 uppercase">Active Jobs (9)</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-secondary rounded-full"></div>
+<span class="text-[10px] font-bold text-stone-600 uppercase">Pro Available (15)</span>
+</div>
+</div>
+</div>
+<!-- Right: Job Queue -->
+<div class="xl:col-span-4 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h3 class="text-xl font-serif text-emerald-900">Job Queue</h3>
+<button class="text-xs font-bold text-primary hover:underline">View All</button>
+</div>
+<div class="space-y-4">
+<!-- Job Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-tertiary/10 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-sm text-emerald-900">Marcus Thorne</h4>
+<p class="text-xs text-stone-400">Broken Pipe Emergency</p>
+</div>
+<span class="bg-tertiary-fixed text-tertiary text-[10px] font-bold px-2 py-0.5 rounded uppercase">Urgent</span>
+</div>
+<div class="flex items-center justify-between text-[11px] font-semibold text-stone-500">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+                                    4 mins ago
+                                </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+                                    District 7, Vienna
+                                </div>
+</div>
+</div>
+<!-- Job Card 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/10 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary-container"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-sm text-emerald-900">Elena Rossi</h4>
+<p class="text-xs text-stone-400">Electrical Maintenance</p>
+</div>
+<span class="bg-primary-fixed text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">In Route</span>
+</div>
+<div class="flex items-center justify-between text-[11px] font-semibold text-stone-500">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+                                    18 mins ago
+                                </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+                                    District 1, Vienna
+                                </div>
+</div>
+</div>
+<!-- Job Card 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/10 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-container"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-sm text-emerald-900">Julian Schmidt</h4>
+<p class="text-xs text-stone-400">Locksmith Service</p>
+</div>
+<span class="bg-secondary-fixed text-secondary text-[10px] font-bold px-2 py-0.5 rounded uppercase">Queued</span>
+</div>
+<div class="flex items-center justify-between text-[11px] font-semibold text-stone-500">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+                                    32 mins ago
+                                </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span>
+                                    District 10, Vienna
+                                </div>
+</div>
+</div>
+</div>
+<button class="w-full py-4 border-2 border-dashed border-stone-200 rounded-lg text-stone-400 text-xs font-bold hover:border-primary hover:text-primary transition-colors">
+                        + Dispatch Manual Job
+                    </button>
+</div>
+</div>
+<!-- Provider Performance Table -->
+<div class="bg-surface-container-lowest rounded-lg overflow-hidden border border-outline-variant/10">
+<div class="p-6 border-b border-stone-100 flex justify-between items-center">
+<h3 class="text-xl font-serif text-emerald-900">Provider Performance</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-low rounded-full text-xs font-bold text-stone-600 hover:bg-stone-200">Daily</button>
+<button class="px-4 py-2 rounded-full text-xs font-bold text-stone-400">Weekly</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low/30">
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Name</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Jobs Today</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Rating</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Status</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-stone-400">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-stone-100">
+<tr class="hover:bg-stone-50/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-stone-100 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional headshot of a service provider smiling confidently in a clean uniform" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAr8iL6wClWeivhI-bDlJMAI6u1_UofrPp_x7y7Ymhlr2k0yA3TCZ3-I09-o5afDl-Z6DIvpilH5wJRhXwK-Cf0O5DeXOzf_hz04qznWR20ezwHsLhS4RlPdYKIhwoaqpqwFlcdIHJnsxm-Bv-E0SV3fy5fH5lF8IkZOKGU4iNRfT6x3pg-FtSlXL_OpVQymic2LH-Vs6wLucHcJOWUCrPi48R8uIdksvhRP4Oid_oG3b7O11ZTM98RVO0Aw-tu-VG-2T1mUwqrEsb7"/>
+</div>
+<div>
+<p class="text-sm font-bold text-emerald-900">Stefan Baum</p>
+<p class="text-[10px] text-stone-400">Plumbing Lead</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-stone-600">6</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-1 text-tertiary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-sm font-bold">4.9</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                        ON DUTY
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-stone-400 hover:text-primary"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-stone-50/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-stone-100 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a female technician with a friendly expression in professional workwear" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmi1JQQ2CfcC1FLUBugJq6phgTDRSADI0Q9oow8LAf5mqvldhM91_Q6A6pJMHzXeaW4xL4-9ZAu1wkD_-S2wSXiqQv53_5Ap4IB3PSD6U4Au-W9CrSNucQSwBoXYU4jS_mszvxNYkOky0c4hxpX5imTCDLY_ivUoBHLmY_7oLshfawzLyQuYt4JyczckAUh2PU8UI2GeBkMlXcx4k_aRmfiiWl9eSydHuH43aAiGGjjwcJ32kmdSLEsC7cDFaQU1WPI4NBxLULbXHa"/>
+</div>
+<div>
+<p class="text-sm font-bold text-emerald-900">Lara Vogel</p>
+<p class="text-[10px] text-stone-400">Electrician</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-stone-600">4</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-1 text-tertiary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-sm font-bold">4.8</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-[10px] font-bold bg-stone-100 text-stone-500">
+<span class="w-1.5 h-1.5 bg-stone-400 rounded-full"></span>
+                                        OFF DUTY
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-stone-400 hover:text-primary"><span class="material-symbols-outlined" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- Background Decorative Layer -->
+<div class="fixed bottom-0 right-0 p-8 opacity-5 pointer-events-none">
+<h2 class="text-[120px] font-serif leading-none text-emerald-900 select-none">QuickWerk</h2>
+</div>
+</main>
+</body></html>

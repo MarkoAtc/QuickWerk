@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Active Job - Calm Resolution</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13e761",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#102217",
+                        "text-main": "#2D3748",
+                        "text-muted": "#A0AEC0",
+                        "accent-blue": "#5C7C8A",
+                        "alert-terracotta": "#E27D60",
+                    },
+                    fontFamily: {
+                        "display": ["Work Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'soft': '0 8px 30px rgba(45, 55, 72, 0.08)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background-color: #f6f8f7;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light text-text-main antialiased min-h-screen flex justify-center">
+<!-- Mobile Device Container -->
+<main class="w-full max-w-[480px] min-h-screen bg-background-light relative shadow-soft overflow-hidden flex flex-col">
+<!-- Top Header (Back/Context) -->
+<header class="absolute top-0 left-0 right-0 z-20 px-4 py-4 flex items-center justify-between pointer-events-none">
+<button aria-label="Go back" class="w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center pointer-events-auto active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-text-main" data-icon="arrow_back">arrow_back</span>
+</button>
+<div class="px-4 py-2 bg-white rounded-full shadow-soft pointer-events-auto flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-sm font-semibold">Plumbing Emergency</span>
+</div>
+</header>
+<!-- Map Section (40vh) -->
+<section class="h-[353px] w-full relative z-10 bg-[#e5e5e5]">
+<!-- Decorative Muted Map Background -->
+<div class="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Muted greyscale city map view of Vienna streets" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBqb9l0iWXtFnS8RYAdDJIDvhpXn8wCiZztMLnex1WZe1foaGYx3hQ5lK_SHZXRty9I6IMLeRm6-f5TZ_c_E9ASrA2uWKWF40U7gMyVIeiQBrrXnalHmFEw0gOnIxvcBTD19o2HjFLTl83rBAj1VKiXhfBJGXRG60NNCOcOSFfSuR3d127x0NI3TVTV9SswhXuMwffqPa6Yv1qbCtE1l3rDPfR0cXOUdxYW0hMP9A4scJLoUQFycKPKCs3usvlKbSVPjbaHPdi_h7-m');">
+</div>
+<!-- Map Route Overlay (Decorative) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="xMidYMid slice" viewbox="0 0 400 300">
+<path class="opacity-70" d="M 100 250 Q 150 200 200 150 T 300 80" fill="none" stroke="#13e761" stroke-dasharray="8 8" stroke-width="4"></path>
+</svg>
+<!-- Provider Marker -->
+<div class="absolute top-[120px] left-[180px] transform -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+<div class="relative">
+<div class="absolute inset-0 bg-primary rounded-full animate-ping opacity-40"></div>
+<div class="w-12 h-12 bg-white rounded-full p-1 shadow-md relative z-10">
+<img alt="Provider Avatar" class="w-full h-full rounded-full object-cover" data-alt="Friendly professional plumber wearing a uniform, headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1Yl_nYikCobZxtZNY-5R5KEspHPTYAnUPkzNTt1dqjOSEL4VWgAQTAfGkr-zddVRQXmUVSTa09ASBW9h-cN5XnilXOezL1eDEQ_ojjkd_xRB7kgD_KD29NAxXB7tIxPf9V8gLOQeIGYTPi_U_0iQQoVtVOoaTxZDQvgVEUWZ_JUoPbbkKQVG4ZbbTl0xH2QXcQPzwf9oLgHYOrldm8uzHguFzpA-z5GAALXycE_33EALnsogW1h7j8o9VZ5nzPvXQ220jqWPZId9g"/>
+</div>
+</div>
+<div class="mt-2 px-3 py-1 bg-white rounded-full shadow-sm text-xs font-bold text-text-main flex items-center gap-1">
+<span>12 min</span>
+</div>
+</div>
+<!-- User Home Marker -->
+<div class="absolute bottom-[40px] right-[80px] transform -translate-x-1/2 -translate-y-1/2 z-20">
+<div class="w-10 h-10 bg-text-main rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+<span class="material-symbols-outlined text-white text-xl" data-icon="home">home</span>
+</div>
+</div>
+</section>
+<!-- Bottom Sheet / Tracker Container -->
+<section class="flex-1 bg-white rounded-t-xl z-20 -mt-6 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] flex flex-col pt-6 px-6 pb-8 relative">
+<!-- Handle -->
+<div class="absolute top-3 left-1/2 transform -translate-x-1/2 w-12 h-1.5 bg-gray-200 rounded-full"></div>
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-2xl font-bold text-text-main">David is arriving soon</h2>
+<p class="text-text-muted mt-1 text-sm">ETA: 10:45 AM</p>
+</div>
+<div class="w-14 h-14 rounded-full bg-background-light flex items-center justify-center border border-gray-100">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="verified_user">verified_user</span>
+</div>
+</div>
+<!-- Vertical Status Timeline -->
+<div class="flex-1 relative ml-4">
+<!-- Track Line (Background) -->
+<div class="absolute left-[11px] top-4 bottom-10 w-0.5 bg-gray-100 -z-10"></div>
+<!-- Active Track Line (Foreground) -->
+<div class="absolute left-[11px] top-4 h-[45%] w-0.5 bg-primary -z-10"></div>
+<!-- Step 1: Dispatched (Completed) -->
+<div class="flex items-start mb-8 relative">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center mt-0.5 shadow-sm">
+<span class="material-symbols-outlined text-white text-sm" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<div class="ml-4">
+<h3 class="text-lg font-semibold text-text-main">Dispatched</h3>
+<p class="text-text-muted text-sm mt-0.5">10:20 AM • Provider is on the way</p>
+</div>
+</div>
+<!-- Alert Injection (Traffic Delay) -->
+<div class="flex items-start mb-8 relative -ml-2">
+<div class="bg-[#FDF2F0] border border-[#FADCD5] rounded-xl p-3 w-full flex items-start gap-3 shadow-sm">
+<span class="material-symbols-outlined text-alert-terracotta mt-0.5" data-icon="warning">warning</span>
+<div>
+<p class="text-alert-terracotta font-medium text-sm">Provider delayed by traffic (+5 mins)</p>
+<p class="text-alert-terracotta/70 text-xs mt-1">David has notified us of heavy traffic on the Gürtel.</p>
+</div>
+</div>
+</div>
+<!-- Step 2: Arriving (Active) -->
+<div class="flex items-start mb-8 relative">
+<div class="w-6 h-6 rounded-full bg-primary border-4 border-white ring-2 ring-primary flex items-center justify-center mt-0.5 relative">
+<!-- Pulse effect for active step -->
+<div class="absolute inset-0 rounded-full bg-primary opacity-30 animate-ping"></div>
+</div>
+<div class="ml-4">
+<h3 class="text-lg font-semibold text-text-main">Arriving</h3>
+<p class="text-primary font-medium text-sm mt-0.5">Current Status</p>
+</div>
+</div>
+<!-- Step 3: In Progress (Upcoming) -->
+<div class="flex items-start relative opacity-50">
+<div class="w-6 h-6 rounded-full bg-white border-2 border-gray-300 mt-0.5"></div>
+<div class="ml-4">
+<h3 class="text-lg font-semibold text-text-muted">In Progress</h3>
+<p class="text-text-muted text-sm mt-0.5">Work begins upon arrival</p>
+</div>
+</div>
+</div>
+<!-- Quick Action Buttons -->
+<div class="mt-8 flex gap-4 pt-4 border-t border-gray-100">
+<button class="flex-1 h-14 rounded-full bg-background-light text-text-main font-bold text-base flex items-center justify-center gap-2 shadow-sm hover:bg-gray-100 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-accent-blue" data-icon="chat_bubble">chat_bubble</span>
+                    Chat
+                </button>
+<button class="flex-1 h-14 rounded-full bg-primary text-text-main font-bold text-base flex items-center justify-center gap-2 shadow-sm hover:bg-primary/90 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-text-main" data-icon="call">call</span>
+                    Call David
+                </button>
+</div>
+</section>
+</main>
+</body></html>

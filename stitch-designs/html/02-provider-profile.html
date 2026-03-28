@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Calm Resolution - Provider Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&amp;family=Fraunces:opsz,wght@9..144,600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6B8E78",
+                        "background-light": "#F9FAF8",
+                        "background-dark": "#102217",
+                        surface: "#FFFFFF",
+                        text: "#2D3748",
+                        muted: "#A0AEC0",
+                        accent: "#5C7C8A",
+                        critical: "#E27D60",
+                    },
+                    fontFamily: {
+                        heading: ['Fraunces', 'serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                        display: ["Work Sans"]
+                    },
+                    borderRadius: {
+                        DEFAULT: "1rem",
+                        card: "24px",
+                        pill: "100px",
+                        lg: "2rem",
+                        xl: "3rem",
+                        full: "9999px"
+                    },
+                    boxShadow: {
+                        soft: "0 8px 30px rgba(45, 55, 72, 0.08)",
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: #F9FAF8;
+            color: #2D3748;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Fraunces', serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased h-screen flex flex-col items-center justify-center bg-black/40">
+<!-- Modal Container -->
+<main class="w-full max-w-md h-[795px] md:h-[707px] bg-surface rounded-t-card md:rounded-card flex flex-col overflow-hidden shadow-soft relative mt-auto md:mt-0 animate-slide-up">
+<!-- Header / Nav (Back-to-Main Exception for Focused Views) -->
+<header class="flex items-center justify-between p-4 bg-surface z-10 sticky top-0">
+<button aria-label="Go back" class="p-2 rounded-full bg-background-light text-text hover:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<h1 class="font-heading font-semibold text-lg text-text">Provider Profile</h1>
+<div class="w-10"></div> <!-- Spacer for balance -->
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto pb-24 px-6 pt-2">
+<!-- Avatar & Verification -->
+<div class="flex flex-col items-center mb-8">
+<div class="relative w-24 h-24 mb-4">
+<div class="w-full h-full rounded-full bg-gray-200 bg-cover bg-center border-4 border-surface shadow-sm" data-alt="professional headshot of a friendly middle-aged male plumber smiling warmly" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCpqrIrCmIQXb5-igLITkYQrjIv46KQhUUMbZXSJ52zeUC8hy3Izo2TXQnfKWKTP-xcgCUlb3gcHgo-NlYEPpFsDQ8-weSdz95f0pYGANjknbtDgB0zbBzWHjAPn-qM-FzJuZdn1uhV7pn5uh1Lq2loZSJf4QLYOhD4eCNbaC20MR5TNaJ33RwBJ-esKUfQjiEzTMtJ3_BUhZvGX7lRcTYn7e0y6qbbqWraNPqj5wSzXPOIUlh-cZm58m85UUNU09cL3ZmAvVZNskzF')">
+</div>
+<!-- Verification Badge -->
+<div class="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full border-2 border-surface flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-surface text-sm" data-icon="verified" data-weight="fill" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<h2 class="font-heading font-semibold text-2xl text-text mb-1">Alex Schneider</h2>
+<p class="text-accent text-sm font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="plumbing">plumbing</span>
+                    Verified Emergency Plumber
+                </p>
+</div>
+<!-- Stats Row -->
+<div class="flex justify-between items-center bg-background-light p-4 rounded-card mb-8 shadow-sm">
+<div class="flex flex-col items-center flex-1">
+<span class="font-body font-bold text-lg text-text">12 min</span>
+<span class="font-body text-xs text-muted font-medium uppercase tracking-wider mt-1">ETA</span>
+</div>
+<div class="w-px h-10 bg-gray-200"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="flex items-center gap-1 text-text">
+<span class="font-body font-bold text-lg">4.9</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="font-body text-xs text-muted font-medium uppercase tracking-wider mt-1">Rating</span>
+</div>
+<div class="w-px h-10 bg-gray-200"></div>
+<div class="flex flex-col items-center flex-1">
+<span class="font-body font-bold text-lg text-text">342</span>
+<span class="font-body text-xs text-muted font-medium uppercase tracking-wider mt-1">Jobs</span>
+</div>
+</div>
+<!-- About Section -->
+<div class="mb-8">
+<h3 class="font-heading font-semibold text-lg text-text mb-3">About Alex</h3>
+<p class="font-body text-text/80 text-sm leading-relaxed">
+                    With over 15 years of experience in Vienna, I specialize in rapid response plumbing emergencies. My goal is to fix your issue quickly while making sure you understand exactly what's being done.
+                </p>
+</div>
+<!-- Review Snippet Card -->
+<div class="mb-6">
+<h3 class="font-heading font-semibold text-lg text-text mb-3">Recent Review</h3>
+<div class="bg-background-light rounded-[16px] p-5 relative shadow-sm">
+<span class="material-symbols-outlined absolute top-4 right-4 text-accent/20 text-4xl" data-icon="format_quote" data-weight="fill" style="font-variation-settings: 'FILL' 1;">format_quote</span>
+<div class="flex gap-1 mb-3">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<p class="font-body text-text italic text-sm mb-4 leading-relaxed relative z-10">
+                        "Alex was a lifesaver! Arrived exactly on time, was very reassuring, and fixed the burst pipe without any hidden fees. Highly recommend for any stressful situation."
+                    </p>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gray-300 bg-cover bg-center" data-alt="small circular portrait of a smiling woman" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCN7NI3S6kvw3WwJIiw0IE_B2gkoz8xFU28xkv9iYcsCKeWb7g0l_TTciQa4it0opJmHh6FL1SKy3LKocNXTes52Z8z74GZdlRNw78aTw29KBUBhcynf7gCLISgZRu8lABapqxx1pH4cJngVuelXRQ7djeeyNgIA5gaM099DxdFVI9f3dMsLn7Zk2UvoYqQQMz8UZP-UEfBZQqTClw_BOT_jHyDIM-MmFXoz9bkAUvInvH7BHN2N8JG0Evr5G2ZCNcSzUxi7034Zfrw')"></div>
+<div>
+<p class="font-body font-bold text-text text-xs">Sarah M.</p>
+<p class="font-body text-muted text-xs">1 week ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Fixed Bottom CTA -->
+<div class="absolute bottom-0 left-0 w-full bg-surface p-4 border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<button class="w-full h-[56px] bg-primary hover:bg-[#5a7865] text-surface font-body font-bold text-base rounded-pill transition-colors flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-surface" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                Request Immediate Help
+            </button>
+</div>
+</main>
+</body></html>

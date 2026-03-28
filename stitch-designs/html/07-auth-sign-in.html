@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickWerk - Sign In</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&amp;family=Plus+Jakarta+Sans:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#446652",
+              "on-primary": "#ffffff",
+              "surface": "#f9faf8",
+              "on-surface-variant": "#424843",
+              "surface-dim": "#d9dad8",
+              "primary": "#42634f",
+              "tertiary": "#96432a",
+              "on-background": "#191c1b",
+              "secondary": "#555f71",
+              "error-container": "#ffdad6",
+              "tertiary-fixed": "#ffdbd1",
+              "primary-fixed": "#c6ebd2",
+              "on-tertiary-fixed": "#3b0900",
+              "inverse-surface": "#2e3130",
+              "secondary-fixed-dim": "#bdc7dc",
+              "secondary-fixed": "#d9e3f9",
+              "tertiary-fixed-dim": "#ffb5a0",
+              "surface-container-low": "#f3f4f2",
+              "surface-bright": "#f9faf8",
+              "secondary-container": "#d6e0f6",
+              "on-secondary-fixed-variant": "#3d4759",
+              "tertiary-container": "#b55a40",
+              "on-tertiary-fixed-variant": "#7b2e17",
+              "on-secondary-fixed": "#121c2c",
+              "surface-variant": "#e1e3e1",
+              "surface-container-highest": "#e1e3e1",
+              "on-tertiary-container": "#fffbff",
+              "surface-container": "#edeeec",
+              "outline-variant": "#c1c8c1",
+              "outline": "#727973",
+              "on-primary-fixed": "#002112",
+              "background": "#f9faf8",
+              "primary-fixed-dim": "#aacfb7",
+              "on-primary-fixed-variant": "#2c4d3b",
+              "error": "#ba1a1a",
+              "primary-container": "#5a7c67",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1b",
+              "on-error-container": "#93000a",
+              "inverse-on-surface": "#f0f1ef",
+              "surface-container-lowest": "#ffffff",
+              "inverse-primary": "#aacfb7",
+              "on-primary-container": "#f6fff6",
+              "on-secondary-container": "#596376",
+              "on-secondary": "#ffffff",
+              "on-error": "#ffffff",
+              "surface-container-high": "#e7e8e6"
+            },
+            fontFamily: {
+              "headline": ["Fraunces", "serif"],
+              "body": ["Plus Jakarta Sans", "sans-serif"],
+              "label": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F9FAF8; }
+        .font-serif { font-family: 'Fraunces', serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface flex flex-col min-h-screen">
+<!-- Top Navigation / Logo Anchor -->
+<header class="bg-[#F9FAF8]/80 backdrop-blur-xl fixed top-0 w-full z-50 flex items-center justify-between px-6 py-6">
+<div class="flex flex-col">
+<h1 class="text-2xl font-serif italic font-medium text-primary tracking-tight">QuickWerk</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-70">Trusted help, fast.</p>
+</div>
+<button class="text-primary hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</header>
+<main class="flex-grow flex flex-col items-center justify-center px-6 pt-32 pb-12 max-w-xl mx-auto w-full">
+<!-- Hero Section -->
+<section class="text-center mb-10 w-full">
+<h2 class="text-4xl md:text-5xl font-serif font-semibold text-on-surface leading-tight mb-4 tracking-tight">
+                Help is one <br/>tap away
+            </h2>
+<p class="text-outline text-lg font-body max-w-sm mx-auto">Access local experts for every emergency, delivered with architectural precision.</p>
+</section>
+<!-- Role Selection -->
+<div class="grid grid-cols-2 gap-4 w-full mb-8">
+<!-- Customer Card -->
+<button class="group relative flex flex-col items-center justify-center p-8 bg-surface-container-lowest rounded-lg transition-all hover:scale-[1.02] active:scale-98 shadow-[0px_24px_48px_rgba(25,28,27,0.04)] text-left overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-primary-fixed opacity-10 rounded-full translate-x-8 -translate-y-8"></div>
+<div class="bg-primary-container text-white p-4 rounded-full mb-4 group-hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="house">house</span>
+</div>
+<span class="font-serif text-lg font-bold text-primary">I need help</span>
+<span class="text-[11px] text-outline font-medium uppercase mt-1 tracking-wider">Customer</span>
+</button>
+<!-- Provider Card -->
+<button class="group relative flex flex-col items-center justify-center p-8 bg-surface-container-lowest rounded-lg transition-all hover:scale-[1.02] active:scale-98 shadow-[0px_24px_48px_rgba(25,28,27,0.04)] text-left overflow-hidden">
+<div class="absolute top-0 right-0 w-24 h-24 bg-secondary-fixed opacity-20 rounded-full translate-x-8 -translate-y-8"></div>
+<div class="bg-secondary text-white p-4 rounded-full mb-4 group-hover:bg-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="handyman">handyman</span>
+</div>
+<span class="font-serif text-lg font-bold text-on-surface">I am a pro</span>
+<span class="text-[11px] text-outline font-medium uppercase mt-1 tracking-wider">Provider</span>
+</button>
+</div>
+<!-- Divider -->
+<div class="flex items-center w-full mb-8 gap-4">
+<div class="h-[1px] flex-grow bg-outline-variant/30"></div>
+<span class="text-[10px] font-bold tracking-widest text-outline uppercase">OR</span>
+<div class="h-[1px] flex-grow bg-outline-variant/30"></div>
+</div>
+<!-- Auth Form -->
+<form class="w-full space-y-4 mb-8">
+<div class="relative">
+<input class="w-full h-16 px-6 bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-on-surface placeholder:text-outline/60" placeholder="Email Address" type="email"/>
+</div>
+<div class="relative">
+<input class="w-full h-16 px-6 bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all font-body text-on-surface placeholder:text-outline/60" placeholder="Password" type="password"/>
+<button class="absolute right-6 top-1/2 -translate-y-1/2 text-primary text-sm font-semibold" type="button">Forgot?</button>
+</div>
+<button class="w-full h-16 bg-gradient-to-br from-primary to-primary-container text-white font-serif font-bold text-xl rounded-lg shadow-lg active:scale-95 transition-all mt-4">
+                Sign In
+            </button>
+</form>
+<!-- Footer Links -->
+<div class="text-center mb-12">
+<p class="text-outline font-body">
+                New to QuickWerk? 
+                <a class="text-primary font-bold ml-1 hover:underline decoration-2 underline-offset-4 transition-all" href="#">Create an account</a>
+</p>
+</div>
+<!-- Trust Badges -->
+<section class="flex flex-wrap justify-center gap-3 w-full">
+<div class="flex items-center gap-2 px-4 py-2 bg-primary-fixed/30 rounded-full border border-primary/10">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="verified_user" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<span class="text-[11px] font-bold text-on-primary-fixed-variant uppercase tracking-wider">Verified Pros</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-2 bg-tertiary-fixed/30 rounded-full border border-tertiary/10">
+<span class="material-symbols-outlined text-[18px] text-tertiary" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="text-[11px] font-bold text-on-tertiary-fixed-variant uppercase tracking-wider">Secure Payments</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-2 bg-secondary-fixed/30 rounded-full border border-secondary/10">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="support_agent" style="font-variation-settings: 'FILL' 1;">support_agent</span>
+<span class="text-[11px] font-bold text-on-secondary-fixed-variant uppercase tracking-wider">24/7 Support</span>
+</div>
+</section>
+</main>
+<!-- Background Decoration (Asymmetric Editorial Style) -->
+<div class="fixed top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+<div class="fixed bottom-0 -right-20 w-96 h-96 bg-tertiary/5 rounded-full blur-3xl -z-10"></div>
+</body></html>
