@@ -202,6 +202,43 @@ export class PostgresBookingRepository implements BookingRepository {
     }));
   }
 
+  async getBooking(bookingId: string): Promise<BookingRecord | null> {
+    const result = await this.postgresClient.query<BookingRow>(
+      this.postgresConfig,
+      `SELECT id::text,
+              customer_user_id::text,
+              provider_user_id::text,
+              requested_service,
+              status,
+              created_at
+       FROM bookings
+       WHERE id = $1::uuid
+       LIMIT 1`,
+      [bookingId],
+    );
+
+    const booking = result.rows[0];
+
+    if (!booking) {
+      return null;
+    }
+
+    const historyResult = await this.postgresClient.query<BookingStatusHistoryRow>(
+      this.postgresConfig,
+      `SELECT changed_at,
+              from_status,
+              to_status,
+              actor_role,
+              actor_user_id::text
+       FROM booking_status_history
+       WHERE booking_id = $1::uuid
+       ORDER BY changed_at ASC, id ASC`,
+      [bookingId],
+    );
+
+    return mapBookingRecord(booking, historyResult.rows);
+  }
+
   private async loadBookingOrThrow(bookingId: string): Promise<BookingRecord> {
     const result = await this.postgresClient.query<BookingRow>(
       this.postgresConfig,

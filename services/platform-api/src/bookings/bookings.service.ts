@@ -66,6 +66,24 @@ export class BookingsService {
     return this.bookings.listBookings({ scope: 'customer-owned', customerUserId: session.userId });
   }
 
+  async getBooking(session: AuthSession, bookingId: string): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']> }
+  > {
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Customers can only see their own bookings; providers can see any submitted booking
+    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    return { ok: true, statusCode: 200, booking: this.serializeRecord(booking) };
+  }
+
   async createBooking(
     session: AuthSession,
     input: { requestedService?: string },

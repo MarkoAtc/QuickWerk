@@ -20,6 +20,9 @@ importers:
 
   apps/admin-web:
     dependencies:
+      '@quickwerk/api-client':
+        specifier: workspace:^
+        version: link:../../packages/api-client
       next:
         specifier: ^16.2.0
         version: 16.2.0(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -29,6 +32,10 @@ importers:
       react-dom:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
+    devDependencies:
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.0(@types/node@25.5.0)(vite@8.0.0(@types/node@25.5.0)(terser@5.46.1)(yaml@2.8.2))
 
   apps/product-app:
     dependencies:

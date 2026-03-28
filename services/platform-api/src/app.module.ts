@@ -5,9 +5,10 @@ import { BookingsModule } from './bookings/bookings.module';
 import { HealthController } from './health/health.controller';
 import { RelayQueueOperatorController } from './operators/relay-queue.controller';
 import { PersistenceModule } from './persistence/persistence.module';
+import { ProvidersModule } from './providers/providers.module';
 
 @Module({
-  imports: [PersistenceModule, AuthModule, BookingsModule],
+  imports: [PersistenceModule, AuthModule, BookingsModule, ProvidersModule],
   controllers: [HealthController, RelayQueueOperatorController],
 })
 export class AppModule {}

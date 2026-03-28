@@ -103,4 +103,8 @@ export class InMemoryBookingRepository implements BookingRepository {
       customerUserId: b.customerUserId,
     }));
   }
+
+  async getBooking(bookingId: string): Promise<BookingRecord | null> {
+    return this.bookings.get(bookingId) ?? null;
+  }
 }

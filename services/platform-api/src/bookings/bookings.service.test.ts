@@ -213,6 +213,49 @@ describe('BookingsService', () => {
     expect(await service.listBookings(customer)).toEqual([]);
   });
 
+  it('getBooking — customer can read own booking, provider can read any booking', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Window fix' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const asCustomer = await service.getBooking(customer, created.booking.bookingId);
+    expect(asCustomer.ok).toBe(true);
+
+    const asProvider = await service.getBooking(provider, created.booking.bookingId);
+    expect(asProvider.ok).toBe(true);
+  });
+
+  it('getBooking — customer cannot read another customer booking', async () => {
+    const { service } = createService();
+    const customer1 = createSession('customer', 'customer-1');
+    const customer2 = createSession('customer', 'customer-2');
+
+    const created = await service.createBooking(customer1, { requestedService: 'Window fix' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const forbidden = await service.getBooking(customer2, created.booking.bookingId);
+    expect(forbidden.ok).toBe(false);
+    if (!forbidden.ok) {
+      expect(forbidden.statusCode).toBe(403);
+    }
+  });
+
+  it('getBooking — returns not found for unknown booking id', async () => {
+    const { service } = createService();
+    const provider = createSession('provider', 'provider-1');
+
+    const missing = await service.getBooking(provider, 'missing-booking-id');
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) {
+      expect(missing.statusCode).toBe(404);
+    }
+  });
+
   it('emits booking accepted domain events with correlation breadcrumbs', async () => {
     const { service, emittedEvents } = createService();
     const customer = createSession('customer', 'customer-1');

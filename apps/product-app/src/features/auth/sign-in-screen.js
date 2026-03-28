@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { createSignInFormState } from './sign-in-screen-actions';
-import { createAuthenticatedSession, sessionStore } from '../../shared/session-context';
 import { productAppShell } from '../../shared/app-shell';
+import { useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 const roles = ['customer', 'provider'];
 
 export function SignInScreen() {
   const router = useRouter();
+  const { setSession } = useSession();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('customer');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,12 +32,12 @@ export function SignInScreen() {
           return;
         }
 
-        sessionStore.set(createAuthenticatedSession(result.sessionToken, role));
+        setSession({ status: 'authenticated', sessionToken: result.sessionToken, role });
 
         if (role === 'provider') {
           router.replace('/provider');
         } else {
-          router.replace('/booking');
+          router.replace('/home-triage');
         }
       })
       .catch((err) => {

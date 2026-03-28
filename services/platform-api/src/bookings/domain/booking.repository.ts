@@ -60,6 +60,7 @@ export interface BookingRepository {
   createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord>;
   acceptSubmittedBooking(input: AcceptSubmittedBookingInput): Promise<AcceptSubmittedBookingResult>;
   listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]>;
+  getBooking(bookingId: string): Promise<BookingRecord | null>;
 }
 
 export const BOOKING_REPOSITORY = Symbol('BOOKING_REPOSITORY');

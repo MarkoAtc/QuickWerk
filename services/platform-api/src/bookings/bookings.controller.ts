@@ -57,6 +57,39 @@ export class BookingsController {
     return this.bookingsService.listBookings(session);
   }
 
+  @Get(':bookingId')
+  async getBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to view booking details.', 401);
+    }
+
+    const result = await this.bookingsService.getBooking(session, bookingId);
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.booking;
+  }
+
   @Post()
   async createBooking(
     @Req() request: RequestLike,

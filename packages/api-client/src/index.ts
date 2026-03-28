@@ -6,6 +6,32 @@ export const apiRoutes = {
   admin: '/api/v1/admin',
 } as const;
 
+export const providerApiRoutes = {
+  submitVerification: `${apiRoutes.providers}/me/verification`,
+  myVerificationStatus: `${apiRoutes.providers}/me/verification`,
+  listPending: `${apiRoutes.providers}/verifications/pending`,
+  getVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}`,
+  reviewVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}/review`,
+} as const;
+
+export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+
+export type SubmitVerificationBody = {
+  businessName?: string;
+  tradeCategories?: string[];
+  serviceArea?: string;
+  documents?: Array<{
+    filename?: string;
+    mimeType?: string;
+    description?: string;
+  }>;
+};
+
+export type ReviewVerificationBody = {
+  decision: 'approved' | 'rejected';
+  reviewNote?: string;
+};
+
 export const authApiRoutes = {
   session: `${apiRoutes.auth}/session`,
   signIn: `${apiRoutes.auth}/sign-in`,
@@ -16,6 +42,7 @@ export const authApiRoutes = {
 export const bookingApiRoutes = {
   preview: `${apiRoutes.bookings}/preview`,
   list: apiRoutes.bookings,
+  get: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}`,
   create: apiRoutes.bookings,
   accept: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/accept`,
 } as const;
@@ -61,6 +88,12 @@ export const createBookingRequest = (sessionToken: string, body: CreateBookingRe
   body,
 }) as const;
 
+export const createGetBookingRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.get(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
 export const createListBookingsRequest = (sessionToken: string) => ({
   method: 'GET',
   path: bookingApiRoutes.list,
@@ -71,4 +104,40 @@ export const createAcceptBookingRequest = (sessionToken: string, bookingId: stri
   method: 'POST',
   path: bookingApiRoutes.accept(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createSubmitVerificationRequest = (sessionToken: string, body: SubmitVerificationBody) => ({
+  method: 'POST',
+  path: providerApiRoutes.submitVerification,
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
+}) as const;
+
+export const createGetMyVerificationStatusRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: providerApiRoutes.myVerificationStatus,
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createListPendingVerificationsRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: providerApiRoutes.listPending,
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createGetVerificationRequest = (sessionToken: string, verificationId: string) => ({
+  method: 'GET',
+  path: providerApiRoutes.getVerification(verificationId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createReviewVerificationRequest = (
+  sessionToken: string,
+  verificationId: string,
+  body: ReviewVerificationBody,
+) => ({
+  method: 'POST',
+  path: providerApiRoutes.reviewVerification(verificationId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
 }) as const;
