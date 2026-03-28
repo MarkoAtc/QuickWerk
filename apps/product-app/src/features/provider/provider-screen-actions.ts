@@ -1,4 +1,10 @@
-import { createAcceptBookingRequest, createListBookingsRequest } from '@quickwerk/api-client';
+import {
+  createAcceptBookingRequest,
+  createGetMyProviderProfileRequest,
+  createListBookingsRequest,
+  createUpsertProviderProfileRequest,
+  UpsertProviderProfileBody,
+} from '@quickwerk/api-client';
 
 import { runtimeConfig } from '../../shared/runtime-config';
 
@@ -118,6 +124,131 @@ export async function acceptBookingRequest(
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown accept booking failure.',
+    };
+  }
+}
+
+// --- Provider Profile ---
+
+export type ProviderProfilePayload = {
+  providerUserId: string;
+  displayName: string;
+  bio?: string;
+  tradeCategories: string[];
+  serviceArea?: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LoadProfileResult =
+  | { profile: ProviderProfilePayload; errorMessage?: undefined }
+  | { profile: null; errorMessage?: undefined }
+  | { profile?: undefined; errorMessage: string };
+
+export type SaveProfileResult =
+  | { profile: ProviderProfilePayload; errorMessage?: undefined }
+  | { profile?: undefined; errorMessage: string };
+
+/**
+ * Parses a raw provider profile payload from the API.
+ * Returns null if required fields are missing or invalid.
+ */
+function parseProviderProfilePayload(payload: Record<string, unknown>): ProviderProfilePayload | null {
+  const providerUserId = typeof payload['providerUserId'] === 'string' ? payload['providerUserId'] : '';
+  const displayName = typeof payload['displayName'] === 'string' ? payload['displayName'] : '';
+  const createdAt = typeof payload['createdAt'] === 'string' ? payload['createdAt'] : '';
+  const updatedAt = typeof payload['updatedAt'] === 'string' ? payload['updatedAt'] : '';
+
+  if (!providerUserId || !displayName || !createdAt || !updatedAt) {
+    return null;
+  }
+
+  return {
+    providerUserId,
+    displayName,
+    bio: typeof payload['bio'] === 'string' ? payload['bio'] : undefined,
+    tradeCategories: Array.isArray(payload['tradeCategories'])
+      ? (payload['tradeCategories'] as string[])
+      : [],
+    serviceArea: typeof payload['serviceArea'] === 'string' ? payload['serviceArea'] : undefined,
+    isPublic: Boolean(payload['isPublic']),
+    createdAt,
+    updatedAt,
+  };
+}
+
+export async function loadMyProviderProfile(
+  sessionToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<LoadProfileResult> {
+  const request = createGetMyProviderProfileRequest(sessionToken);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: request.headers,
+    });
+
+    if (response.status === 404 || response.status === 204) {
+      return { profile: null };
+    }
+
+    if (!response.ok) {
+      return { errorMessage: `Load profile failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+
+    // API returns { status: 'not-set' } when no profile exists
+    if (payload['status'] === 'not-set') {
+      return { profile: null };
+    }
+
+    const profile = parseProviderProfilePayload(payload);
+
+    if (!profile) {
+      return { errorMessage: 'Profile response missing required fields.' };
+    }
+
+    return { profile };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown load profile failure.',
+    };
+  }
+}
+
+export async function saveMyProviderProfile(
+  sessionToken: string,
+  body: UpsertProviderProfileBody,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SaveProfileResult> {
+  const request = createUpsertProviderProfileRequest(sessionToken, body);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: { ...request.headers, 'content-type': 'application/json' },
+      body: JSON.stringify(request.body),
+    });
+
+    if (!response.ok) {
+      return { errorMessage: `Save profile failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+
+    const profile = parseProviderProfilePayload(payload);
+
+    if (!profile) {
+      return { errorMessage: 'Save profile response missing required fields.' };
+    }
+
+    return { profile };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown save profile failure.',
     };
   }
 }

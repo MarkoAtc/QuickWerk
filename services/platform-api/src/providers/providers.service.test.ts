@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
+import { InMemoryProviderProfileRepository } from './infrastructure/in-memory-provider-profile.repository';
 import { InMemoryProviderVerificationRepository } from './infrastructure/in-memory-provider-verification.repository';
 import { ProvidersService } from './providers.service';
 
 const makeService = () => {
   const repo = new InMemoryProviderVerificationRepository();
-  const service = new ProvidersService(repo);
+  const service = new ProvidersService(repo, new InMemoryProviderProfileRepository());
   return { service, repo };
 };
 

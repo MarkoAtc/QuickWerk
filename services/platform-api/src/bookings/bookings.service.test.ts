@@ -1,4 +1,4 @@
-import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
@@ -21,14 +21,19 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
 
 const createService = () => {
   const emittedEvents: BookingAcceptedDomainEvent[] = [];
+  const declinedEvents: BookingDeclinedDomainEvent[] = [];
   const eventPublisher: BookingDomainEventPublisher = {
     async publishBookingAccepted(event) {
       emittedEvents.push(event);
+    },
+    async publishBookingDeclined(event) {
+      declinedEvents.push(event);
     },
   };
 
   return {
     emittedEvents,
+    declinedEvents,
     service: new BookingsService(new InMemoryBookingRepository(), eventPublisher),
   };
 };
@@ -89,6 +94,7 @@ describe('BookingsService', () => {
     if (replayedAccept.ok) {
       expect(replayedAccept.booking.status).toBe('accepted');
       expect(replayedAccept.booking.providerUserId).toBe('provider-1');
+      // Replay must NOT add a new statusHistory entry
       expect(replayedAccept.booking.statusHistory).toHaveLength(2);
     }
 
@@ -284,5 +290,99 @@ describe('BookingsService', () => {
     expect(emittedEvents[0]?.replayed).toBe(false);
     expect(emittedEvents[1]?.correlationId).toBe('corr-request-2');
     expect(emittedEvents[1]?.replayed).toBe(true);
+  });
+
+  // --- Phase 2: Decline ---
+
+  it('declineBooking — provider can decline a submitted booking', async () => {
+    const { service, declinedEvents } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Tile repair' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const declined = await service.declineBooking(
+      provider,
+      created.booking.bookingId,
+      { declineReason: 'Outside service area' },
+      { correlationId: 'corr-decline-1' },
+    );
+
+    expect(declined.ok).toBe(true);
+    if (!declined.ok) return;
+    expect(declined.booking.status).toBe('declined');
+    expect(declined.booking.declineReason).toBe('Outside service area');
+    expect(declined.booking.statusHistory).toHaveLength(2);
+    expect(declinedEvents).toHaveLength(1);
+    expect(declinedEvents[0]?.booking.status).toBe('declined');
+    expect(declinedEvents[0]?.booking.declineReason).toBe('Outside service area');
+    expect(declinedEvents[0]?.correlationId).toBe('corr-decline-1');
+  });
+
+  it('declineBooking — customer cannot decline a booking', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Tile repair' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const declined = await service.declineBooking(customer, created.booking.bookingId, {});
+    expect(declined.ok).toBe(false);
+    if (!declined.ok) {
+      expect(declined.statusCode).toBe(403);
+    }
+  });
+
+  it('declineBooking — returns 404 for unknown booking', async () => {
+    const { service } = createService();
+    const provider = createSession('provider', 'provider-1');
+
+    const declined = await service.declineBooking(provider, 'missing-id', {});
+    expect(declined.ok).toBe(false);
+    if (!declined.ok) {
+      expect(declined.statusCode).toBe(404);
+    }
+  });
+
+  it('declineBooking — returns 409 when booking is already accepted', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const providerA = createSession('provider', 'provider-1');
+    const providerB = createSession('provider', 'provider-2');
+
+    const created = await service.createBooking(customer, { requestedService: 'Roofing' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await service.acceptBooking(providerA, created.booking.bookingId);
+
+    const declined = await service.declineBooking(providerB, created.booking.bookingId, {});
+    expect(declined.ok).toBe(false);
+    if (!declined.ok) {
+      expect(declined.statusCode).toBe(409);
+    }
+  });
+
+  it('declineBooking — is idempotent for the same provider', async () => {
+    const { service, declinedEvents } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Flooring' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await service.declineBooking(provider, created.booking.bookingId, {});
+    const replay = await service.declineBooking(provider, created.booking.bookingId, {});
+
+    expect(replay.ok).toBe(true);
+    if (replay.ok) {
+      expect(replay.booking.status).toBe('declined');
+    }
+    expect(declinedEvents).toHaveLength(2);
+    expect(declinedEvents[1]?.replayed).toBe(true);
   });
 });

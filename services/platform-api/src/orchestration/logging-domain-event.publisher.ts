@@ -1,8 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
+
+type BookingDomainEvent = BookingAcceptedDomainEvent | BookingDeclinedDomainEvent;
+
+function buildEventLogDetails(event: BookingDomainEvent) {
+  return {
+    eventName: event.eventName,
+    eventId: event.eventId,
+    replayed: event.replayed,
+    bookingId: event.booking.bookingId,
+  };
+}
 
 @Injectable()
 export class LoggingBookingDomainEventPublisher implements BookingDomainEventPublisher {
@@ -11,12 +22,16 @@ export class LoggingBookingDomainEventPublisher implements BookingDomainEventPub
       event: 'booking.accepted.domain-event.emit',
       correlationId: event.correlationId,
       status: 'succeeded',
-      details: {
-        eventName: event.eventName,
-        eventId: event.eventId,
-        replayed: event.replayed,
-        bookingId: event.booking.bookingId,
-      },
+      details: buildEventLogDetails(event),
+    });
+  }
+
+  async publishBookingDeclined(event: BookingDeclinedDomainEvent): Promise<void> {
+    logStructuredBreadcrumb({
+      event: 'booking.declined.domain-event.emit',
+      correlationId: event.correlationId,
+      status: 'succeeded',
+      details: buildEventLogDetails(event),
     });
   }
 }

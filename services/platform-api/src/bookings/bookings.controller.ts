@@ -9,6 +9,10 @@ type CreateBookingRequestBody = {
   requestedService?: string;
 };
 
+type DeclineBookingRequestBody = {
+  declineReason?: string;
+};
+
 type RequestLike = {
   method: string;
   path: string;
@@ -153,6 +157,53 @@ export class BookingsController {
     }
 
     const result = await this.bookingsService.acceptBooking(session, bookingId, {
+      correlationId,
+    });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.booking;
+  }
+
+  /**
+   * POST /api/v1/bookings/:bookingId/decline
+   * Provider declines a submitted booking.
+   */
+  @Post(':bookingId/decline')
+  @HttpCode(200)
+  async declineBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+    @Body() body: DeclineBookingRequestBody,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: { bookingId },
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required before declining bookings.', 401);
+    }
+
+    const safeBody = body != null && typeof body === 'object' ? body : {};
+    const declineReason =
+      typeof (safeBody as DeclineBookingRequestBody).declineReason === 'string'
+        ? (safeBody as DeclineBookingRequestBody).declineReason
+        : undefined;
+
+    const result = await this.bookingsService.declineBooking(session, bookingId, { declineReason }, {
       correlationId,
     });
 

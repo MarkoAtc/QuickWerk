@@ -12,6 +12,7 @@ export const bookingStatuses = [
   'submitted',
   'broadcast',
   'accepted',
+  'declined',
   'en_route',
   'in_progress',
   'completed',
@@ -55,6 +56,22 @@ export type BookingAcceptedDomainEvent = {
   };
 };
 
+export type BookingDeclinedDomainEvent = {
+  eventName: 'booking.declined';
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+  replayed: boolean;
+  booking: {
+    bookingId: string;
+    customerUserId: string;
+    providerUserId: string;
+    requestedService: string;
+    status: 'declined';
+    declineReason?: string;
+  };
+};
+
 export type BookingAcceptedRetryBackoffMetadata = {
   strategy: 'deterministic-exponential-v1';
   attempt: number;
@@ -76,4 +93,27 @@ export type BookingAcceptedWorkerEnvelope = {
   event: BookingAcceptedDomainEvent;
   retry: BookingAcceptedRetryBackoffMetadata;
   dlq?: BookingAcceptedDlqMarker;
+};
+
+export type BookingDeclinedRetryBackoffMetadata = {
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+export type BookingDeclinedDlqMarker = {
+  terminal: true;
+  queueName: 'booking.declined.dlq';
+  reason: 'max-attempts-exhausted';
+  markedAt: string;
+};
+
+export type BookingDeclinedWorkerEnvelope = {
+  eventName: 'booking.declined';
+  correlationId: string;
+  event: BookingDeclinedDomainEvent;
+  retry: BookingDeclinedRetryBackoffMetadata;
+  dlq?: BookingDeclinedDlqMarker;
 };

@@ -8,6 +8,8 @@ import {
   BookingRepository,
   BookingSummary,
   CreateSubmittedBookingInput,
+  DeclineSubmittedBookingInput,
+  DeclineSubmittedBookingResult,
   ListBookingsFilter,
 } from '../domain/booking.repository';
 
@@ -85,6 +87,47 @@ export class InMemoryBookingRepository implements BookingRepository {
       booking: updated,
       replayed: false,
     };
+  }
+
+  async declineSubmittedBooking(input: DeclineSubmittedBookingInput): Promise<DeclineSubmittedBookingResult> {
+    const current = this.bookings.get(input.bookingId);
+
+    if (!current) {
+      return { ok: false, reason: 'not-found' };
+    }
+
+    if (current.status !== 'submitted') {
+      // Idempotent: same provider already declined this booking
+      if (current.status === 'declined' && current.providerUserId === input.providerUserId) {
+        return { ok: true, booking: current, replayed: true };
+      }
+
+      return {
+        ok: false,
+        reason: 'transition-conflict',
+        currentStatus: current.status,
+      };
+    }
+
+    const declinedEvent = {
+      changedAt: input.declinedAt,
+      from: current.status,
+      to: 'declined' as const,
+      actorRole: input.actorRole,
+      actorUserId: input.actorUserId,
+    };
+
+    const updated: BookingRecord = {
+      ...current,
+      status: 'declined',
+      providerUserId: input.providerUserId,
+      declineReason: input.declineReason?.trim() || undefined,
+      statusHistory: [...current.statusHistory, declinedEvent],
+    };
+
+    this.bookings.set(input.bookingId, updated);
+
+    return { ok: true, booking: updated, replayed: false };
   }
 
   async listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]> {

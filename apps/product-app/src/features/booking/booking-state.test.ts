@@ -30,7 +30,7 @@ describe('booking screen state helpers', () => {
     const booking = {
       bookingId: 'bk-001',
       requestedService: 'Fix the boiler',
-      status: 'submitted',
+      status: 'submitted' as const,
       customerUserId: 'usr-001',
     };
     const state = createSubmittedBookingScreenState(booking);

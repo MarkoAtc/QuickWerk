@@ -3,6 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import {
+  PROVIDER_PROFILE_REPOSITORY,
+  ProviderProfile,
+  ProviderProfileRepository,
+} from './domain/provider-profile.repository';
+import {
   PROVIDER_VERIFICATION_REPOSITORY,
   ProviderVerificationRecord,
   ProviderVerificationRepository,
@@ -19,11 +24,21 @@ type SubmitVerificationInput = {
   }>;
 };
 
+type UpsertProfileInput = {
+  displayName?: string;
+  bio?: string;
+  tradeCategories?: string[];
+  serviceArea?: string;
+  isPublic?: boolean;
+};
+
 @Injectable()
 export class ProvidersService {
   constructor(
     @Inject(PROVIDER_VERIFICATION_REPOSITORY)
     private readonly verifications: ProviderVerificationRepository,
+    @Inject(PROVIDER_PROFILE_REPOSITORY)
+    private readonly profiles: ProviderProfileRepository,
   ) {}
 
   async submitVerification(
@@ -271,6 +286,94 @@ export class ProvidersService {
     }
 
     return { ok: true, statusCode: 200, verification: this.serializeRecord(record) };
+  }
+
+  async upsertProfile(
+    session: AuthSession,
+    input: UpsertProfileInput,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 400 | 403; error: string }
+    | { ok: true; statusCode: 200; profile: ReturnType<ProvidersService['serializeProfile']> }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'provider.profile.upsert',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'role-forbidden', actorRole: session.role, actorUserId: session.userId },
+      });
+      return { ok: false, statusCode: 403, error: 'Only providers can manage their profile.' };
+    }
+
+    const displayName = input.displayName?.trim();
+    if (!displayName) {
+      logStructuredBreadcrumb({
+        event: 'provider.profile.upsert',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'invalid-display-name', actorUserId: session.userId },
+      });
+      return { ok: false, statusCode: 400, error: 'displayName is required.' };
+    }
+
+    const profile = await this.profiles.upsertProfile({
+      providerUserId: session.userId,
+      displayName,
+      bio: input.bio,
+      tradeCategories: input.tradeCategories,
+      serviceArea: input.serviceArea,
+      isPublic: input.isPublic,
+      now: new Date().toISOString(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'provider.profile.upsert',
+      correlationId,
+      status: 'succeeded',
+      details: { actorUserId: session.userId, isPublic: profile.isPublic },
+    });
+
+    return { ok: true, statusCode: 200, profile: this.serializeProfile(profile) };
+  }
+
+  async getMyProfile(
+    session: AuthSession,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403; error: string }
+    | { ok: true; statusCode: 200; profile: ReturnType<ProvidersService['serializeProfile']> | null }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'provider.profile.get',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'role-forbidden', actorRole: session.role, actorUserId: session.userId },
+      });
+      return { ok: false, statusCode: 403, error: 'Only providers can view their own profile.' };
+    }
+
+    const profile = await this.profiles.getProfileByProviderId(session.userId);
+
+    return { ok: true, statusCode: 200, profile: profile ? this.serializeProfile(profile) : null };
+  }
+
+  private serializeProfile(profile: ProviderProfile) {
+    return {
+      providerUserId: profile.providerUserId,
+      displayName: profile.displayName,
+      bio: profile.bio,
+      tradeCategories: profile.tradeCategories,
+      serviceArea: profile.serviceArea,
+      isPublic: profile.isPublic,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+    } as const;
   }
 
   private serializeRecord(record: ProviderVerificationRecord) {

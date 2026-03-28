@@ -10,6 +10,8 @@ import {
   BookingStatusEvent,
   BookingSummary,
   CreateSubmittedBookingInput,
+  DeclineSubmittedBookingInput,
+  DeclineSubmittedBookingResult,
   ListBookingsFilter,
 } from '../domain/booking.repository';
 import { PostgresClient } from '../../persistence/postgres-client';
@@ -22,6 +24,7 @@ type BookingRow = {
   requested_service: string;
   status: BookingStatus;
   created_at: Date | string;
+  decline_reason: string | null;
 };
 
 type BookingStatusHistoryRow = {
@@ -150,6 +153,76 @@ export class PostgresBookingRepository implements BookingRepository {
     return result;
   }
 
+  async declineSubmittedBooking(input: DeclineSubmittedBookingInput): Promise<DeclineSubmittedBookingResult> {
+    if (!isUuid(input.bookingId)) {
+      return { ok: false, reason: 'not-found' };
+    }
+
+    const result = await this.postgresClient.withTransaction<DeclineSubmittedBookingResult>(async (client) => {
+      const currentResult = await client.query<Pick<BookingRow, 'status' | 'provider_user_id'>>(
+        'SELECT status, provider_user_id::text FROM bookings WHERE id = $1::uuid FOR UPDATE',
+        [input.bookingId],
+      );
+
+      const current = currentResult.rows[0];
+
+      if (!current) {
+        return { ok: false, reason: 'not-found' };
+      }
+
+      if (current.status !== 'submitted') {
+        // Idempotent: same provider already declined
+        if (current.status === 'declined' && current.provider_user_id === input.providerUserId) {
+          const booking = await this.loadBookingById(client, input.bookingId);
+
+          if (!booking) {
+            throw new Error(`Failed to load replayed declined booking ${input.bookingId}.`);
+          }
+
+          return { ok: true, booking, replayed: true };
+        }
+
+        return {
+          ok: false,
+          reason: 'transition-conflict',
+          currentStatus: current.status,
+        };
+      }
+
+      await client.query(
+        `UPDATE bookings
+         SET status = 'declined',
+             provider_user_id = $2::uuid,
+             decline_reason = $3
+         WHERE id = $1::uuid`,
+        [input.bookingId, input.providerUserId, input.declineReason?.trim() ?? null],
+      );
+
+      await this.insertStatusEvent(client, {
+        bookingId: input.bookingId,
+        changedAt: input.declinedAt,
+        fromStatus: 'submitted',
+        toStatus: 'declined',
+        actorRole: input.actorRole,
+        actorUserId: input.actorUserId,
+      });
+
+      const booking = await this.loadBookingById(client, input.bookingId);
+
+      if (!booking) {
+        throw new Error(`Failed to load declined booking ${input.bookingId}.`);
+      }
+
+      return { ok: true, booking, replayed: false };
+    }, {
+      ...process.env,
+      DATABASE_URL: this.postgresConfig.databaseUrl,
+      PERSISTENCE_MODE: 'postgres',
+    });
+
+    return result;
+  }
+
   async listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]> {
     let rows: Array<{
       id: string;
@@ -228,7 +301,8 @@ export class PostgresBookingRepository implements BookingRepository {
               provider_user_id::text,
               requested_service,
               status,
-              created_at
+              created_at,
+              decline_reason
        FROM bookings
        WHERE id = $1::uuid
        LIMIT 1`,
@@ -264,7 +338,8 @@ export class PostgresBookingRepository implements BookingRepository {
               provider_user_id::text,
               requested_service,
               status,
-              created_at
+              created_at,
+              decline_reason
        FROM bookings
        WHERE id = $1::uuid
        LIMIT 1`,
@@ -340,6 +415,7 @@ function mapBookingRecord(booking: BookingRow, historyRows: BookingStatusHistory
     providerUserId: booking.provider_user_id ?? undefined,
     requestedService: booking.requested_service,
     status: booking.status,
+    declineReason: booking.decline_reason ?? undefined,
     statusHistory,
   };
 }
