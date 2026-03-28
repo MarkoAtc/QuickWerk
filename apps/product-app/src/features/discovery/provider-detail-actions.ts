@@ -1,22 +1,24 @@
 /**
  * Actions for the provider detail screen.
  *
- * Since the public API does not yet expose a dedicated single-provider endpoint,
- * we fetch the full list (optionally pre-filtered to be lighter) and pick by
- * providerUserId. This keeps the backend unchanged for Slice 3.
+ * Slice 4: uses the dedicated `GET /api/v1/providers/:providerUserId` endpoint
+ * added in platform-api instead of fetching the full list and filtering client-side.
  */
 
-import { loadPublicProviders } from './provider-discovery-actions';
+import { createGetPublicProviderRequest } from '@quickwerk/api-client';
+
 import type { PublicProviderSummary } from './provider-discovery-state';
 
 export type LoadProviderDetailResult =
-  | { provider: PublicProviderSummary; errorMessage?: undefined }
-  | { provider?: undefined; errorMessage: string }
+  | { provider: PublicProviderSummary; errorMessage?: undefined; notFound?: undefined }
+  | { provider?: undefined; errorMessage: string; notFound?: undefined }
   | { provider?: undefined; errorMessage?: undefined; notFound: true };
 
 /**
- * Loads a single public provider profile by providerUserId.
- * Fetches the full public list and picks by id — no backend change required.
+ * Loads a single public provider profile by providerUserId via the dedicated
+ * `GET /api/v1/providers/:providerUserId` endpoint.
+ *
+ * Returns notFound when the API responds with 404, and errorMessage for other failures.
  */
 export async function loadProviderDetail(
   providerUserId: string,
@@ -28,17 +30,50 @@ export async function loadProviderDetail(
     return { errorMessage: 'providerUserId is required.' };
   }
 
-  const result = await loadPublicProviders(undefined, fetchImpl);
+  const request = createGetPublicProviderRequest(trimmedProviderUserId);
 
-  if (result.errorMessage) {
-    return { errorMessage: result.errorMessage };
+  let response: Response;
+  try {
+    response = await fetchImpl(request.path, { method: request.method });
+  } catch (err) {
+    return { errorMessage: err instanceof Error ? err.message : 'Unexpected error loading provider.' };
   }
 
-  const provider = result.providers!.find((p) => p.providerUserId === trimmedProviderUserId);
-
-  if (!provider) {
+  if (response.status === 404) {
     return { notFound: true };
   }
 
-  return { provider };
+  if (!response.ok) {
+    return { errorMessage: `Request failed with status ${response.status}.` };
+  }
+
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    return { errorMessage: 'Invalid JSON response from server.' };
+  }
+
+  if (!isPublicProviderSummary(data)) {
+    return { errorMessage: 'Invalid provider profile data received.' };
+  }
+
+  return { provider: data };
+}
+
+function isPublicProviderSummary(value: unknown): value is PublicProviderSummary {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.providerUserId === 'string' &&
+    typeof record.displayName === 'string' &&
+    Array.isArray(record.tradeCategories) &&
+    typeof record.isPublic === 'boolean' &&
+    typeof record.createdAt === 'string' &&
+    typeof record.updatedAt === 'string'
+  );
 }

@@ -23,6 +23,7 @@ export interface ProviderProfileRepository {
   upsertProfile(input: UpsertProviderProfileInput): Promise<ProviderProfile>;
   getProfileByProviderId(providerUserId: string): Promise<ProviderProfile | null>;
   listPublicProfiles(filter?: { tradeCategory?: string }): Promise<ProviderProfile[]>;
+  getPublicProfileByProviderId(providerUserId: string): Promise<ProviderProfile | null>;
 }
 
 export const PROVIDER_PROFILE_REPOSITORY = Symbol('PROVIDER_PROFILE_REPOSITORY');

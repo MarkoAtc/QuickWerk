@@ -27,8 +27,13 @@ export default function BookingWizardRoute() {
     setLoading(true);
     setError(null);
 
+    // When coming from provider detail, include the provider context in the service request.
+    const providerUserIdParam = Array.isArray(params.providerUserId)
+      ? params.providerUserId[0]
+      : params.providerUserId;
+    const providerHint = providerUserIdParam ? `[provider:${providerUserIdParam}]` : undefined;
     const result = await submitBooking(
-      { issueType, urgency, address, category: params.category },
+      { issueType, urgency, address, category: params.category, providerHint },
       token,
     );
     setLoading(false);
