@@ -71,7 +71,9 @@ export function buildDeclineEmailNotificationPayload(
     bookingId: event.booking.bookingId,
     correlationId: event.correlationId,
     subject: 'Your booking request was declined',
-    body: `Your request for "${event.booking.requestedService}" was declined by the provider.`,
+    body: event.booking.declineReason
+      ? `Your request for "${event.booking.requestedService}" was declined by the provider. Reason: ${event.booking.declineReason}`
+      : `Your request for "${event.booking.requestedService}" was declined by the provider.`,
     queuedAt: now.toISOString(),
   };
 }
@@ -91,7 +93,7 @@ export function buildDeclinePushNotificationPayload(
 }
 
 export function consumeBookingDeclinedAttempt(input: BookingDeclinedAttemptInput): BookingDeclinedAttemptResult {
-  const { event, attempt, maxAttempts, shouldFail = false, baseBackoffMs, now } = input;
+  const { event, attempt, maxAttempts, shouldFail = false, baseBackoffMs, now = new Date() } = input;
 
   const envelope = buildBookingDeclinedWorkerEnvelope({
     event,

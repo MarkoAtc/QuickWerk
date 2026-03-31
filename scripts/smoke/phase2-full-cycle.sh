@@ -40,27 +40,27 @@ req() {
 
   if [[ -n "$token" ]]; then
     if [[ -n "$body" ]]; then
-      curl --fail --silent --show-error \
+      curl --fail --silent --show-error --max-time 30 \
         -X "$method" \
         -H "Authorization: Bearer $token" \
         -H "Content-Type: application/json" \
         -d "$body" \
         "$BASE_URL$path"
     else
-      curl --fail --silent --show-error \
+      curl --fail --silent --show-error --max-time 30 \
         -X "$method" \
         -H "Authorization: Bearer $token" \
         "$BASE_URL$path"
     fi
   else
     if [[ -n "$body" ]]; then
-      curl --fail --silent --show-error \
+      curl --fail --silent --show-error --max-time 30 \
         -X "$method" \
         -H "Content-Type: application/json" \
         -d "$body" \
         "$BASE_URL$path"
     else
-      curl --fail --silent --show-error -X "$method" "$BASE_URL$path"
+      curl --fail --silent --show-error --max-time 30 -X "$method" "$BASE_URL$path"
     fi
   fi
 }
@@ -73,19 +73,19 @@ req_status() {
   local body="${4:-}"
 
   if [[ -n "$token" && -n "$body" ]]; then
-    curl --silent --output /dev/null --write-out '%{http_code}' \
+    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
       -X "$method" \
       -H "Authorization: Bearer $token" \
       -H "Content-Type: application/json" \
       -d "$body" \
       "$BASE_URL$path"
   elif [[ -n "$token" ]]; then
-    curl --silent --output /dev/null --write-out '%{http_code}' \
+    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
       -X "$method" \
       -H "Authorization: Bearer $token" \
       "$BASE_URL$path"
   else
-    curl --silent --output /dev/null --write-out '%{http_code}' \
+    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
       -X "$method" \
       "$BASE_URL$path"
   fi

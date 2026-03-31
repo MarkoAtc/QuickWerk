@@ -154,6 +154,15 @@ describe('decline notification payload builders', () => {
     const payload = buildDeclineEmailNotificationPayload(event, now);
 
     expect(payload.body).toContain('Tile repair');
+    expect(payload.body).toContain('Unavailable');
+  });
+
+  it('email payload omits reason clause when declineReason is absent', () => {
+    const event = makeDeclinedEvent();
+    const payload = buildDeclineEmailNotificationPayload(event, now);
+
+    expect(payload.body).toContain('Tile repair');
+    expect(payload.body).not.toContain('Reason:');
   });
 });
 
