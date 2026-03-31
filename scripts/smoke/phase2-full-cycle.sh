@@ -84,6 +84,12 @@ req_status() {
       -X "$method" \
       -H "Authorization: Bearer $token" \
       "$BASE_URL$path"
+  elif [[ -n "$body" ]]; then
+    curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+      -X "$method" \
+      -H "Content-Type: application/json" \
+      -d "$body" \
+      "$BASE_URL$path"
   else
     curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
       -X "$method" \
