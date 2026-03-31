@@ -117,3 +117,13 @@ export type BookingDeclinedWorkerEnvelope = {
   retry: BookingDeclinedRetryBackoffMetadata;
   dlq?: BookingDeclinedDlqMarker;
 };
+
+export type BookingDeclinedNotificationPayload = {
+  channel: 'email' | 'push';
+  recipientUserId: string;
+  bookingId: string;
+  correlationId: string;
+  subject?: string;
+  body: string;
+  queuedAt: string;
+};
