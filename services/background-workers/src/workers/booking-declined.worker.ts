@@ -1,6 +1,7 @@
 import type {
   BookingDeclinedDomainEvent,
   BookingDeclinedDlqMarker,
+  BookingDeclinedNotificationPayload,
   BookingDeclinedWorkerEnvelope,
 } from '@quickwerk/domain';
 
@@ -60,8 +61,39 @@ export function markBookingDeclinedDlq(
   return { ...envelope, dlq };
 }
 
+export function buildDeclineEmailNotificationPayload(
+  event: BookingDeclinedDomainEvent,
+  now: Date = new Date(),
+): BookingDeclinedNotificationPayload {
+  return {
+    channel: 'email',
+    recipientUserId: event.booking.customerUserId,
+    bookingId: event.booking.bookingId,
+    correlationId: event.correlationId,
+    subject: 'Your booking request was declined',
+    body: event.booking.declineReason
+      ? `Your request for "${event.booking.requestedService}" was declined by the provider. Reason: ${event.booking.declineReason}`
+      : `Your request for "${event.booking.requestedService}" was declined by the provider.`,
+    queuedAt: now.toISOString(),
+  };
+}
+
+export function buildDeclinePushNotificationPayload(
+  event: BookingDeclinedDomainEvent,
+  now: Date = new Date(),
+): BookingDeclinedNotificationPayload {
+  return {
+    channel: 'push',
+    recipientUserId: event.booking.customerUserId,
+    bookingId: event.booking.bookingId,
+    correlationId: event.correlationId,
+    body: `Your request for "${event.booking.requestedService}" was declined.`,
+    queuedAt: now.toISOString(),
+  };
+}
+
 export function consumeBookingDeclinedAttempt(input: BookingDeclinedAttemptInput): BookingDeclinedAttemptResult {
-  const { event, attempt, maxAttempts, shouldFail = false, baseBackoffMs, now } = input;
+  const { event, attempt, maxAttempts, shouldFail = false, baseBackoffMs, now = new Date() } = input;
 
   const envelope = buildBookingDeclinedWorkerEnvelope({
     event,
@@ -92,6 +124,22 @@ export function consumeBookingDeclinedAttempt(input: BookingDeclinedAttemptInput
         eventId: envelope.event.eventId,
         retry: envelope.retry,
       },
+    });
+
+    const emailPayload = buildDeclineEmailNotificationPayload(event, now);
+    logWorkerEvent({
+      event: 'notification.declined.email.queued',
+      correlationId: envelope.correlationId,
+      status: 'succeeded',
+      details: { notification: emailPayload },
+    });
+
+    const pushPayload = buildDeclinePushNotificationPayload(event, now);
+    logWorkerEvent({
+      event: 'notification.declined.push.queued',
+      correlationId: envelope.correlationId,
+      status: 'succeeded',
+      details: { notification: pushPayload },
     });
 
     return {
