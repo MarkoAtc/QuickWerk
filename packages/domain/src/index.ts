@@ -127,3 +127,47 @@ export type BookingDeclinedNotificationPayload = {
   body: string;
   queuedAt: string;
 };
+
+// --- Payments ---
+
+export type PaymentStatus = 'pending' | 'authorized' | 'captured' | 'failed' | 'refunded';
+
+export type PaymentRecord = {
+  paymentId: string;
+  bookingId: string;
+  customerUserId: string;
+  providerUserId: string;
+  amountCents: number;
+  currency: string;
+  status: PaymentStatus;
+  capturedAt: string;
+  correlationId: string;
+};
+
+export type PaymentCapturedDomainEvent = {
+  eventName: 'payment.captured';
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+  replayed: boolean;
+  payment: {
+    paymentId: string;
+    bookingId: string;
+    customerUserId: string;
+    providerUserId: string;
+    amountCents: number;
+    currency: string;
+    status: 'captured';
+  };
+};
+
+// --- File Uploads ---
+
+export type UploadUrlRecord = {
+  uploadId: string;
+  providerUserId: string;
+  presignedUrl: string;
+  expiresAt: string;
+  filename: string;
+  mimeType: string;
+};

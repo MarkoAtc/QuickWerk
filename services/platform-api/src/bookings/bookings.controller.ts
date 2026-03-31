@@ -168,6 +168,81 @@ export class BookingsController {
   }
 
   /**
+   * POST /api/v1/bookings/:bookingId/complete
+   * Provider marks a booking as complete, triggering payment capture.
+   */
+  @Post(':bookingId/complete')
+  @HttpCode(200)
+  async completeBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: { bookingId },
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required before completing bookings.', 401);
+    }
+
+    const result = await this.bookingsService.completeBooking(session, bookingId, { correlationId });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return { booking: result.booking, payment: result.payment };
+  }
+
+  /**
+   * GET /api/v1/bookings/:bookingId/payment
+   * Fetch payment record for a booking.
+   */
+  @Get(':bookingId/payment')
+  async getBookingPayment(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to view payment details.', 401);
+    }
+
+    const result = await this.bookingsService.getBookingPayment(session, bookingId);
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.payment;
+  }
+
+  /**
    * POST /api/v1/bookings/:bookingId/decline
    * Provider declines a submitted booking.
    */

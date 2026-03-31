@@ -370,4 +370,50 @@ export class ProvidersController {
 
     return result.profile ?? { status: 'not-set' };
   }
+
+  /**
+   * POST /api/v1/providers/me/verification/upload-url
+   * Provider requests a presigned upload URL for a verification document.
+   */
+  @Post('me/verification/upload-url')
+  @HttpCode(201)
+  async requestUploadUrl(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Body() body: { filename?: string; mimeType?: string },
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to request an upload URL.', 401);
+    }
+
+    const safeBody = body != null && typeof body === 'object' ? body : {};
+    const filename = typeof safeBody.filename === 'string' ? safeBody.filename : 'document';
+    const mimeType = typeof safeBody.mimeType === 'string' ? safeBody.mimeType : 'application/octet-stream';
+
+    const result = await this.providersService.requestUploadUrl(
+      session,
+      { filename, mimeType },
+      { correlationId },
+    );
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.uploadUrl;
+  }
 }

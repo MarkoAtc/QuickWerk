@@ -1,9 +1,9 @@
-import { createBookingRequest, createDeclineBookingRequest } from '@quickwerk/api-client';
+import { createBookingRequest, createCompleteBookingRequest, createDeclineBookingRequest } from '@quickwerk/api-client';
 
 import type { CreatedBooking } from './booking-state';
 import { runtimeConfig } from '../../shared/runtime-config';
 
-const knownBookingStatuses = ['submitted', 'accepted', 'declined'] as const;
+const knownBookingStatuses = ['submitted', 'accepted', 'declined', 'completed'] as const;
 type KnownBookingStatus = typeof knownBookingStatuses[number];
 
 function parseBookingStatus(raw: string | undefined): KnownBookingStatus | null {
@@ -122,6 +122,62 @@ export async function declineBookingRequest(
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown decline failure.',
+    };
+  }
+}
+
+type CompleteBookingInput = {
+  sessionToken: string;
+  bookingId: string;
+};
+
+type CompleteBookingResult =
+  | { booking: CreatedBooking; errorMessage?: undefined }
+  | { booking?: undefined; errorMessage: string };
+
+export async function completeBookingRequest(
+  input: CompleteBookingInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<CompleteBookingResult> {
+  const request = createCompleteBookingRequest(input.sessionToken, input.bookingId);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: request.headers,
+    });
+
+    if (!response.ok) {
+      return { errorMessage: `Complete booking failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as {
+      booking?: {
+        bookingId?: string;
+        requestedService?: string;
+        status?: string;
+        customerUserId?: string;
+      };
+    };
+
+    const bookingPayload = payload.booking;
+    const status = parseBookingStatus(bookingPayload?.status);
+
+    if (!bookingPayload?.bookingId || !status) {
+      return { errorMessage: 'Complete booking response missing required fields.' };
+    }
+
+    return {
+      booking: {
+        bookingId: bookingPayload.bookingId,
+        requestedService: bookingPayload.requestedService ?? '',
+        status,
+        customerUserId: bookingPayload.customerUserId ?? '',
+      },
+    };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown complete booking failure.',
     };
   }
 }

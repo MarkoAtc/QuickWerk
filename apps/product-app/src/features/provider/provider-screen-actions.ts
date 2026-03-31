@@ -2,7 +2,9 @@ import {
   createAcceptBookingRequest,
   createGetMyProviderProfileRequest,
   createListBookingsRequest,
+  createRequestUploadUrlRequest,
   createUpsertProviderProfileRequest,
+  RequestUploadUrlBody,
   UpsertProviderProfileBody,
 } from '@quickwerk/api-client';
 
@@ -249,6 +251,56 @@ export async function saveMyProviderProfile(
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown save profile failure.',
+    };
+  }
+}
+
+export type UploadUrlPayload = {
+  uploadId: string;
+  presignedUrl: string;
+  expiresAt: string;
+  filename: string;
+  mimeType: string;
+};
+
+export type RequestUploadUrlResult =
+  | { uploadUrl: UploadUrlPayload; errorMessage?: undefined }
+  | { uploadUrl?: undefined; errorMessage: string };
+
+export async function requestVerificationUploadUrl(
+  sessionToken: string,
+  body: RequestUploadUrlBody,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RequestUploadUrlResult> {
+  const request = createRequestUploadUrlRequest(sessionToken, body);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: { ...request.headers, 'content-type': 'application/json' },
+      body: JSON.stringify(request.body),
+    });
+
+    if (!response.ok) {
+      return { errorMessage: `Request upload URL failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+
+    const uploadId = typeof payload['uploadId'] === 'string' ? payload['uploadId'] : '';
+    const presignedUrl = typeof payload['presignedUrl'] === 'string' ? payload['presignedUrl'] : '';
+    const expiresAt = typeof payload['expiresAt'] === 'string' ? payload['expiresAt'] : '';
+    const filename = typeof payload['filename'] === 'string' ? payload['filename'] : '';
+    const mimeType = typeof payload['mimeType'] === 'string' ? payload['mimeType'] : '';
+
+    if (!uploadId || !presignedUrl || !expiresAt) {
+      return { errorMessage: 'Upload URL response missing required fields.' };
+    }
+
+    return { uploadUrl: { uploadId, presignedUrl, expiresAt, filename, mimeType } };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown upload URL failure.',
     };
   }
 }
