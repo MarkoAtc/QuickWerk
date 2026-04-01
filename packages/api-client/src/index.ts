@@ -257,3 +257,34 @@ export const createRequestUploadUrlRequest = (sessionToken: string, body: Reques
   headers: { authorization: `Bearer ${sessionToken}` },
   body,
 }) as const;
+
+// --- Provider Payouts ---
+
+export const providerPayoutApiRoutes = {
+  list: () => '/api/v1/providers/me/payouts',
+  detail: (payoutId: string) => `/api/v1/providers/me/payouts/${payoutId}`,
+} as const;
+
+export const createGetMyPayoutsRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: providerPayoutApiRoutes.list(),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createGetPayoutDetailRequest = (sessionToken: string, payoutId: string) => ({
+  method: 'GET',
+  path: providerPayoutApiRoutes.detail(payoutId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Booking Invoices ---
+
+export const bookingInvoiceApiRoutes = {
+  get: (bookingId: string) => `/api/v1/bookings/${bookingId}/invoice`,
+} as const;
+
+export const createGetBookingInvoiceRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingInvoiceApiRoutes.get(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;

@@ -113,6 +113,18 @@ export function consumePaymentCapturedAttempt(input: PaymentCapturedAttemptInput
       },
     });
 
+    logWorkerEvent({
+      event: 'payment.captured.worker.invoice-generation.stub',
+      correlationId: envelope.correlationId,
+      status: 'started',
+      details: {
+        eventId: envelope.event.eventId,
+        bookingId: envelope.event.payment.bookingId,
+        paymentId: envelope.event.payment.paymentId,
+        note: 'invoice-generation-stub: real PDF generation not yet wired',
+      },
+    });
+
     return {
       status: 'processed',
       attempt,
