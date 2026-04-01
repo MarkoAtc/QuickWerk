@@ -23,4 +23,5 @@ export const workerPipelines = [
   'payout-reconciliation',
   'booking-accepted-orchestration',
   'booking-declined-orchestration',
+  'payment-captured-orchestration',
 ] as const;

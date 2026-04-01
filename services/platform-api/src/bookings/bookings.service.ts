@@ -377,7 +377,7 @@ export class BookingsService {
     bookingId: string,
     context?: { correlationId?: string },
   ): Promise<
-    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: false; statusCode: 403 | 404 | 409 | 500; error: string }
     | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']>; payment: PaymentRecord }
   > {
     const correlationId = context?.correlationId ?? 'corr-missing';
@@ -418,7 +418,28 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    // Capture payment BEFORE finalizing the booking to avoid terminal state without payment
+    // Validate booking can transition to completed before capturing payment
+    if (bookingToComplete.status !== 'accepted') {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: bookingToComplete.status,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot transition from ${bookingToComplete.status} to completed.`,
+      };
+    }
+
+    // Capture payment only after validating transition eligibility
     let payment: PaymentRecord;
     let paymentReplayed: boolean;
 
