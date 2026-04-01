@@ -455,7 +455,7 @@ export class BookingsService {
       });
 
       payment = captureResult.payment;
-      paymentReplayed = captureResult.payment.replayed ?? false;
+      paymentReplayed = captureResult.replayed;
     } catch (error) {
       logStructuredBreadcrumb({
         event: 'booking.complete.write',

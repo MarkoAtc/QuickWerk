@@ -1,10 +1,10 @@
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
 import { Injectable } from '@nestjs/common';
 
 export const BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY = Symbol('BOOKING_ACCEPTED_RELAY_ATTEMPT_POLICY');
 
 export type BookingAcceptedRelayAttemptContext = {
-  event: BookingAcceptedDomainEvent | BookingDeclinedDomainEvent;
+  event: BookingAcceptedDomainEvent | BookingDeclinedDomainEvent | PaymentCapturedDomainEvent;
   attempt: number;
   maxAttempts: number;
 };
