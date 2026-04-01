@@ -15,6 +15,7 @@ export const providerApiRoutes = {
   getVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}`,
   reviewVerification: (verificationId: string) => `${apiRoutes.providers}/verifications/${verificationId}/review`,
   myProfile: `${apiRoutes.providers}/me/profile`,
+  requestUploadUrl: `${apiRoutes.providers}/me/verification/upload-url`,
 } as const;
 
 export type VerificationStatus = 'pending' | 'approved' | 'rejected';
@@ -49,6 +50,8 @@ export const bookingApiRoutes = {
   create: apiRoutes.bookings,
   accept: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/accept`,
   decline: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/decline`,
+  complete: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/complete`,
+  payment: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/payment`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -226,3 +229,31 @@ export const createListPublicProvidersRequest = (filter?: ListPublicProvidersFil
     path,
   } as const;
 };
+
+// --- Booking Completion ---
+
+export const createCompleteBookingRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'POST',
+  path: bookingApiRoutes.complete(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createGetBookingPaymentRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.payment(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Provider Upload URL ---
+
+export type RequestUploadUrlBody = {
+  filename: string;
+  mimeType: string;
+};
+
+export const createRequestUploadUrlRequest = (sessionToken: string, body: RequestUploadUrlBody) => ({
+  method: 'POST',
+  path: providerApiRoutes.requestUploadUrl,
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
+}) as const;

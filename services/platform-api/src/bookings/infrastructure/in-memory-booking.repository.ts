@@ -7,6 +7,8 @@ import {
   BookingRecord,
   BookingRepository,
   BookingSummary,
+  CompleteAcceptedBookingInput,
+  CompleteAcceptedBookingResult,
   CreateSubmittedBookingInput,
   DeclineSubmittedBookingInput,
   DeclineSubmittedBookingResult,
@@ -123,6 +125,45 @@ export class InMemoryBookingRepository implements BookingRepository {
       providerUserId: input.providerUserId,
       declineReason: input.declineReason?.trim() || undefined,
       statusHistory: [...current.statusHistory, declinedEvent],
+    };
+
+    this.bookings.set(input.bookingId, updated);
+
+    return { ok: true, booking: updated, replayed: false };
+  }
+
+  async completeAcceptedBooking(input: CompleteAcceptedBookingInput): Promise<CompleteAcceptedBookingResult> {
+    const current = this.bookings.get(input.bookingId);
+
+    if (!current) {
+      return { ok: false, reason: 'not-found' };
+    }
+
+    if (current.status !== 'accepted') {
+      // Idempotent: same provider already completed this booking
+      if (current.status === 'completed' && current.providerUserId === input.providerUserId) {
+        return { ok: true, booking: current, replayed: true };
+      }
+
+      return {
+        ok: false,
+        reason: 'transition-conflict',
+        currentStatus: current.status,
+      };
+    }
+
+    const completedEvent = {
+      changedAt: input.completedAt,
+      from: current.status,
+      to: 'completed' as const,
+      actorRole: input.actorRole,
+      actorUserId: input.actorUserId,
+    };
+
+    const updated: BookingRecord = {
+      ...current,
+      status: 'completed',
+      statusHistory: [...current.statusHistory, completedEvent],
     };
 
     this.bookings.set(input.bookingId, updated);

@@ -1,7 +1,7 @@
 export type CreatedBooking = {
   bookingId: string;
   requestedService: string;
-  status: 'submitted' | 'accepted' | 'declined';
+  status: 'submitted' | 'accepted' | 'declined' | 'completed';
   customerUserId: string;
   declineReason?: string;
 };

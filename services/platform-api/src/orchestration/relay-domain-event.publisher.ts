@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
-import { consumeBookingDeclinedAttempt } from '@quickwerk/background-workers';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
+import { consumeBookingDeclinedAttempt, consumePaymentCapturedAttempt } from '@quickwerk/background-workers';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
@@ -180,6 +180,82 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
 
     logStructuredBreadcrumb({
       event: 'booking.declined.domain-event.relay',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+  }
+
+  /**
+   * Publish a payment.captured domain event through the relay retry/DLQ pipeline,
+   * mirroring the booking.accepted and booking.declined flows. The logging publisher
+   * is called first to preserve the structured audit breadcrumb regardless of relay outcome.
+   */
+  async publishPaymentCaptured(event: PaymentCapturedDomainEvent): Promise<void> {
+    await this.loggingPublisher.publishPaymentCaptured(event);
+
+    let finalWorkerResult = consumePaymentCapturedAttempt({
+      event,
+      attempt: 1,
+      maxAttempts: relayMaxAttempts,
+      baseBackoffMs: relayBaseBackoffMs,
+      shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+        event,
+        attempt: 1,
+        maxAttempts: relayMaxAttempts,
+      }),
+      now: this.relayClock.now(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'payment.captured.domain-event.relay.attempt',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+
+    for (let attempt = 2; attempt <= relayMaxAttempts && finalWorkerResult.status === 'retry-scheduled'; attempt += 1) {
+      finalWorkerResult = consumePaymentCapturedAttempt({
+        event,
+        attempt,
+        maxAttempts: relayMaxAttempts,
+        baseBackoffMs: relayBaseBackoffMs,
+        shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+          event,
+          attempt,
+          maxAttempts: relayMaxAttempts,
+        }),
+        now: this.relayClock.now(),
+      });
+
+      logStructuredBreadcrumb({
+        event: 'payment.captured.domain-event.relay.attempt',
+        correlationId: event.correlationId,
+        status: mapRelayAttemptStatus(finalWorkerResult.status),
+        details: {
+          eventId: event.eventId,
+          workerStatus: finalWorkerResult.status,
+          workerCorrelationId: finalWorkerResult.correlationId,
+          retry: finalWorkerResult.envelope.retry,
+          dlq: finalWorkerResult.envelope.dlq,
+        },
+      });
+    }
+
+    logStructuredBreadcrumb({
+      event: 'payment.captured.domain-event.relay',
       correlationId: event.correlationId,
       status: mapRelayAttemptStatus(finalWorkerResult.status),
       details: {

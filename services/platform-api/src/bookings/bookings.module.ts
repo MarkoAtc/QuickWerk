@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../auth/auth.module';
+import { PaymentsModule } from '../payments/payments.module';
 import {
   BOOKING_DOMAIN_EVENT_PUBLISHER,
 } from '../orchestration/domain-event.publisher';
@@ -29,7 +30,7 @@ import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PaymentsModule],
   controllers: [BookingsController],
   providers: [
     BookingsService,

@@ -1,4 +1,4 @@
-export type BookingStatus = 'submitted' | 'accepted' | 'declined';
+export type BookingStatus = 'submitted' | 'accepted' | 'declined' | 'completed';
 export type BookingActorRole = 'customer' | 'provider';
 
 export type BookingStatusEvent = {
@@ -70,6 +70,22 @@ export type BookingSummary = {
   customerUserId: string;
 };
 
+export type CompleteAcceptedBookingInput = {
+  bookingId: string;
+  completedAt: string;
+  providerUserId: string;
+  actorRole: BookingActorRole;
+  actorUserId: string;
+};
+
+export type CompleteAcceptedBookingResult =
+  | { ok: true; booking: BookingRecord; replayed: boolean }
+  | {
+      ok: false;
+      reason: 'not-found' | 'transition-conflict';
+      currentStatus?: BookingStatus;
+    };
+
 export type ListBookingsFilter =
   | { scope: 'submitted-only' }
   | { scope: 'customer-owned'; customerUserId: string };
@@ -78,6 +94,7 @@ export interface BookingRepository {
   createSubmittedBooking(input: CreateSubmittedBookingInput): Promise<BookingRecord>;
   acceptSubmittedBooking(input: AcceptSubmittedBookingInput): Promise<AcceptSubmittedBookingResult>;
   declineSubmittedBooking(input: DeclineSubmittedBookingInput): Promise<DeclineSubmittedBookingResult>;
+  completeAcceptedBooking(input: CompleteAcceptedBookingInput): Promise<CompleteAcceptedBookingResult>;
   listBookings(filter: ListBookingsFilter): Promise<BookingSummary[]>;
   getBooking(bookingId: string): Promise<BookingRecord | null>;
 }

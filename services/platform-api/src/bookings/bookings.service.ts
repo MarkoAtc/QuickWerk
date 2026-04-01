@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type {
+  BookingAcceptedDomainEvent,
+  BookingDeclinedDomainEvent,
+  PaymentCapturedDomainEvent,
+  PaymentRecord,
+} from '@quickwerk/domain';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
@@ -9,6 +14,7 @@ import {
   BOOKING_DOMAIN_EVENT_PUBLISHER,
   BookingDomainEventPublisher,
 } from '../orchestration/domain-event.publisher';
+import { PaymentsService } from '../payments/payments.service';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
 
 @Injectable()
@@ -18,6 +24,7 @@ export class BookingsService {
     private readonly bookings: BookingRepository,
     @Inject(BOOKING_DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: BookingDomainEventPublisher,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   getMarketplacePreview() {
@@ -363,6 +370,236 @@ export class BookingsService {
       statusCode: 200,
       booking: this.serializeRecord(declined.booking),
     };
+  }
+
+  async completeBooking(
+    session: AuthSession,
+    bookingId: string,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409 | 500; error: string }
+    | { ok: true; statusCode: 200; booking: ReturnType<BookingsService['serializeRecord']>; payment: PaymentRecord }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+          bookingId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only providers can complete bookings.',
+      };
+    }
+
+    const completedAt = new Date().toISOString();
+
+    // First, attempt to get the booking to validate it exists and can transition
+    const bookingToComplete = await this.bookings.getBooking(bookingId);
+
+    if (!bookingToComplete) {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'not-found', bookingId, actorUserId: session.userId },
+      });
+
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Validate booking can transition to completed before capturing payment
+    if (bookingToComplete.status !== 'accepted') {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: bookingToComplete.status,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot transition from ${bookingToComplete.status} to completed.`,
+      };
+    }
+
+    // Capture payment only after validating transition eligibility
+    let payment: PaymentRecord;
+    let paymentReplayed: boolean;
+
+    try {
+      const captureResult = await this.paymentsService.capturePaymentForBooking({
+        bookingId,
+        customerUserId: bookingToComplete.customerUserId,
+        providerUserId: bookingToComplete.providerUserId ?? session.userId,
+        amountCents: 0,
+        currency: 'EUR',
+        capturedAt: completedAt,
+        correlationId,
+      });
+
+      payment = captureResult.payment;
+      paymentReplayed = captureResult.payment.replayed ?? false;
+    } catch (error) {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'payment-capture-failed',
+          bookingId,
+          actorUserId: session.userId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 500,
+        error: 'Payment capture failed. Booking not completed.',
+      };
+    }
+
+    // Now complete the booking after successful payment capture
+    const completed = await this.bookings.completeAcceptedBooking({
+      bookingId,
+      completedAt,
+      providerUserId: session.userId,
+      actorRole: session.role,
+      actorUserId: session.userId,
+    });
+
+    if (!completed.ok) {
+      if (completed.reason === 'not-found') {
+        logStructuredBreadcrumb({
+          event: 'booking.complete.write',
+          correlationId,
+          status: 'failed',
+          details: { reason: 'not-found', bookingId, actorUserId: session.userId },
+        });
+
+        return { ok: false, statusCode: 404, error: 'Booking not found.' };
+      }
+
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'transition-conflict',
+          bookingId,
+          actorUserId: session.userId,
+          currentStatus: completed.currentStatus,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot transition from ${completed.currentStatus} to completed.`,
+      };
+    }
+
+    const paymentCapturedEvent: PaymentCapturedDomainEvent = {
+      eventName: 'payment.captured',
+      eventId: randomUUID(),
+      occurredAt: completedAt,
+      correlationId,
+      replayed: paymentReplayed,
+      payment: {
+        paymentId: payment.paymentId,
+        bookingId: payment.bookingId,
+        customerUserId: payment.customerUserId,
+        providerUserId: payment.providerUserId,
+        amountCents: payment.amountCents,
+        currency: payment.currency,
+        status: 'captured',
+      },
+    };
+
+    await this.domainEvents.publishPaymentCaptured(paymentCapturedEvent);
+
+    logStructuredBreadcrumb({
+      event: 'payment.captured.domain-event.emit',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        eventId: paymentCapturedEvent.eventId,
+        paymentId: payment.paymentId,
+        bookingId,
+        replayed: paymentReplayed,
+      },
+    });
+
+    logStructuredBreadcrumb({
+      event: 'booking.complete.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId: completed.booking.bookingId,
+        actorUserId: session.userId,
+        replayed: completed.replayed,
+        paymentId: payment.paymentId,
+      },
+    });
+
+    return {
+      ok: true,
+      statusCode: 200,
+      booking: this.serializeRecord(completed.booking),
+      payment,
+    };
+  }
+
+  async getBookingPayment(
+    session: AuthSession,
+    bookingId: string,
+  ): Promise<
+    | { ok: false; statusCode: 401 | 403 | 404; error: string }
+    | { ok: true; statusCode: 200; payment: PaymentRecord }
+  > {
+    if (!session) {
+      return { ok: false, statusCode: 401, error: 'Sign-in required.' };
+    }
+
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Validate access for both customer and provider
+    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    const payment = await this.paymentsService.getPaymentByBookingId(bookingId);
+
+    if (!payment) {
+      return { ok: false, statusCode: 404, error: 'Payment not found for this booking.' };
+    }
+
+    return { ok: true, statusCode: 200, payment };
   }
 
   private serializeRecord(record: BookingRecord) {

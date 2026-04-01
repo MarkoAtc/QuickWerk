@@ -5,6 +5,9 @@ export {
   buildBookingDeclinedWorkerEnvelope,
   consumeBookingDeclinedAttempt,
   markBookingDeclinedDlq,
+  buildPaymentCapturedWorkerEnvelope,
+  consumePaymentCapturedAttempt,
+  markPaymentCapturedDlq,
   workerPipelines,
 } from './workers/index.js';
 

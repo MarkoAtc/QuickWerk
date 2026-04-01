@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BookingDomainEventPublisher } from '../orchestration/domain-event.publisher';
+import { InMemoryPaymentRepository } from '../payments/infrastructure/in-memory-payment.repository';
+import { PaymentsService } from '../payments/payments.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
@@ -29,12 +31,14 @@ const createService = () => {
     async publishBookingDeclined(event) {
       declinedEvents.push(event);
     },
+    async publishPaymentCaptured(_event) {},
   };
+  const paymentsService = new PaymentsService(new InMemoryPaymentRepository());
 
   return {
     emittedEvents,
     declinedEvents,
-    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher),
+    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
   };
 };
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { InMemoryProviderProfileRepository } from './infrastructure/in-memory-provider-profile.repository';
 import { InMemoryProviderVerificationRepository } from './infrastructure/in-memory-provider-verification.repository';
+import { InMemoryUploadUrlRepository } from './infrastructure/in-memory-upload-url.repository';
 import { ProvidersService } from './providers.service';
 
 const createSession = (role: AuthSession['role'], userId: string): AuthSession => {
@@ -18,7 +19,11 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
 };
 
 const createService = () =>
-  new ProvidersService(new InMemoryProviderVerificationRepository(), new InMemoryProviderProfileRepository());
+  new ProvidersService(
+    new InMemoryProviderVerificationRepository(),
+    new InMemoryProviderProfileRepository(),
+    new InMemoryUploadUrlRepository(),
+  );
 
 describe('ProvidersService — profile', () => {
   it('provider can upsert their profile', async () => {

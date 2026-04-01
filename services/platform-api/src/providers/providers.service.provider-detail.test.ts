@@ -7,10 +7,15 @@ import { describe, expect, it } from 'vitest';
 
 import { InMemoryProviderProfileRepository } from './infrastructure/in-memory-provider-profile.repository';
 import { InMemoryProviderVerificationRepository } from './infrastructure/in-memory-provider-verification.repository';
+import { InMemoryUploadUrlRepository } from './infrastructure/in-memory-upload-url.repository';
 import { ProvidersService } from './providers.service';
 
 const createService = () =>
-  new ProvidersService(new InMemoryProviderVerificationRepository(), new InMemoryProviderProfileRepository());
+  new ProvidersService(
+    new InMemoryProviderVerificationRepository(),
+    new InMemoryProviderProfileRepository(),
+    new InMemoryUploadUrlRepository(),
+  );
 
 const makeProviderSession = (userId: string) => ({
   createdAt: '2026-01-01T09:00:00.000Z',

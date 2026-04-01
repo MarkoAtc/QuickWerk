@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import type { UploadUrlRecord } from '@quickwerk/domain';
+
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import {
@@ -12,6 +14,7 @@ import {
   ProviderVerificationRecord,
   ProviderVerificationRepository,
 } from './domain/provider-verification.repository';
+import { UPLOAD_URL_REPOSITORY, UploadUrlRepository } from './domain/upload-url.repository';
 
 type SubmitVerificationInput = {
   businessName?: string;
@@ -39,6 +42,8 @@ export class ProvidersService {
     private readonly verifications: ProviderVerificationRepository,
     @Inject(PROVIDER_PROFILE_REPOSITORY)
     private readonly profiles: ProviderProfileRepository,
+    @Inject(UPLOAD_URL_REPOSITORY)
+    private readonly uploadUrls: UploadUrlRepository,
   ) {}
 
   async submitVerification(
@@ -456,5 +461,57 @@ export class ProvidersService {
       reviewNote: record.reviewNote,
       statusHistory: record.statusHistory,
     } as const;
+  }
+
+  async requestUploadUrl(
+    session: AuthSession,
+    input: { filename: string; mimeType: string },
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403; error: string }
+    | { ok: true; statusCode: 201; uploadUrl: UploadUrlRecord }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+
+    if (session.role !== 'provider') {
+      logStructuredBreadcrumb({
+        event: 'provider.upload-url.request',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'role-forbidden',
+          actorRole: session.role,
+          actorUserId: session.userId,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Only providers can request upload URLs.',
+      };
+    }
+
+    const uploadUrl = await this.uploadUrls.createUploadUrl({
+      providerUserId: session.userId,
+      filename: input.filename,
+      mimeType: input.mimeType,
+      now: new Date().toISOString(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'provider.upload-url.request',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        uploadId: uploadUrl.uploadId,
+        providerUserId: session.userId,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        expiresAt: uploadUrl.expiresAt,
+      },
+    });
+
+    return { ok: true, statusCode: 201, uploadUrl };
   }
 }

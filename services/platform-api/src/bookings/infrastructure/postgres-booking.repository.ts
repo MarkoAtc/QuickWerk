@@ -9,6 +9,8 @@ import {
   BookingStatus,
   BookingStatusEvent,
   BookingSummary,
+  CompleteAcceptedBookingInput,
+  CompleteAcceptedBookingResult,
   CreateSubmittedBookingInput,
   DeclineSubmittedBookingInput,
   DeclineSubmittedBookingResult,
@@ -211,6 +213,72 @@ export class PostgresBookingRepository implements BookingRepository {
 
       if (!booking) {
         throw new Error(`Failed to load declined booking ${input.bookingId}.`);
+      }
+
+      return { ok: true, booking, replayed: false };
+    }, {
+      ...process.env,
+      DATABASE_URL: this.postgresConfig.databaseUrl,
+      PERSISTENCE_MODE: 'postgres',
+    });
+
+    return result;
+  }
+
+  async completeAcceptedBooking(input: CompleteAcceptedBookingInput): Promise<CompleteAcceptedBookingResult> {
+    if (!isUuid(input.bookingId)) {
+      return { ok: false, reason: 'not-found' };
+    }
+
+    const result = await this.postgresClient.withTransaction<CompleteAcceptedBookingResult>(async (client) => {
+      const currentResult = await client.query<Pick<BookingRow, 'status' | 'provider_user_id'>>(
+        'SELECT status, provider_user_id::text FROM bookings WHERE id = $1::uuid FOR UPDATE',
+        [input.bookingId],
+      );
+
+      const current = currentResult.rows[0];
+
+      if (!current) {
+        return { ok: false, reason: 'not-found' };
+      }
+
+      if (current.status !== 'accepted') {
+        // Idempotent: same provider already completed
+        if (current.status === 'completed' && current.provider_user_id === input.providerUserId) {
+          const booking = await this.loadBookingById(client, input.bookingId);
+
+          if (!booking) {
+            throw new Error(`Failed to load replayed completed booking ${input.bookingId}.`);
+          }
+
+          return { ok: true, booking, replayed: true };
+        }
+
+        return {
+          ok: false,
+          reason: 'transition-conflict',
+          currentStatus: current.status,
+        };
+      }
+
+      await client.query(
+        `UPDATE bookings SET status = 'completed' WHERE id = $1::uuid`,
+        [input.bookingId],
+      );
+
+      await this.insertStatusEvent(client, {
+        bookingId: input.bookingId,
+        changedAt: input.completedAt,
+        fromStatus: 'accepted',
+        toStatus: 'completed',
+        actorRole: input.actorRole,
+        actorUserId: input.actorUserId,
+      });
+
+      const booking = await this.loadBookingById(client, input.bookingId);
+
+      if (!booking) {
+        throw new Error(`Failed to load completed booking ${input.bookingId}.`);
       }
 
       return { ok: true, booking, replayed: false };

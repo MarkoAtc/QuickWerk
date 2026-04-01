@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
 
 type BookingDomainEvent = BookingAcceptedDomainEvent | BookingDeclinedDomainEvent;
+type PaymentDomainEvent = PaymentCapturedDomainEvent;
 
 function buildEventLogDetails(event: BookingDomainEvent) {
   return {
@@ -32,6 +33,21 @@ export class LoggingBookingDomainEventPublisher implements BookingDomainEventPub
       correlationId: event.correlationId,
       status: 'succeeded',
       details: buildEventLogDetails(event),
+    });
+  }
+
+  async publishPaymentCaptured(event: PaymentCapturedDomainEvent): Promise<void> {
+    logStructuredBreadcrumb({
+      event: 'payment.captured.domain-event.emit',
+      correlationId: event.correlationId,
+      status: 'succeeded',
+      details: {
+        eventName: event.eventName,
+        eventId: event.eventId,
+        replayed: event.replayed,
+        paymentId: event.payment.paymentId,
+        bookingId: event.payment.bookingId,
+      },
     });
   }
 }
