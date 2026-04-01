@@ -16,6 +16,11 @@ function bootstrapWorkers() {
         handler: 'consumeBookingDeclinedAttempt',
         retryVisibility: 'attempt/maxAttempts with structured status logs',
       },
+      {
+        eventName: 'payment.captured',
+        handler: 'consumePaymentCapturedAttempt',
+        retryVisibility: 'attempt/maxAttempts with structured status logs',
+      },
     ],
   };
 
