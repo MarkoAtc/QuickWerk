@@ -403,6 +403,59 @@ export class BookingsService {
     }
 
     const completedAt = new Date().toISOString();
+
+    // First, attempt to get the booking to validate it exists and can transition
+    const bookingToComplete = await this.bookings.getBooking(bookingId);
+
+    if (!bookingToComplete) {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: { reason: 'not-found', bookingId, actorUserId: session.userId },
+      });
+
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Capture payment BEFORE finalizing the booking to avoid terminal state without payment
+    let payment: PaymentRecord;
+    let paymentReplayed: boolean;
+
+    try {
+      const captureResult = await this.paymentsService.capturePaymentForBooking({
+        bookingId,
+        customerUserId: bookingToComplete.customerUserId,
+        providerUserId: bookingToComplete.providerUserId ?? session.userId,
+        amountCents: 0,
+        currency: 'EUR',
+        capturedAt: completedAt,
+        correlationId,
+      });
+
+      payment = captureResult.payment;
+      paymentReplayed = captureResult.payment.replayed ?? false;
+    } catch (error) {
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'payment-capture-failed',
+          bookingId,
+          actorUserId: session.userId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 500,
+        error: 'Payment capture failed. Booking not completed.',
+      };
+    }
+
+    // Now complete the booking after successful payment capture
     const completed = await this.bookings.completeAcceptedBooking({
       bookingId,
       completedAt,
@@ -442,22 +495,12 @@ export class BookingsService {
       };
     }
 
-    const { payment } = await this.paymentsService.capturePaymentForBooking({
-      bookingId: completed.booking.bookingId,
-      customerUserId: completed.booking.customerUserId,
-      providerUserId: completed.booking.providerUserId ?? session.userId,
-      amountCents: 0,
-      currency: 'EUR',
-      capturedAt: completedAt,
-      correlationId,
-    });
-
     const paymentCapturedEvent: PaymentCapturedDomainEvent = {
       eventName: 'payment.captured',
       eventId: randomUUID(),
       occurredAt: completedAt,
       correlationId,
-      replayed: completed.replayed,
+      replayed: paymentReplayed,
       payment: {
         paymentId: payment.paymentId,
         bookingId: payment.bookingId,
@@ -479,7 +522,7 @@ export class BookingsService {
         eventId: paymentCapturedEvent.eventId,
         paymentId: payment.paymentId,
         bookingId,
-        replayed: completed.replayed,
+        replayed: paymentReplayed,
       },
     });
 
@@ -520,7 +563,12 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
+    // Validate access for both customer and provider
     if (session.role === 'customer' && booking.customerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 

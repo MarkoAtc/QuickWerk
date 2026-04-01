@@ -10,6 +10,12 @@ export {
   markBookingDeclinedDlq,
 } from './booking-declined.worker.js';
 
+export {
+  buildPaymentCapturedWorkerEnvelope,
+  consumePaymentCapturedAttempt,
+  markPaymentCapturedDlq,
+} from './payment-captured.worker.js';
+
 export const workerPipelines = [
   'matching-dispatch',
   'notifications',
