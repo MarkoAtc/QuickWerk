@@ -452,6 +452,7 @@ export class BookingsService {
         currency: 'EUR',
         capturedAt: completedAt,
         correlationId,
+        requestedService: bookingToComplete.requestedService,
       });
 
       payment = captureResult.payment;

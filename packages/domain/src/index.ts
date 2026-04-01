@@ -171,3 +171,67 @@ export type UploadUrlRecord = {
   filename: string;
   mimeType: string;
 };
+
+// --- Payouts ---
+
+export type PayoutStatus = 'pending' | 'processing' | 'settled' | 'failed';
+
+export type PayoutRecord = {
+  payoutId: string;
+  providerUserId: string;
+  bookingId: string;
+  paymentId: string;
+  amountCents: number;
+  currency: string;
+  status: PayoutStatus;
+  settlementRef: string | null;
+  createdAt: string;
+  settledAt: string | null;
+};
+
+export type PayoutCreatedDomainEvent = {
+  type: 'payout.created';
+  payoutId: string;
+  bookingId: string;
+  providerUserId: string;
+  amountCents: number;
+  currency: string;
+  correlationId: string;
+  occurredAt: string;
+};
+
+export type PayoutCreatedWorkerEnvelope = {
+  event: PayoutCreatedDomainEvent;
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+// --- Invoices ---
+
+export type InvoiceLineItem = {
+  description: string;
+  quantity: number;
+  unitAmountCents: number;
+  totalAmountCents: number;
+};
+
+export type InvoiceStatus = 'draft' | 'issued' | 'void';
+
+export type InvoiceRecord = {
+  invoiceId: string;
+  bookingId: string;
+  customerUserId: string;
+  providerUserId: string;
+  lineItems: InvoiceLineItem[];
+  subtotalCents: number;
+  taxCents: number;
+  totalCents: number;
+  currency: string;
+  status: InvoiceStatus;
+  issuedAt: string | null;
+  createdAt: string;
+  pdfUrl: string | null;
+};

@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import { InMemoryInvoiceRepository } from '../invoices/infrastructure/in-memory-invoice.repository';
+import { InvoicesService } from '../invoices/invoices.service';
+import { InMemoryPayoutRepository } from '../payouts/infrastructure/in-memory-payout.repository';
+import { PayoutsService } from '../payouts/payouts.service';
 import { InMemoryPaymentRepository } from './infrastructure/in-memory-payment.repository';
 import { PaymentsService } from './payments.service';
 
-const createService = () => new PaymentsService(new InMemoryPaymentRepository());
+const createService = () =>
+  new PaymentsService(
+    new InMemoryPaymentRepository(),
+    new PayoutsService(new InMemoryPayoutRepository()),
+    new InvoicesService(new InMemoryInvoiceRepository()),
+  );
 
 describe('PaymentsService', () => {
   it('captures a payment and returns a payment record', async () => {

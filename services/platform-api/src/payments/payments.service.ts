@@ -2,7 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import type { PaymentRecord } from '@quickwerk/domain';
 
+import { InvoicesService } from '../invoices/invoices.service';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
+import { PayoutsService } from '../payouts/payouts.service';
 import { CreatePaymentInput, PAYMENT_REPOSITORY, PaymentRepository } from './domain/payment.repository';
 
 @Injectable()
@@ -10,6 +12,8 @@ export class PaymentsService {
   constructor(
     @Inject(PAYMENT_REPOSITORY)
     private readonly payments: PaymentRepository,
+    private readonly payoutsService: PayoutsService,
+    private readonly invoicesService: InvoicesService,
   ) {}
 
   async capturePaymentForBooking(
@@ -45,6 +49,23 @@ export class PaymentsService {
         replayed: result.replayed,
       },
     });
+
+    await this.payoutsService.createPayoutForCapture(
+      result.payment,
+      input.providerUserId,
+      input.correlationId,
+    );
+
+    await this.invoicesService.generateInvoiceForBooking(
+      {
+        bookingId: input.bookingId,
+        customerUserId: input.customerUserId,
+        providerUserId: input.providerUserId,
+        requestedService: input.requestedService ?? 'General handyman help',
+      },
+      result.payment,
+      input.correlationId,
+    );
 
     return result;
   }
