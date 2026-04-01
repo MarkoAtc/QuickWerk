@@ -17,22 +17,34 @@ export class PaymentsService {
   ): Promise<{ ok: true; payment: PaymentRecord; replayed: boolean }> {
     const result = await this.payments.createPayment(input);
 
+    if (!result.ok) {
+      logStructuredBreadcrumb({
+        event: 'payment.capture.write',
+        correlationId: input.correlationId,
+        status: 'failed',
+        details: {
+          bookingId: input.bookingId,
+          amountCents: input.amountCents,
+          currency: input.currency,
+          reason: result.reason,
+        },
+      });
+
+      throw new Error(`Failed to capture payment for booking ${input.bookingId}: ${result.reason}`);
+    }
+
     logStructuredBreadcrumb({
       event: 'payment.capture.write',
       correlationId: input.correlationId,
       status: 'succeeded',
       details: {
-        paymentId: result.ok ? result.payment.paymentId : 'unknown',
+        paymentId: result.payment.paymentId,
         bookingId: input.bookingId,
         amountCents: input.amountCents,
         currency: input.currency,
-        replayed: result.ok ? result.replayed : false,
+        replayed: result.replayed,
       },
     });
-
-    if (!result.ok) {
-      throw new Error(`Failed to capture payment for booking ${input.bookingId}: ${result.reason}`);
-    }
 
     return result;
   }

@@ -88,13 +88,16 @@ describe('ProvidersService.requestUploadUrl', () => {
       filename: 'cert.jpg',
       mimeType: 'image/jpeg',
     });
+    const after = Date.now();
+
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     const expiresMs = new Date(result.uploadUrl.expiresAt).getTime();
-    const expectedMs = before + 15 * 60 * 1000;
+    const lowerBound = before + 15 * 60 * 1000 - 1000;
+    const upperBound = after + 15 * 60 * 1000 + 1000;
 
-    expect(expiresMs).toBeGreaterThanOrEqual(expectedMs - 1000);
-    expect(expiresMs).toBeLessThanOrEqual(expectedMs + 1000);
+    expect(expiresMs).toBeGreaterThanOrEqual(lowerBound);
+    expect(expiresMs).toBeLessThanOrEqual(upperBound);
   });
 });

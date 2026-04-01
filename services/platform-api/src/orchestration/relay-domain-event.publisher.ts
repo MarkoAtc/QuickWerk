@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
 import { consumeBookingDeclinedAttempt } from '@quickwerk/background-workers';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
@@ -190,5 +190,13 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
         dlq: finalWorkerResult.envelope.dlq,
       },
     });
+  }
+
+  /**
+   * Publish a payment.captured domain event. For now, only log the event
+   * without relay/retry logic since payment events are synchronous.
+   */
+  async publishPaymentCaptured(event: PaymentCapturedDomainEvent): Promise<void> {
+    await this.loggingPublisher.publishPaymentCaptured(event);
   }
 }

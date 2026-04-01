@@ -31,6 +31,7 @@ const createService = () => {
     async publishBookingDeclined(event) {
       declinedEvents.push(event);
     },
+    async publishPaymentCaptured(_event) {},
   };
   const paymentsService = new PaymentsService(new InMemoryPaymentRepository());
 

@@ -469,6 +469,8 @@ export class BookingsService {
       },
     };
 
+    await this.domainEvents.publishPaymentCaptured(paymentCapturedEvent);
+
     logStructuredBreadcrumb({
       event: 'payment.captured.domain-event.emit',
       correlationId,

@@ -24,6 +24,7 @@ const createService = () => {
   const eventPublisher: BookingDomainEventPublisher = {
     async publishBookingAccepted(_event: BookingAcceptedDomainEvent) {},
     async publishBookingDeclined(_event: BookingDeclinedDomainEvent) {},
+    async publishPaymentCaptured(_event) {},
   };
   const paymentsService = new PaymentsService(new InMemoryPaymentRepository());
   return {

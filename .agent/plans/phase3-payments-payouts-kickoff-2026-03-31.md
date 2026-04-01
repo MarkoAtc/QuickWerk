@@ -1,7 +1,7 @@
 # Phase 3 — Payments, Payouts & Document Workflows Kickoff Plan
 
 **Date:** 2026-03-31
-**Status:** PLANNING — Phase 2 complete (PR #9), Phase 3 not yet started
+**Status:** IN PROGRESS — Phase 3 Slice 1 delivered (commit dd81915)
 **Target duration:** 4 weeks
 
 ---
@@ -177,4 +177,4 @@ Slice 1 endpoint targets:
 - `packages/domain` updates for `PaymentRecord`, `PaymentStatus`, `UploadUrlRecord`
 - `packages/api-client` request builders for both
 - Unit tests following existing booking/provider service test patterns
-- Smoke script: `scripts/smoke/phase3-payment-upload-smoke.sh`
+- Smoke script: `scripts/smoke/phase3-slice1-complete-upload-smoke.sh`
