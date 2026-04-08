@@ -94,7 +94,7 @@ describe('BookingsService.completeBooking', () => {
     expect(result.payment.bookingId).toBe(created.booking.bookingId);
     expect(result.payment.status).toBe('captured');
     expect(result.payment.currency).toBe('EUR');
-    expect(result.payment.amountCents).toBe(0);
+    expect(result.payment.amountCents).toBeGreaterThan(0);
 
     // Payment should be retrievable
     const payment = await paymentsService.getPaymentByBookingId(created.booking.bookingId);

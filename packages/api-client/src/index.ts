@@ -288,3 +288,60 @@ export const createGetBookingInvoiceRequest = (sessionToken: string, bookingId: 
   path: bookingInvoiceApiRoutes.get(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
+
+// --- Disputes ---
+
+export const disputeApiRoutes = {
+  submit: (bookingId: string) => `/api/v1/bookings/${bookingId}/dispute`,
+  pending: () => '/api/v1/disputes/pending',
+} as const;
+
+export const createSubmitDisputeRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body: { category: string; description: string },
+) => ({
+  method: 'POST' as const,
+  path: disputeApiRoutes.submit(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
+}) as const;
+
+export const createGetPendingDisputesRequest = (sessionToken: string) => ({
+  method: 'GET' as const,
+  path: disputeApiRoutes.pending(),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Reviews ---
+
+export const bookingReviewApiRoutes = {
+  reviews: (bookingId: string) => `/api/v1/bookings/${bookingId}/reviews`,
+} as const;
+
+export const providerReviewApiRoutes = {
+  list: (providerUserId: string) => `/api/v1/providers/${providerUserId}/reviews`,
+} as const;
+
+export const createSubmitReviewRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body: { rating: number; comment?: string },
+) => ({
+  method: 'POST' as const,
+  path: bookingReviewApiRoutes.reviews(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
+});
+
+export const createGetBookingReviewsRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET' as const,
+  path: bookingReviewApiRoutes.reviews(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+});
+
+export const createGetProviderReviewsRequest = (providerUserId: string) => ({
+  method: 'GET' as const,
+  path: providerReviewApiRoutes.list(providerUserId),
+  headers: {} as Record<string, string>,
+});

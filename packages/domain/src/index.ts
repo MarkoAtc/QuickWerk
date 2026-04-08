@@ -235,3 +235,58 @@ export type InvoiceRecord = {
   createdAt: string;
   pdfUrl: string | null;
 };
+
+// --- Reviews ---
+
+export type ReviewStatus = 'submitted' | 'moderated' | 'removed';
+
+export type ReviewRecord = {
+  reviewId: string;
+  bookingId: string;
+  customerUserId: string;
+  providerUserId: string;
+  authorRole: 'customer' | 'provider';
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string | null;
+  status: ReviewStatus;
+  createdAt: string;
+};
+
+export type ReviewSubmittedDomainEvent = {
+  type: 'review.submitted';
+  reviewId: string;
+  bookingId: string;
+  providerUserId: string;
+  rating: number;
+  correlationId: string;
+  occurredAt: string;
+};
+
+// --- Disputes ---
+
+export type DisputeStatus = 'open' | 'under-review' | 'resolved' | 'closed';
+
+export type DisputeCategory = 'no-show' | 'quality' | 'billing' | 'safety' | 'other';
+
+export type DisputeRecord = {
+  disputeId: string;
+  bookingId: string;
+  reporterUserId: string;
+  reporterRole: 'customer' | 'provider';
+  category: DisputeCategory;
+  description: string;
+  status: DisputeStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+};
+
+export type DisputeSubmittedDomainEvent = {
+  type: 'dispute.submitted';
+  disputeId: string;
+  bookingId: string;
+  reporterUserId: string;
+  category: DisputeCategory;
+  correlationId: string;
+  occurredAt: string;
+};

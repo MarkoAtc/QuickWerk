@@ -76,6 +76,6 @@ import { BookingsService } from './bookings.service';
       useExisting: RelayBookingDomainEventPublisher,
     },
   ],
-  exports: [PostgresRelayAttemptExecutor],
+  exports: [BOOKING_REPOSITORY, PostgresRelayAttemptExecutor],
 })
 export class BookingsModule {}

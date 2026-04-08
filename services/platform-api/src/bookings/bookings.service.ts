@@ -418,6 +418,48 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
+    if (bookingToComplete.status === 'completed') {
+      const replayedPayment = await this.paymentsService.getPaymentByBookingId(bookingId);
+
+      if (!replayedPayment) {
+        logStructuredBreadcrumb({
+          event: 'booking.complete.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'missing-payment-on-replay',
+            bookingId,
+            actorUserId: session.userId,
+          },
+        });
+
+        return {
+          ok: false,
+          statusCode: 500,
+          error: 'Booking is completed but no captured payment was found.',
+        };
+      }
+
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          bookingId: bookingToComplete.bookingId,
+          actorUserId: session.userId,
+          replayed: true,
+          paymentId: replayedPayment.paymentId,
+        },
+      });
+
+      return {
+        ok: true,
+        statusCode: 200,
+        booking: this.serializeRecord(bookingToComplete),
+        payment: replayedPayment,
+      };
+    }
+
     // Validate booking can transition to completed before capturing payment
     if (bookingToComplete.status !== 'accepted') {
       logStructuredBreadcrumb({
@@ -448,7 +490,7 @@ export class BookingsService {
         bookingId,
         customerUserId: bookingToComplete.customerUserId,
         providerUserId: bookingToComplete.providerUserId ?? session.userId,
-        amountCents: 0,
+        amountCents: this.estimatePaymentAmountCents(bookingToComplete.requestedService),
         currency: 'EUR',
         capturedAt: completedAt,
         correlationId,
@@ -614,5 +656,9 @@ export class BookingsService {
       declineReason: record.declineReason,
       statusHistory: record.statusHistory,
     } as const;
+  }
+
+  private estimatePaymentAmountCents(_requestedService: string): number {
+    return 12000;
   }
 }
