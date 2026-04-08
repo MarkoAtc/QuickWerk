@@ -4,14 +4,28 @@ import { randomUUID } from 'node:crypto';
 import type { DisputeRecord, DisputeSubmittedDomainEvent } from '@quickwerk/domain';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
+import { BOOKING_REPOSITORY, BookingRepository } from '../bookings/domain/booking.repository';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { DISPUTE_REPOSITORY, DisputeRepository } from './domain/dispute.repository';
+
+const validDisputeCategories = new Set<DisputeRecord['category']>([
+  'no-show',
+  'quality',
+  'billing',
+  'safety',
+  'other',
+]);
+
+const isDisputeCategory = (value: string): value is DisputeRecord['category'] =>
+  validDisputeCategories.has(value as DisputeRecord['category']);
 
 @Injectable()
 export class DisputesService {
   constructor(
     @Inject(DISPUTE_REPOSITORY)
     private readonly disputes: DisputeRepository,
+    @Inject(BOOKING_REPOSITORY)
+    private readonly bookings: BookingRepository,
   ) {}
 
   async submitDispute(
@@ -20,9 +34,29 @@ export class DisputesService {
     category: string,
     description: string,
     correlationId: string,
-  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 401 | 403; error: string }> {
+  ): Promise<
+    { ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 400 | 401 | 403 | 404 | 500; error: string }
+  > {
     if (session.role !== 'customer' && session.role !== 'provider') {
       return { ok: false, statusCode: 403, error: 'Only customers or providers can submit disputes.' };
+    }
+
+    const booking = await this.bookings.getBooking(bookingId);
+    const isParticipant =
+      session.role === 'customer'
+        ? booking?.customerUserId === session.userId
+        : booking?.providerUserId === session.userId;
+
+    if (!booking || !isParticipant) {
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Not authorized to submit dispute for this booking.',
+      };
+    }
+
+    if (!isDisputeCategory(category)) {
+      return { ok: false, statusCode: 400, error: 'Invalid dispute category.' };
     }
 
     const existing = await this.disputes.findByBookingIdAndReporter(bookingId, session.userId);
@@ -49,7 +83,7 @@ export class DisputesService {
       bookingId,
       reporterUserId: session.userId,
       reporterRole,
-      category: category as DisputeRecord['category'],
+      category,
       description,
       status: 'open',
       createdAt: new Date().toISOString(),
@@ -57,7 +91,16 @@ export class DisputesService {
       resolutionNote: null,
     };
 
-    await this.disputes.save(dispute);
+    const saved = await this.disputes.save(dispute);
+    if (!saved.ok) {
+      logStructuredBreadcrumb({
+        event: 'dispute.submit.write',
+        correlationId,
+        status: 'failed',
+        details: { bookingId, disputeId: dispute.disputeId },
+      });
+      return { ok: false, statusCode: 500, error: 'Failed to persist dispute.' };
+    }
 
     const event: DisputeSubmittedDomainEvent = {
       type: 'dispute.submitted',

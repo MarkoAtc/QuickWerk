@@ -10,6 +10,11 @@ export class InMemoryPayoutRepository implements PayoutRepository {
   private readonly payouts = new Map<string, PayoutRecord>();
 
   async createPayout(input: CreatePayoutInput): Promise<PayoutRecord> {
+    const existing = Array.from(this.payouts.values()).find((p) => p.bookingId === input.bookingId);
+    if (existing) {
+      return existing;
+    }
+
     const payoutId = randomUUID();
     const record: PayoutRecord = {
       payoutId,

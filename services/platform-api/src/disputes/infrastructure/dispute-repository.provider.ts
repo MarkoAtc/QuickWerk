@@ -5,5 +5,5 @@ import { InMemoryDisputeRepository } from './in-memory-dispute.repository';
 
 export const disputeRepositoryProvider: Provider = {
   provide: DISPUTE_REPOSITORY,
-  useClass: InMemoryDisputeRepository,
+  useExisting: InMemoryDisputeRepository,
 };

@@ -18,22 +18,7 @@ export class PayoutsService {
     providerUserId: string,
     correlationId: string,
   ): Promise<PayoutRecord> {
-    const existing = await this.payouts.findPayoutByBookingId(payment.bookingId);
-
-    if (existing) {
-      logStructuredBreadcrumb({
-        event: 'payout.create.write',
-        correlationId,
-        status: 'succeeded',
-        details: {
-          payoutId: existing.payoutId,
-          bookingId: payment.bookingId,
-          replayed: true,
-        },
-      });
-
-      return existing;
-    }
+    const createdAt = new Date().toISOString();
 
     const payout = await this.payouts.createPayout({
       providerUserId,
@@ -41,8 +26,15 @@ export class PayoutsService {
       paymentId: payment.paymentId,
       amountCents: payment.amountCents,
       currency: payment.currency,
-      createdAt: new Date().toISOString(),
+      createdAt,
     });
+
+    const replayed =
+      payout.providerUserId !== providerUserId ||
+      payout.paymentId !== payment.paymentId ||
+      payout.amountCents !== payment.amountCents ||
+      payout.currency !== payment.currency ||
+      payout.createdAt !== createdAt;
 
     const payoutCreatedEvent: PayoutCreatedDomainEvent = {
       type: 'payout.created',
@@ -56,7 +48,7 @@ export class PayoutsService {
     };
 
     logStructuredBreadcrumb({
-      event: 'payout.created.domain-event.emit',
+      event: 'payout.created.domain-event.logged',
       correlationId,
       status: 'succeeded',
       details: {
@@ -75,7 +67,7 @@ export class PayoutsService {
       details: {
         payoutId: payout.payoutId,
         bookingId: payment.bookingId,
-        replayed: false,
+        replayed,
       },
     });
 

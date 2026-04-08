@@ -25,23 +25,6 @@ export class InvoicesService {
     payment: PaymentRecord,
     correlationId: string,
   ): Promise<InvoiceRecord> {
-    const existing = await this.invoices.findInvoiceByBookingId(booking.bookingId);
-
-    if (existing) {
-      logStructuredBreadcrumb({
-        event: 'invoice.generate.write',
-        correlationId,
-        status: 'succeeded',
-        details: {
-          invoiceId: existing.invoiceId,
-          bookingId: booking.bookingId,
-          replayed: true,
-        },
-      });
-
-      return existing;
-    }
-
     const lineItem = {
       description: `Job: ${booking.requestedService}`,
       quantity: 1,
@@ -52,6 +35,7 @@ export class InvoicesService {
     const subtotalCents = payment.amountCents;
     const taxCents = 0;
     const totalCents = subtotalCents + taxCents;
+    const createdAt = new Date().toISOString();
 
     const invoice = await this.invoices.createInvoice({
       bookingId: booking.bookingId,
@@ -62,7 +46,7 @@ export class InvoicesService {
       taxCents,
       totalCents,
       currency: payment.currency,
-      createdAt: new Date().toISOString(),
+      createdAt,
     });
 
     logStructuredBreadcrumb({
@@ -73,7 +57,7 @@ export class InvoicesService {
         invoiceId: invoice.invoiceId,
         bookingId: booking.bookingId,
         totalCents: invoice.totalCents,
-        replayed: false,
+        replayed: invoice.createdAt !== createdAt,
       },
     });
 

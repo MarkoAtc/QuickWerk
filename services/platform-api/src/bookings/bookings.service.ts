@@ -440,6 +440,37 @@ export class BookingsService {
         };
       }
 
+      const replayedPaymentCapturedEvent: PaymentCapturedDomainEvent = {
+        eventName: 'payment.captured',
+        eventId: randomUUID(),
+        occurredAt: replayedPayment.capturedAt,
+        correlationId,
+        replayed: true,
+        payment: {
+          paymentId: replayedPayment.paymentId,
+          bookingId: replayedPayment.bookingId,
+          customerUserId: replayedPayment.customerUserId,
+          providerUserId: replayedPayment.providerUserId,
+          amountCents: replayedPayment.amountCents,
+          currency: replayedPayment.currency,
+          status: 'captured',
+        },
+      };
+
+      await this.domainEvents.publishPaymentCaptured(replayedPaymentCapturedEvent);
+
+      logStructuredBreadcrumb({
+        event: 'payment.captured.domain-event.emit',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          eventId: replayedPaymentCapturedEvent.eventId,
+          paymentId: replayedPayment.paymentId,
+          bookingId,
+          replayed: true,
+        },
+      });
+
       logStructuredBreadcrumb({
         event: 'booking.complete.write',
         correlationId,

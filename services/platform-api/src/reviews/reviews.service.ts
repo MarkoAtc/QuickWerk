@@ -98,7 +98,7 @@ export class ReviewsService {
     };
 
     logStructuredBreadcrumb({
-      event: 'review.submitted.domain-event.emit',
+      event: 'review.submitted.domain-event.logged',
       correlationId,
       status: 'succeeded',
       details: {

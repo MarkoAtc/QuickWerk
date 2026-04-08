@@ -56,16 +56,31 @@ export class PaymentsService {
       input.correlationId,
     );
 
-    await this.invoicesService.generateInvoiceForBooking(
-      {
-        bookingId: input.bookingId,
-        customerUserId: input.customerUserId,
-        providerUserId: input.providerUserId,
-        requestedService: input.requestedService ?? 'General handyman help',
-      },
-      result.payment,
-      input.correlationId,
-    );
+    try {
+      await this.invoicesService.generateInvoiceForBooking(
+        {
+          bookingId: input.bookingId,
+          customerUserId: input.customerUserId,
+          providerUserId: input.providerUserId,
+          requestedService: input.requestedService ?? 'General handyman help',
+        },
+        result.payment,
+        input.correlationId,
+      );
+    } catch (error) {
+      logStructuredBreadcrumb({
+        event: 'payment.capture.post-processing',
+        correlationId: input.correlationId,
+        status: 'failed',
+        details: {
+          paymentId: result.payment.paymentId,
+          bookingId: input.bookingId,
+          reason: 'invoice-generation-failed-after-payout',
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+      throw error;
+    }
 
     return result;
   }

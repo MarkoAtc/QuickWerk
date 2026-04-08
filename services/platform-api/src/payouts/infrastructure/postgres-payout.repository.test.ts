@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PayoutStatus } from '@quickwerk/domain';
+
 import { PostgresClient } from '../../persistence/postgres-client';
 import { PostgresPayoutRepository } from './postgres-payout.repository';
-
-type PayoutStatus = 'pending' | 'processing' | 'settled' | 'failed';
 
 type PayoutState = {
   id: string;
@@ -80,18 +80,37 @@ describe('PostgresPayoutRepository', () => {
       const postgresClient = makePostgresClient(payouts);
       const repository = new PostgresPayoutRepository(postgresClient, postgresConfig);
 
-      // Insert with different amount — ON CONFLICT DO NOTHING returns the existing record
+      // Insert with identical payload — ON CONFLICT DO NOTHING returns the existing record
       const result = await repository.createPayout({
         providerUserId: PROVIDER_ID,
         bookingId: BOOKING_ID,
         paymentId: PAYMENT_ID,
-        amountCents: 9999,
+        amountCents: 5000,
         currency: 'USD',
         createdAt: CREATED_AT,
       });
 
       expect(result.amountCents).toBe(5000);
       expect(result.bookingId).toBe(BOOKING_ID);
+    });
+
+    it('throws when existing payout conflicts with attempted payload', async () => {
+      const existingPayout = makePayoutState({ amountCents: 5000 });
+      const payouts = new Map<string, PayoutState>([[BOOKING_ID, existingPayout]]);
+
+      const postgresClient = makePostgresClient(payouts);
+      const repository = new PostgresPayoutRepository(postgresClient, postgresConfig);
+
+      await expect(
+        repository.createPayout({
+          providerUserId: PROVIDER_ID,
+          bookingId: BOOKING_ID,
+          paymentId: PAYMENT_ID,
+          amountCents: 9999,
+          currency: 'USD',
+          createdAt: CREATED_AT,
+        }),
+      ).rejects.toThrow(`Conflicting payout already exists for booking ${BOOKING_ID}.`);
     });
   });
 
@@ -188,6 +207,7 @@ async function queryAgainstState<T>(
   values: readonly unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
   if (text.includes('INSERT INTO payouts')) {
+    const existedBeforeInsert = payouts.has(values[1] as string);
     const [providerUserId, bookingId, paymentId, amountCents, currency, createdAt] = values as [
       string,
       string,
@@ -212,7 +232,7 @@ async function queryAgainstState<T>(
       });
     }
 
-    return { rows: [], rowCount: payouts.has(bookingId) ? 1 : 0 };
+    return { rows: [], rowCount: existedBeforeInsert ? 0 : 1 };
   }
 
   if (text.includes('WHERE booking_id = $1::uuid')) {

@@ -9,6 +9,9 @@ const PLATFORM_API_BASE_URL =
     ? (process.env['NEXT_PUBLIC_PLATFORM_API_BASE_URL'] ?? 'http://127.0.0.1:3101')
     : 'http://127.0.0.1:3101';
 
+const disputeCategories = new Set<DisputeRecord['category']>(['no-show', 'quality', 'billing', 'safety', 'other']);
+const disputeStatuses = new Set<DisputeRecord['status']>(['open', 'under-review', 'resolved', 'closed']);
+
 const isDisputeRecord = (value: unknown): value is DisputeRecord => {
   if (!value || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
@@ -19,9 +22,13 @@ const isDisputeRecord = (value: unknown): value is DisputeRecord => {
     typeof record['reporterUserId'] === 'string' &&
     (record['reporterRole'] === 'customer' || record['reporterRole'] === 'provider') &&
     typeof record['category'] === 'string' &&
+    disputeCategories.has(record['category'] as DisputeRecord['category']) &&
     typeof record['description'] === 'string' &&
     typeof record['status'] === 'string' &&
-    typeof record['createdAt'] === 'string'
+    disputeStatuses.has(record['status'] as DisputeRecord['status']) &&
+    typeof record['createdAt'] === 'string' &&
+    (record['resolvedAt'] === null || typeof record['resolvedAt'] === 'string') &&
+    (record['resolutionNote'] === null || typeof record['resolutionNote'] === 'string')
   );
 };
 

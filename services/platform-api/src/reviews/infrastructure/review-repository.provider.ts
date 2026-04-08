@@ -5,5 +5,5 @@ import { InMemoryReviewRepository } from './in-memory-review.repository';
 
 export const reviewRepositoryProvider: Provider = {
   provide: REVIEW_REPOSITORY,
-  useClass: InMemoryReviewRepository,
+  useExisting: InMemoryReviewRepository,
 };

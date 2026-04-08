@@ -71,22 +71,22 @@ export class PostgresPayoutRepository implements PayoutRepository {
       throw new Error(`Payout for booking ${input.bookingId} was not found after write.`);
     }
 
+    if (
+      row.provider_user_id !== input.providerUserId ||
+      row.payment_id !== input.paymentId ||
+      row.amount_cents !== input.amountCents ||
+      row.currency !== input.currency
+    ) {
+      throw new Error(`Conflicting payout already exists for booking ${input.bookingId}.`);
+    }
+
     return mapPayoutRow(row);
   }
 
   async findPayoutById(payoutId: string): Promise<PayoutRecord | null> {
     const result = await this.postgresClient.query<PayoutRow>(
       this.postgresConfig,
-      `SELECT id::text,
-              provider_user_id::text,
-              booking_id::text,
-              payment_id::text,
-              amount_cents,
-              currency,
-              status,
-              settlement_ref,
-              created_at,
-              settled_at
+      `SELECT ${PAYOUT_SELECT_COLUMNS}
        FROM payouts
        WHERE id = $1::uuid
        LIMIT 1`,
@@ -101,16 +101,7 @@ export class PostgresPayoutRepository implements PayoutRepository {
   async findPayoutsByProviderUserId(providerUserId: string): Promise<PayoutRecord[]> {
     const result = await this.postgresClient.query<PayoutRow>(
       this.postgresConfig,
-      `SELECT id::text,
-              provider_user_id::text,
-              booking_id::text,
-              payment_id::text,
-              amount_cents,
-              currency,
-              status,
-              settlement_ref,
-              created_at,
-              settled_at
+      `SELECT ${PAYOUT_SELECT_COLUMNS}
        FROM payouts
        WHERE provider_user_id = $1::uuid
        ORDER BY created_at DESC`,
@@ -123,16 +114,7 @@ export class PostgresPayoutRepository implements PayoutRepository {
   async findPayoutByBookingId(bookingId: string): Promise<PayoutRecord | null> {
     const result = await this.postgresClient.query<PayoutRow>(
       this.postgresConfig,
-      `SELECT id::text,
-              provider_user_id::text,
-              booking_id::text,
-              payment_id::text,
-              amount_cents,
-              currency,
-              status,
-              settlement_ref,
-              created_at,
-              settled_at
+      `SELECT ${PAYOUT_SELECT_COLUMNS}
        FROM payouts
        WHERE booking_id = $1::uuid
        LIMIT 1`,

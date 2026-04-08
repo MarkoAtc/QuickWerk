@@ -10,6 +10,11 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
   private readonly invoices = new Map<string, InvoiceRecord>();
 
   async createInvoice(input: CreateInvoiceInput): Promise<InvoiceRecord> {
+    const existing = Array.from(this.invoices.values()).find((i) => i.bookingId === input.bookingId);
+    if (existing) {
+      return existing;
+    }
+
     const invoiceId = randomUUID();
     const issuedAt = new Date().toISOString();
 
@@ -18,7 +23,7 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
       bookingId: input.bookingId,
       customerUserId: input.customerUserId,
       providerUserId: input.providerUserId,
-      lineItems: input.lineItems,
+      lineItems: input.lineItems.map((item) => ({ ...item })),
       subtotalCents: input.subtotalCents,
       taxCents: input.taxCents,
       totalCents: input.totalCents,

@@ -1,9 +1,46 @@
 import { describe, expect, it } from 'vitest';
 
+import { InMemoryBookingRepository } from '../bookings/infrastructure/in-memory-booking.repository';
 import { InMemoryDisputeRepository } from './infrastructure/in-memory-dispute.repository';
 import { DisputesService } from './disputes.service';
 
-const createService = () => new DisputesService(new InMemoryDisputeRepository());
+const createService = () => {
+  const bookings = new InMemoryBookingRepository();
+  const disputes = new InMemoryDisputeRepository();
+  return { bookings, service: new DisputesService(disputes, bookings) };
+};
+
+const createCompletedBooking = async (
+  bookings: InMemoryBookingRepository,
+  customerUserId: string,
+  providerUserId: string,
+) => {
+  const created = await bookings.createSubmittedBooking({
+    createdAt: new Date().toISOString(),
+    customerUserId,
+    requestedService: 'Plumbing',
+    actorRole: 'customer',
+    actorUserId: customerUserId,
+  });
+
+  await bookings.acceptSubmittedBooking({
+    bookingId: created.bookingId,
+    acceptedAt: new Date().toISOString(),
+    providerUserId,
+    actorRole: 'provider',
+    actorUserId: providerUserId,
+  });
+
+  await bookings.completeAcceptedBooking({
+    bookingId: created.bookingId,
+    completedAt: new Date().toISOString(),
+    providerUserId,
+    actorRole: 'provider',
+    actorUserId: providerUserId,
+  });
+
+  return created;
+};
 
 const makeCustomerSession = (userId = 'customer-1') => {
   const createdAt = new Date();
@@ -44,17 +81,24 @@ const makeOperatorSession = (userId = 'operator-1') => {
 describe('DisputesService', () => {
   describe('submitDispute', () => {
     it('customer submits dispute: disputeId present, status open, reporterRole customer', async () => {
-      const service = createService();
+      const { service, bookings } = createService();
       const session = makeCustomerSession();
+      const booking = await createCompletedBooking(bookings, session.userId, 'provider-1');
 
-      const result = await service.submitDispute(session, 'booking-1', 'quality', 'Work was incomplete.', 'corr-1');
+      const result = await service.submitDispute(
+        session,
+        booking.bookingId,
+        'quality',
+        'Work was incomplete.',
+        'corr-1',
+      );
 
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.dispute.disputeId).toBeDefined();
         expect(result.dispute.status).toBe('open');
         expect(result.dispute.reporterRole).toBe('customer');
-        expect(result.dispute.bookingId).toBe('booking-1');
+        expect(result.dispute.bookingId).toBe(booking.bookingId);
         expect(result.dispute.category).toBe('quality');
         expect(result.dispute.resolvedAt).toBeNull();
         expect(result.dispute.resolutionNote).toBeNull();
@@ -62,10 +106,17 @@ describe('DisputesService', () => {
     });
 
     it('provider submits dispute: reporterRole is provider', async () => {
-      const service = createService();
+      const { service, bookings } = createService();
       const session = makeProviderSession();
+      const booking = await createCompletedBooking(bookings, 'customer-1', session.userId);
 
-      const result = await service.submitDispute(session, 'booking-2', 'billing', 'Payment was incorrect.', 'corr-2');
+      const result = await service.submitDispute(
+        session,
+        booking.bookingId,
+        'billing',
+        'Payment was incorrect.',
+        'corr-2',
+      );
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -75,11 +126,24 @@ describe('DisputesService', () => {
     });
 
     it('is idempotent: same (bookingId, reporterUserId) twice returns same disputeId', async () => {
-      const service = createService();
+      const { service, bookings } = createService();
       const session = makeCustomerSession();
+      const booking = await createCompletedBooking(bookings, session.userId, 'provider-1');
 
-      const first = await service.submitDispute(session, 'booking-3', 'no-show', 'Provider did not arrive.', 'corr-3a');
-      const second = await service.submitDispute(session, 'booking-3', 'no-show', 'Provider did not arrive.', 'corr-3b');
+      const first = await service.submitDispute(
+        session,
+        booking.bookingId,
+        'no-show',
+        'Provider did not arrive.',
+        'corr-3a',
+      );
+      const second = await service.submitDispute(
+        session,
+        booking.bookingId,
+        'no-show',
+        'Provider did not arrive.',
+        'corr-3b',
+      );
 
       expect(first.ok).toBe(true);
       expect(second.ok).toBe(true);
@@ -91,11 +155,12 @@ describe('DisputesService', () => {
 
   describe('getPendingDisputes', () => {
     it('returns open disputes for operator session', async () => {
-      const service = createService();
+      const { service, bookings } = createService();
       const customer = makeCustomerSession();
       const operator = makeOperatorSession();
+      const booking = await createCompletedBooking(bookings, customer.userId, 'provider-1');
 
-      await service.submitDispute(customer, 'booking-4', 'safety', 'Safety concern.', 'corr-4');
+      await service.submitDispute(customer, booking.bookingId, 'safety', 'Safety concern.', 'corr-4');
 
       const result = await service.getPendingDisputes(operator);
 
@@ -108,7 +173,7 @@ describe('DisputesService', () => {
     });
 
     it('returns 403 for non-operator session', async () => {
-      const service = createService();
+      const { service } = createService();
       const customer = makeCustomerSession();
 
       const result = await service.getPendingDisputes(customer);
@@ -120,7 +185,7 @@ describe('DisputesService', () => {
     });
 
     it('returns empty array when no open disputes exist', async () => {
-      const service = createService();
+      const { service } = createService();
       const operator = makeOperatorSession();
 
       const result = await service.getPendingDisputes(operator);

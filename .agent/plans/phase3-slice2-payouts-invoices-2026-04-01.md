@@ -110,7 +110,7 @@ interface PayoutRepository {
 - `getPayoutById(session, payoutId): Promise<PayoutRecord>`
 
 **File: `src/payouts/payouts.controller.ts`**
-```
+```text
 GET /api/v1/providers/me/payouts      → provider session required
 GET /api/v1/providers/me/payouts/:id  → provider session required
 ```
@@ -185,7 +185,7 @@ interface InvoiceRepository {
   - Session must be customer OR provider on the booking
 
 **File: `src/invoices/invoices.controller.ts`**
-```
+```text
 GET /api/v1/bookings/:id/invoice  → customer or provider session required
 ```
 
@@ -276,7 +276,7 @@ corepack pnpm --filter @quickwerk/background-workers test
 
 ## Commit Convention
 
-```
+```text
 feat(phase3-slice2): payout record creation + invoice/receipt endpoint (Milestones 3c + 3d)
 ```
 
