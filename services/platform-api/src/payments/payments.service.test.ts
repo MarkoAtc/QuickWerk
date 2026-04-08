@@ -25,6 +25,7 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     });
 
     expect(payment.paymentId).toBeDefined();
@@ -45,6 +46,7 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     };
 
     const first = await service.capturePaymentForBooking(input);
@@ -71,10 +73,28 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     });
 
     const found = await service.getPaymentByBookingId('booking-3');
     expect(found).not.toBeNull();
     expect(found?.paymentId).toBe(created.paymentId);
+  });
+
+  it('throws when requestedService is blank', async () => {
+    const service = createService();
+
+    await expect(
+      service.capturePaymentForBooking({
+        bookingId: 'booking-4',
+        customerUserId: 'customer-1',
+        providerUserId: 'provider-1',
+        amountCents: 0,
+        currency: 'EUR',
+        capturedAt: '2026-03-31T12:00:00.000Z',
+        correlationId: 'corr-test',
+        requestedService: '   ',
+      }),
+    ).rejects.toThrow('missing requestedService');
   });
 });

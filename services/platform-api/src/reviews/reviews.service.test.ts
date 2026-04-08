@@ -17,6 +17,8 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
   };
 };
 
+const createOperatorSession = (userId = 'operator-1'): AuthSession => createSession('operator', userId);
+
 const createService = () => {
   const bookings = new InMemoryBookingRepository();
   const reviews = new InMemoryReviewRepository();
@@ -111,6 +113,43 @@ describe('ReviewsService', () => {
       { rating: 4, comment: 'Not mine' },
       'corr-review-3',
     );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.statusCode).toBe(403);
+    }
+  });
+
+  it('returns 403 for operator when reading booking reviews', async () => {
+    const { service, bookings } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+    const operator = createOperatorSession();
+
+    const created = await bookings.createSubmittedBooking({
+      createdAt: new Date().toISOString(),
+      customerUserId: customer.userId,
+      requestedService: 'Painting',
+      actorRole: 'customer',
+      actorUserId: customer.userId,
+    });
+
+    await bookings.acceptSubmittedBooking({
+      bookingId: created.bookingId,
+      acceptedAt: new Date().toISOString(),
+      providerUserId: provider.userId,
+      actorRole: 'provider',
+      actorUserId: provider.userId,
+    });
+
+    await bookings.completeAcceptedBooking({
+      bookingId: created.bookingId,
+      completedAt: new Date().toISOString(),
+      providerUserId: provider.userId,
+      actorRole: 'provider',
+      actorUserId: provider.userId,
+    });
+
+    const result = await service.getBookingReviews(operator, created.bookingId);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.statusCode).toBe(403);

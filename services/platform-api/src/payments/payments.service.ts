@@ -19,6 +19,22 @@ export class PaymentsService {
   async capturePaymentForBooking(
     input: CreatePaymentInput,
   ): Promise<{ ok: true; payment: PaymentRecord; replayed: boolean }> {
+    const requestedService = input.requestedService.trim();
+    if (!requestedService) {
+      logStructuredBreadcrumb({
+        event: 'payment.capture.write',
+        correlationId: input.correlationId,
+        status: 'failed',
+        details: {
+          bookingId: input.bookingId,
+          amountCents: input.amountCents,
+          currency: input.currency,
+          reason: 'missing-requested-service',
+        },
+      });
+      throw new Error(`Failed to capture payment for booking ${input.bookingId}: missing requestedService`);
+    }
+
     const result = await this.payments.createPayment(input);
 
     if (!result.ok) {
@@ -62,7 +78,7 @@ export class PaymentsService {
           bookingId: input.bookingId,
           customerUserId: input.customerUserId,
           providerUserId: input.providerUserId,
-          requestedService: input.requestedService ?? 'General handyman help',
+          requestedService,
         },
         result.payment,
         input.correlationId,

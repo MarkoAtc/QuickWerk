@@ -127,6 +127,10 @@ export class ReviewsService {
     session: AuthSession,
     bookingId: string,
   ): Promise<{ ok: true; reviews: ReviewRecord[] } | { ok: false; statusCode: 403 | 404; error: string }> {
+    if (session.role !== 'customer' && session.role !== 'provider') {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
     const booking = await this.bookings.getBooking(bookingId);
     if (!booking) {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };

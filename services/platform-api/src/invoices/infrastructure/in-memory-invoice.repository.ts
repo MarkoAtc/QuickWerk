@@ -8,11 +8,13 @@ import { CreateInvoiceInput, InvoiceRepository } from '../domain/invoice.reposit
 @Injectable()
 export class InMemoryInvoiceRepository implements InvoiceRepository {
   private readonly invoices = new Map<string, InvoiceRecord>();
+  private readonly invoiceIdByBookingId = new Map<string, string>();
 
   async createInvoice(input: CreateInvoiceInput): Promise<InvoiceRecord> {
-    const existing = Array.from(this.invoices.values()).find((i) => i.bookingId === input.bookingId);
+    const existingInvoiceId = this.invoiceIdByBookingId.get(input.bookingId);
+    const existing = existingInvoiceId ? this.invoices.get(existingInvoiceId) : undefined;
     if (existing) {
-      return existing;
+      return this.cloneRecord(existing);
     }
 
     const invoiceId = randomUUID();
@@ -34,16 +36,26 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
       pdfUrl: null,
     };
 
-    this.invoices.set(invoiceId, record);
-    return record;
+    this.invoices.set(invoiceId, this.cloneRecord(record));
+    this.invoiceIdByBookingId.set(input.bookingId, invoiceId);
+    return this.cloneRecord(record);
   }
 
   async findInvoiceByBookingId(bookingId: string): Promise<InvoiceRecord | null> {
-    const found = Array.from(this.invoices.values()).find((i) => i.bookingId === bookingId);
-    return found ?? null;
+    const invoiceId = this.invoiceIdByBookingId.get(bookingId);
+    const found = invoiceId ? this.invoices.get(invoiceId) : undefined;
+    return found ? this.cloneRecord(found) : null;
   }
 
   async findInvoiceById(invoiceId: string): Promise<InvoiceRecord | null> {
-    return this.invoices.get(invoiceId) ?? null;
+    const found = this.invoices.get(invoiceId);
+    return found ? this.cloneRecord(found) : null;
+  }
+
+  private cloneRecord(record: InvoiceRecord): InvoiceRecord {
+    return {
+      ...record,
+      lineItems: record.lineItems.map((item) => ({ ...item })),
+    };
   }
 }
