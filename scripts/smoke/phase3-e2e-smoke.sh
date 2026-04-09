@@ -198,6 +198,9 @@ echo ""
 echo "=== Section 4: Milestone 3c — Payouts ==="
 payouts_res=$(req GET /api/v1/providers/me/payouts "$PROVIDER_TOKEN") || true
 assert "payout list returns 200 body" "$payouts_res" '"payoutId"'
+assert "payout list response includes payouts array" "$payouts_res" '"payouts"'
+assert "payout list response includes nextCursor field" "$payouts_res" '"nextCursor"'
+assert "payout list response includes default limit=20" "$payouts_res" '"limit":20'
 assert "payout status is pending" "$payouts_res" '"pending"'
 assert "payout has amountCents" "$payouts_res" '"amountCents"'
 
@@ -211,6 +214,11 @@ else
   echo "  [FAIL] payout list amountCents expected > 0, got: ${PAYOUT_AMOUNT:-empty}"
   FAIL=$((FAIL + 1))
 fi
+
+payouts_limit_1_res=$(req GET "/api/v1/providers/me/payouts?limit=1" "$PROVIDER_TOKEN") || true
+assert "payout list with limit=1 includes bounded limit field" "$payouts_limit_1_res" '"limit":1'
+assert "payout list with limit=1 includes payouts array" "$payouts_limit_1_res" '"payouts"'
+assert "payout list with limit=1 includes nextCursor field" "$payouts_limit_1_res" '"nextCursor"'
 
 payout_res=$(req GET "/api/v1/providers/me/payouts/${PAYOUT_ID}" "$PROVIDER_TOKEN") || true
 assert "payout detail returns payoutId" "$payout_res" '"payoutId"'
