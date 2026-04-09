@@ -1,8 +1,20 @@
-import { createGetPendingDisputesRequest } from '@quickwerk/api-client';
+import {
+  createCloseDisputeRequest,
+  createGetPendingDisputesRequest,
+  createResolveDisputeRequest,
+  createStartReviewDisputeRequest,
+} from '@quickwerk/api-client';
 import type { DisputeRecord } from '@quickwerk/domain';
 
-import type { DisputeQueueState } from './dispute-queue-state';
-import { createEmptyState, createErrorState, createLoadedState } from './dispute-queue-state';
+import type { DisputeQueueActionType, DisputeQueueState } from './dispute-queue-state';
+import {
+  applyDisputeTransitionSuccess,
+  beginOptimisticDisputeTransition,
+  createEmptyState,
+  createErrorState,
+  createLoadedState,
+  rollbackDisputeTransition,
+} from './dispute-queue-state';
 
 const PLATFORM_API_BASE_URL =
   typeof process !== 'undefined'
@@ -57,4 +69,80 @@ export async function loadDisputeQueueState(
   } catch (error) {
     return createErrorState(error instanceof Error ? error.message : 'Unknown error loading dispute queue.');
   }
+}
+
+type TransitionResult =
+  | { dispute: DisputeRecord; errorMessage?: undefined }
+  | { dispute?: undefined; errorMessage: string };
+
+async function requestDisputeTransition(
+  sessionToken: string,
+  disputeId: string,
+  actionType: DisputeQueueActionType,
+  options: { resolutionNote?: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<TransitionResult> {
+  const request =
+    actionType === 'startReview'
+      ? createStartReviewDisputeRequest(sessionToken, disputeId)
+      : actionType === 'resolve'
+        ? createResolveDisputeRequest(sessionToken, disputeId, {
+            resolutionNote: options.resolutionNote ?? '',
+          })
+        : createCloseDisputeRequest(sessionToken, disputeId, {
+            resolutionNote: options.resolutionNote,
+          });
+
+  try {
+    const response = await fetchImpl(`${PLATFORM_API_BASE_URL}${request.path}`, {
+      method: request.method,
+      headers: request.headers,
+      body: 'body' in request ? JSON.stringify(request.body) : undefined,
+    });
+
+    if (!response.ok) {
+      const errorPayload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const message =
+        typeof errorPayload['message'] === 'string'
+          ? errorPayload['message']
+          : `Dispute transition failed: HTTP ${response.status}.`;
+      return { errorMessage: message };
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!isDisputeRecord(payload)) {
+      return { errorMessage: 'Unexpected response format for dispute transition.' };
+    }
+
+    return { dispute: payload };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error during dispute transition.',
+    };
+  }
+}
+
+export async function submitDisputeTransition(
+  currentState: DisputeQueueState,
+  sessionToken: string,
+  disputeId: string,
+  actionType: DisputeQueueActionType,
+  options: { resolutionNote?: string } = {},
+  fetchImpl: typeof fetch = fetch,
+): Promise<DisputeQueueState> {
+  const optimisticState = beginOptimisticDisputeTransition(currentState, disputeId, actionType);
+
+  const result = await requestDisputeTransition(sessionToken, disputeId, actionType, options, fetchImpl);
+
+  if (!result.dispute) {
+    return rollbackDisputeTransition(
+      optimisticState,
+      currentState,
+      disputeId,
+      actionType,
+      result.errorMessage ?? 'Dispute transition failed.',
+    );
+  }
+
+  return applyDisputeTransitionSuccess(optimisticState, result.dispute, actionType);
 }

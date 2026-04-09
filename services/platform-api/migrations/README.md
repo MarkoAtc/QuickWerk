@@ -23,6 +23,13 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
 - `0005_operator_role_support.sql`
   - expands `users.role` constraint to include dedicated `operator`
   - preserves existing `customer`/`provider` rows while enabling operator session migration
+- `0006_booking_declined_support.sql`
+  - adds `declined` status support to bookings and booking status history
+  - adds nullable `decline_reason` with backward-safe constraint widening
+- `0007_disputes_lifecycle.sql`
+  - creates durable `disputes` table with lifecycle states (`open`, `under-review`, `resolved`, `closed`)
+  - enforces one dispute per (`booking_id`, `reporter_user_id`) and resolution field consistency checks
+  - adds indexes for operator queue and reporter/booking lookups
 
 ## How to run later (manual)
 
@@ -34,6 +41,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005_operator_role_support.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0006_booking_declined_support.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0007_disputes_lifecycle.sql
 ```
 
 Rollback is currently manual (early scaffold phase).
