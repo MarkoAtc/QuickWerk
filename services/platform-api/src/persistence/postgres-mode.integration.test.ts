@@ -164,5 +164,29 @@ describe.runIf(shouldRun && Boolean(databaseUrl))('postgres mode integration (op
     if (!resolveTransition.ok) return;
     expect(resolveTransition.dispute.status).toBe('resolved');
     expect(resolveTransition.dispute.resolutionNote).toContain('integration test');
+
+    const replayResolve = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['under-review'],
+      nextStatus: 'resolved',
+      resolvedAt: new Date().toISOString(),
+      resolutionNote: 'Resolved in integration test.',
+    });
+    expect(replayResolve.ok).toBe(true);
+    if (replayResolve.ok) {
+      expect(replayResolve.replayed).toBe(true);
+      expect(replayResolve.dispute.status).toBe('resolved');
+    }
+
+    const invalidClose = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['under-review'],
+      nextStatus: 'closed',
+    });
+    expect(invalidClose.ok).toBe(false);
+    if (!invalidClose.ok && invalidClose.reason === 'transition-conflict') {
+      expect(invalidClose.reason).toBe('transition-conflict');
+      expect(invalidClose.currentStatus).toBe('resolved');
+    }
   });
 });

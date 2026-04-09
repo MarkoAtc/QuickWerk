@@ -32,6 +32,11 @@ export class InMemoryDisputeRepository implements DisputeRepository {
     return Array.from(this.disputes.values()).filter((d) => d.status === status);
   }
 
+  async findByStatuses(statuses: DisputeStatus[]): Promise<DisputeRecord[]> {
+    const allowed = new Set(statuses);
+    return Array.from(this.disputes.values()).filter((d) => allowed.has(d.status));
+  }
+
   async transitionStatus(input: {
     disputeId: string;
     allowedCurrentStatuses: DisputeStatus[];

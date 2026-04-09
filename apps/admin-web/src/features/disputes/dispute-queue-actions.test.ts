@@ -82,6 +82,7 @@ describe('dispute-queue-actions', () => {
     const current = createLoadedState([makeDispute('d-1')]);
 
     const fetchImpl = async (_url: string, init?: RequestInit) => {
+      expect(_url).toBe('http://127.0.0.1:3101/api/v1/disputes/d-1/resolve');
       expect(init?.method).toBe('PATCH');
       return {
         ok: true,
@@ -110,12 +111,15 @@ describe('dispute-queue-actions', () => {
   it('rolls back optimistic transition when API call fails', async () => {
     const current = createLoadedState([makeDispute('d-1')]);
 
-    const fetchImpl = async () =>
-      ({
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      expect(_url).toBe('http://127.0.0.1:3101/api/v1/disputes/d-1/start-review');
+      expect(init?.method).toBe('PATCH');
+      return {
         ok: false,
         status: 409,
         json: async () => ({ message: 'Transition conflict' }),
-      }) as Response;
+      } as Response;
+    };
 
     const next = await submitDisputeTransition(
       current,

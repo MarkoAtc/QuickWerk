@@ -347,7 +347,7 @@ export const createStartReviewDisputeRequest = (sessionToken: string, disputeId:
 export const createResolveDisputeRequest = (
   sessionToken: string,
   disputeId: string,
-  body: { resolutionNote: string },
+  body: { resolutionNote?: string },
 ) => ({
   method: 'PATCH' as const,
   path: disputeApiRoutes.resolve(disputeId),

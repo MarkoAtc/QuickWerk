@@ -151,14 +151,7 @@ export class DisputesService {
       return { ok: false, statusCode: 403, error: 'Only operators can view pending disputes.' };
     }
 
-    const [openDisputes, underReviewDisputes] = await Promise.all([
-      this.disputes.findByStatus('open'),
-      this.disputes.findByStatus('under-review'),
-    ]);
-
-    const disputes = [...openDisputes, ...underReviewDisputes].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+    const disputes = await this.disputes.findByStatuses(['open', 'under-review']);
 
     return { ok: true, disputes };
   }
@@ -174,9 +167,13 @@ export class DisputesService {
   async resolveDispute(
     session: AuthSession,
     disputeId: string,
-    resolutionNote: string,
+    resolutionNote: unknown,
     correlationId: string,
   ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 400 | 403 | 404 | 409; error: string }> {
+    if (typeof resolutionNote !== 'string') {
+      return { ok: false, statusCode: 400, error: 'resolutionNote must be a string and non-empty.' };
+    }
+
     const note = resolutionNote.trim();
     if (!note) {
       return { ok: false, statusCode: 400, error: 'resolutionNote is required to resolve a dispute.' };
@@ -188,10 +185,14 @@ export class DisputesService {
   async closeDispute(
     session: AuthSession,
     disputeId: string,
-    resolutionNote: string | undefined,
+    resolutionNote: unknown,
     correlationId: string,
-  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 403 | 404 | 409; error: string }> {
-    const note = resolutionNote?.trim();
+  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 400 | 403 | 404 | 409; error: string }> {
+    if (resolutionNote !== undefined && resolutionNote !== null && typeof resolutionNote !== 'string') {
+      return { ok: false, statusCode: 400, error: 'resolutionNote must be a string when provided.' };
+    }
+
+    const note = typeof resolutionNote === 'string' ? resolutionNote.trim() : null;
     return this.transitionDispute(session, disputeId, 'close', note && note.length > 0 ? note : null, correlationId);
   }
 

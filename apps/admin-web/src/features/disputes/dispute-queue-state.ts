@@ -1,6 +1,10 @@
-import type { DisputeRecord } from '@quickwerk/domain';
+import {
+  disputeOperatorActionTransitions,
+  type DisputeOperatorActionType,
+  type DisputeRecord,
+} from '@quickwerk/domain';
 
-export type DisputeQueueActionType = 'startReview' | 'resolve' | 'close';
+export type DisputeQueueActionType = DisputeOperatorActionType;
 
 export type DisputeQueueAction =
   | { status: 'idle' }
@@ -32,20 +36,13 @@ export const beginOptimisticDisputeTransition = (
     return state;
   }
 
+  const nextStatus = disputeOperatorActionTransitions[actionType];
   const disputes = state.disputes.map((dispute) => {
     if (dispute.disputeId !== disputeId) {
       return dispute;
     }
 
-    if (actionType === 'startReview') {
-      return { ...dispute, status: 'under-review' as const };
-    }
-
-    if (actionType === 'resolve') {
-      return { ...dispute, status: 'resolved' as const };
-    }
-
-    return { ...dispute, status: 'closed' as const };
+    return { ...dispute, status: nextStatus };
   });
 
   return {

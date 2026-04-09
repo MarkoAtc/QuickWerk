@@ -21,11 +21,11 @@ type SubmitDisputeBody = {
 };
 
 type ResolveDisputeBody = {
-  resolutionNote?: string;
+  resolutionNote?: unknown;
 };
 
 type CloseDisputeBody = {
-  resolutionNote?: string;
+  resolutionNote?: unknown;
 };
 
 @Controller('api/v1/bookings')
@@ -180,7 +180,7 @@ export class DisputesOperatorController {
       throw new HttpException('Sign-in required to review disputes.', 401);
     }
 
-    const result = await this.disputesService.resolveDispute(session, disputeId, body?.resolutionNote ?? '', correlationId);
+    const result = await this.disputesService.resolveDispute(session, disputeId, body?.resolutionNote, correlationId);
     if (!result.ok) {
       throw new HttpException(result.error, result.statusCode);
     }

@@ -24,7 +24,7 @@ export class PostgresDisputeRepository implements DisputeRepository {
   ) {}
 
   async save(dispute: DisputeRecord): Promise<{ ok: boolean }> {
-    await this.postgresClient.query(
+    const result = await this.postgresClient.query(
       this.postgresConfig,
       `INSERT INTO disputes (
         id,
@@ -63,7 +63,7 @@ export class PostgresDisputeRepository implements DisputeRepository {
       ],
     );
 
-    return { ok: true };
+    return { ok: (result.rowCount ?? 0) > 0 };
   }
 
   async findById(disputeId: string): Promise<DisputeRecord | null> {
@@ -161,6 +161,28 @@ export class PostgresDisputeRepository implements DisputeRepository {
        WHERE status = $1
        ORDER BY created_at DESC`,
       [status],
+    );
+
+    return result.rows.map(mapDisputeRow);
+  }
+
+  async findByStatuses(statuses: DisputeStatus[]): Promise<DisputeRecord[]> {
+    const result = await this.postgresClient.query<DisputeRow>(
+      this.postgresConfig,
+      `SELECT id::text,
+              booking_id::text,
+              reporter_user_id::text,
+              reporter_role,
+              category,
+              description,
+              status,
+              created_at,
+              resolved_at,
+              resolution_note
+       FROM disputes
+       WHERE status = ANY($1::text[])
+       ORDER BY created_at ASC`,
+      [statuses],
     );
 
     return result.rows.map(mapDisputeRow);

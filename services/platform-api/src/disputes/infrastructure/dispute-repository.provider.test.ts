@@ -6,6 +6,20 @@ import { InMemoryDisputeRepository } from './in-memory-dispute.repository';
 import { PostgresDisputeRepository } from './postgres-dispute.repository';
 
 describe('resolveDisputeRepository', () => {
+  it('throws when postgres mode is selected without DATABASE_URL', () => {
+    const inMemoryRepository = new InMemoryDisputeRepository();
+
+    expect(() =>
+      resolveDisputeRepository({
+        inMemoryRepository,
+        postgresClient: new PostgresClient(),
+        env: {
+          PERSISTENCE_MODE: 'postgres',
+        },
+      }),
+    ).toThrowError(/DATABASE_URL/i);
+  });
+
   it('returns in-memory repository by default', () => {
     const inMemoryRepository = new InMemoryDisputeRepository();
 

@@ -15,6 +15,7 @@ export interface DisputeRepository {
   findByBookingIdAndReporter(bookingId: string, reporterUserId: string): Promise<DisputeRecord | null>;
   findByReporterUserId(reporterUserId: string): Promise<DisputeRecord[]>;
   findByStatus(status: DisputeStatus): Promise<DisputeRecord[]>;
+  findByStatuses(statuses: DisputeStatus[]): Promise<DisputeRecord[]>;
   transitionStatus(input: {
     disputeId: string;
     allowedCurrentStatuses: DisputeStatus[];

@@ -165,7 +165,11 @@ describe('DisputesService', () => {
         throw new Error('Expected dispute submit to succeed in setup.');
       }
 
-      await service.startReviewDispute(operator, submitted.dispute.disputeId, 'corr-4a');
+      const review = await service.startReviewDispute(operator, submitted.dispute.disputeId, 'corr-4a');
+      expect(review.ok).toBe(true);
+      if (!review.ok) {
+        throw new Error('Expected review transition to succeed in setup.');
+      }
 
       const result = await service.getPendingDisputes(operator);
 
@@ -174,6 +178,7 @@ describe('DisputesService', () => {
         expect(Array.isArray(result.disputes)).toBe(true);
         expect(result.disputes.length).toBeGreaterThan(0);
         expect(result.disputes.every((d) => d.status === 'open' || d.status === 'under-review')).toBe(true);
+        expect(result.disputes.some((d) => d.status === 'under-review')).toBe(true);
       }
     });
 
@@ -264,6 +269,38 @@ describe('DisputesService', () => {
       }
     });
 
+    it('rejects invalid resolution note payloads', async () => {
+      const { service, bookings } = createService();
+      const customer = makeCustomerSession();
+      const operator = makeOperatorSession();
+      const booking = await createCompletedBooking(bookings, customer.userId, 'provider-1');
+
+      const submitted = await service.submitDispute(customer, booking.bookingId, 'billing', 'Bad payload', 'corr-6c');
+      expect(submitted.ok).toBe(true);
+      if (!submitted.ok) return;
+
+      const review = await service.startReviewDispute(operator, submitted.dispute.disputeId, 'corr-6d');
+      expect(review.ok).toBe(true);
+      if (!review.ok) return;
+
+      const invalidResolve = await service.resolveDispute(
+        operator,
+        submitted.dispute.disputeId,
+        1234,
+        'corr-6e',
+      );
+      expect(invalidResolve.ok).toBe(false);
+      if (!invalidResolve.ok) {
+        expect(invalidResolve.statusCode).toBe(400);
+      }
+
+      const invalidClose = await service.closeDispute(operator, submitted.dispute.disputeId, { note: 'x' }, 'corr-6f');
+      expect(invalidClose.ok).toBe(false);
+      if (!invalidClose.ok) {
+        expect(invalidClose.statusCode).toBe(400);
+      }
+    });
+
     it('is idempotent for repeated operator actions on already transitioned records', async () => {
       const { service, bookings } = createService();
       const customer = makeCustomerSession();
@@ -282,6 +319,39 @@ describe('DisputesService', () => {
       if (!first.ok || !second.ok) return;
       expect(first.dispute.status).toBe('under-review');
       expect(second.dispute.status).toBe('under-review');
+    });
+
+    it('supports close after review while enforcing operator-only access', async () => {
+      const { service, bookings } = createService();
+      const customer = makeCustomerSession();
+      const operator = makeOperatorSession();
+      const booking = await createCompletedBooking(bookings, customer.userId, 'provider-1');
+
+      const submitted = await service.submitDispute(customer, booking.bookingId, 'quality', 'Close flow', 'corr-8');
+      expect(submitted.ok).toBe(true);
+      if (!submitted.ok) return;
+
+      const review = await service.startReviewDispute(operator, submitted.dispute.disputeId, 'corr-8a');
+      expect(review.ok).toBe(true);
+      if (!review.ok) return;
+
+      const forbiddenClose = await service.closeDispute(customer, submitted.dispute.disputeId, 'not allowed', 'corr-8b');
+      expect(forbiddenClose.ok).toBe(false);
+      if (!forbiddenClose.ok) {
+        expect(forbiddenClose.statusCode).toBe(403);
+      }
+
+      const closed = await service.closeDispute(operator, submitted.dispute.disputeId, 'Closed after review.', 'corr-8c');
+      expect(closed.ok).toBe(true);
+      if (!closed.ok) return;
+      expect(closed.dispute.status).toBe('closed');
+      expect(closed.dispute.resolvedAt).not.toBeNull();
+      expect(closed.dispute.resolutionNote).toContain('Closed after review');
+
+      const pending = await service.getPendingDisputes(operator);
+      expect(pending.ok).toBe(true);
+      if (!pending.ok) return;
+      expect(pending.disputes.some((d) => d.disputeId === submitted.dispute.disputeId)).toBe(false);
     });
   });
 });
