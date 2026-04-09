@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BookingDomainEventPublisher } from '../orchestration/domain-event.publisher';
+import { InMemoryInvoiceRepository } from '../invoices/infrastructure/in-memory-invoice.repository';
+import { InvoicesService } from '../invoices/invoices.service';
 import { InMemoryPaymentRepository } from '../payments/infrastructure/in-memory-payment.repository';
 import { PaymentsService } from '../payments/payments.service';
+import { InMemoryPayoutRepository } from '../payouts/infrastructure/in-memory-payout.repository';
+import { PayoutsService } from '../payouts/payouts.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
@@ -26,7 +30,11 @@ const createService = () => {
     async publishBookingDeclined(_event: BookingDeclinedDomainEvent) {},
     async publishPaymentCaptured(_event) {},
   };
-  const paymentsService = new PaymentsService(new InMemoryPaymentRepository());
+  const paymentsService = new PaymentsService(
+    new InMemoryPaymentRepository(),
+    new PayoutsService(new InMemoryPayoutRepository()),
+    new InvoicesService(new InMemoryInvoiceRepository()),
+  );
   return {
     service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
     paymentsService,
@@ -86,7 +94,7 @@ describe('BookingsService.completeBooking', () => {
     expect(result.payment.bookingId).toBe(created.booking.bookingId);
     expect(result.payment.status).toBe('captured');
     expect(result.payment.currency).toBe('EUR');
-    expect(result.payment.amountCents).toBe(0);
+    expect(result.payment.amountCents).toBeGreaterThan(0);
 
     // Payment should be retrievable
     const payment = await paymentsService.getPaymentByBookingId(created.booking.bookingId);

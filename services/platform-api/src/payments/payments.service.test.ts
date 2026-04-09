@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import { InMemoryInvoiceRepository } from '../invoices/infrastructure/in-memory-invoice.repository';
+import { InvoicesService } from '../invoices/invoices.service';
+import { InMemoryPayoutRepository } from '../payouts/infrastructure/in-memory-payout.repository';
+import { PayoutsService } from '../payouts/payouts.service';
 import { InMemoryPaymentRepository } from './infrastructure/in-memory-payment.repository';
 import { PaymentsService } from './payments.service';
 
-const createService = () => new PaymentsService(new InMemoryPaymentRepository());
+const createService = () =>
+  new PaymentsService(
+    new InMemoryPaymentRepository(),
+    new PayoutsService(new InMemoryPayoutRepository()),
+    new InvoicesService(new InMemoryInvoiceRepository()),
+  );
 
 describe('PaymentsService', () => {
   it('captures a payment and returns a payment record', async () => {
@@ -16,6 +25,7 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     });
 
     expect(payment.paymentId).toBeDefined();
@@ -36,6 +46,7 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     };
 
     const first = await service.capturePaymentForBooking(input);
@@ -62,10 +73,28 @@ describe('PaymentsService', () => {
       currency: 'EUR',
       capturedAt: '2026-03-31T12:00:00.000Z',
       correlationId: 'corr-test',
+      requestedService: 'Plumbing',
     });
 
     const found = await service.getPaymentByBookingId('booking-3');
     expect(found).not.toBeNull();
     expect(found?.paymentId).toBe(created.paymentId);
+  });
+
+  it('throws when requestedService is blank', async () => {
+    const service = createService();
+
+    await expect(
+      service.capturePaymentForBooking({
+        bookingId: 'booking-4',
+        customerUserId: 'customer-1',
+        providerUserId: 'provider-1',
+        amountCents: 0,
+        currency: 'EUR',
+        capturedAt: '2026-03-31T12:00:00.000Z',
+        correlationId: 'corr-test',
+        requestedService: '   ',
+      }),
+    ).rejects.toThrow('missing requestedService');
   });
 });

@@ -8,6 +8,7 @@ export type CreatePaymentInput = {
   currency: string;
   capturedAt: string;
   correlationId: string;
+  requestedService: string;
 };
 
 /**

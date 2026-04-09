@@ -418,6 +418,79 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
+    if (bookingToComplete.status === 'completed') {
+      const replayedPayment = await this.paymentsService.getPaymentByBookingId(bookingId);
+
+      if (!replayedPayment) {
+        logStructuredBreadcrumb({
+          event: 'booking.complete.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'missing-payment-on-replay',
+            bookingId,
+            actorUserId: session.userId,
+          },
+        });
+
+        return {
+          ok: false,
+          statusCode: 500,
+          error: 'Booking is completed but no captured payment was found.',
+        };
+      }
+
+      const replayedPaymentCapturedEvent: PaymentCapturedDomainEvent = {
+        eventName: 'payment.captured',
+        eventId: randomUUID(),
+        occurredAt: replayedPayment.capturedAt,
+        correlationId,
+        replayed: true,
+        payment: {
+          paymentId: replayedPayment.paymentId,
+          bookingId: replayedPayment.bookingId,
+          customerUserId: replayedPayment.customerUserId,
+          providerUserId: replayedPayment.providerUserId,
+          amountCents: replayedPayment.amountCents,
+          currency: replayedPayment.currency,
+          status: 'captured',
+        },
+      };
+
+      await this.domainEvents.publishPaymentCaptured(replayedPaymentCapturedEvent);
+
+      logStructuredBreadcrumb({
+        event: 'payment.captured.domain-event.emit',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          eventId: replayedPaymentCapturedEvent.eventId,
+          paymentId: replayedPayment.paymentId,
+          bookingId,
+          replayed: true,
+        },
+      });
+
+      logStructuredBreadcrumb({
+        event: 'booking.complete.write',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          bookingId: bookingToComplete.bookingId,
+          actorUserId: session.userId,
+          replayed: true,
+          paymentId: replayedPayment.paymentId,
+        },
+      });
+
+      return {
+        ok: true,
+        statusCode: 200,
+        booking: this.serializeRecord(bookingToComplete),
+        payment: replayedPayment,
+      };
+    }
+
     // Validate booking can transition to completed before capturing payment
     if (bookingToComplete.status !== 'accepted') {
       logStructuredBreadcrumb({
@@ -448,10 +521,11 @@ export class BookingsService {
         bookingId,
         customerUserId: bookingToComplete.customerUserId,
         providerUserId: bookingToComplete.providerUserId ?? session.userId,
-        amountCents: 0,
+        amountCents: this.estimatePaymentAmountCents(bookingToComplete.requestedService),
         currency: 'EUR',
         capturedAt: completedAt,
         correlationId,
+        requestedService: bookingToComplete.requestedService,
       });
 
       payment = captureResult.payment;
@@ -613,5 +687,9 @@ export class BookingsService {
       declineReason: record.declineReason,
       statusHistory: record.statusHistory,
     } as const;
+  }
+
+  private estimatePaymentAmountCents(_requestedService: string): number {
+    return 12000;
   }
 }

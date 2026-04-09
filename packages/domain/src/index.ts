@@ -171,3 +171,122 @@ export type UploadUrlRecord = {
   filename: string;
   mimeType: string;
 };
+
+// --- Payouts ---
+
+export type PayoutStatus = 'pending' | 'processing' | 'settled' | 'failed';
+
+export type PayoutRecord = {
+  payoutId: string;
+  providerUserId: string;
+  bookingId: string;
+  paymentId: string;
+  amountCents: number;
+  currency: string;
+  status: PayoutStatus;
+  settlementRef: string | null;
+  createdAt: string;
+  settledAt: string | null;
+};
+
+export type PayoutCreatedDomainEvent = {
+  type: 'payout.created';
+  payoutId: string;
+  bookingId: string;
+  providerUserId: string;
+  amountCents: number;
+  currency: string;
+  correlationId: string;
+  occurredAt: string;
+};
+
+export type PayoutCreatedWorkerEnvelope = {
+  event: PayoutCreatedDomainEvent;
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+// --- Invoices ---
+
+export type InvoiceLineItem = {
+  description: string;
+  quantity: number;
+  unitAmountCents: number;
+  totalAmountCents: number;
+};
+
+export type InvoiceStatus = 'draft' | 'issued' | 'void';
+
+export type InvoiceRecord = {
+  invoiceId: string;
+  bookingId: string;
+  customerUserId: string;
+  providerUserId: string;
+  lineItems: InvoiceLineItem[];
+  subtotalCents: number;
+  taxCents: number;
+  totalCents: number;
+  currency: string;
+  status: InvoiceStatus;
+  issuedAt: string | null;
+  createdAt: string;
+  pdfUrl: string | null;
+};
+
+// --- Reviews ---
+
+export type ReviewStatus = 'submitted' | 'moderated' | 'removed';
+
+export type ReviewRecord = {
+  reviewId: string;
+  bookingId: string;
+  customerUserId: string;
+  providerUserId: string;
+  authorRole: 'customer' | 'provider';
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string | null;
+  status: ReviewStatus;
+  createdAt: string;
+};
+
+export type ReviewSubmittedDomainEvent = {
+  type: 'review.submitted';
+  reviewId: string;
+  bookingId: string;
+  providerUserId: string;
+  rating: number;
+  correlationId: string;
+  occurredAt: string;
+};
+
+// --- Disputes ---
+
+export type DisputeStatus = 'open' | 'under-review' | 'resolved' | 'closed';
+
+export type DisputeCategory = 'no-show' | 'quality' | 'billing' | 'safety' | 'other';
+
+export type DisputeRecord = {
+  disputeId: string;
+  bookingId: string;
+  reporterUserId: string;
+  reporterRole: 'customer' | 'provider';
+  category: DisputeCategory;
+  description: string;
+  status: DisputeStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+};
+
+export type DisputeSubmittedDomainEvent = {
+  type: 'dispute.submitted';
+  disputeId: string;
+  bookingId: string;
+  reporterUserId: string;
+  category: DisputeCategory;
+  correlationId: string;
+  occurredAt: string;
+};

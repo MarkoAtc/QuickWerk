@@ -257,3 +257,113 @@ export const createRequestUploadUrlRequest = (sessionToken: string, body: Reques
   headers: { authorization: `Bearer ${sessionToken}` },
   body,
 }) as const;
+
+// --- Provider Payouts ---
+
+export const providerPayoutApiRoutes = {
+  list: () => '/api/v1/providers/me/payouts',
+  detail: (payoutId: string) => `/api/v1/providers/me/payouts/${payoutId}`,
+} as const;
+
+export type ListMyPayoutsQuery = {
+  cursor?: string;
+  limit?: number;
+};
+
+export const createGetMyPayoutsRequest = (sessionToken: string, query?: ListMyPayoutsQuery) => {
+  const params = new URLSearchParams();
+
+  if (query?.cursor?.trim()) {
+    params.set('cursor', query.cursor.trim());
+  }
+
+  if (Number.isFinite(query?.limit) && (query?.limit as number) > 0) {
+    params.set('limit', String(Math.floor(query?.limit as number)));
+  }
+
+  const encodedParams = params.toString();
+  const path = encodedParams
+    ? `${providerPayoutApiRoutes.list()}?${encodedParams}`
+    : providerPayoutApiRoutes.list();
+
+  return {
+    method: 'GET',
+    path,
+    headers: { authorization: `Bearer ${sessionToken}` },
+  } as const;
+};
+
+export const createGetPayoutDetailRequest = (sessionToken: string, payoutId: string) => ({
+  method: 'GET',
+  path: providerPayoutApiRoutes.detail(payoutId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Booking Invoices ---
+
+export const bookingInvoiceApiRoutes = {
+  get: (bookingId: string) => `/api/v1/bookings/${bookingId}/invoice`,
+} as const;
+
+export const createGetBookingInvoiceRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingInvoiceApiRoutes.get(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Disputes ---
+
+export const disputeApiRoutes = {
+  submit: (bookingId: string) => `/api/v1/bookings/${bookingId}/dispute`,
+  pending: () => '/api/v1/disputes/pending',
+} as const;
+
+export const createSubmitDisputeRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body: { category: string; description: string },
+) => ({
+  method: 'POST' as const,
+  path: disputeApiRoutes.submit(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
+}) as const;
+
+export const createGetPendingDisputesRequest = (sessionToken: string) => ({
+  method: 'GET' as const,
+  path: disputeApiRoutes.pending(),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+// --- Reviews ---
+
+export const bookingReviewApiRoutes = {
+  reviews: (bookingId: string) => `/api/v1/bookings/${bookingId}/reviews`,
+} as const;
+
+export const providerReviewApiRoutes = {
+  list: (providerUserId: string) => `/api/v1/providers/${providerUserId}/reviews`,
+} as const;
+
+export const createSubmitReviewRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body: { rating: number; comment?: string },
+) => ({
+  method: 'POST' as const,
+  path: bookingReviewApiRoutes.reviews(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
+});
+
+export const createGetBookingReviewsRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET' as const,
+  path: bookingReviewApiRoutes.reviews(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+});
+
+export const createGetProviderReviewsRequest = (providerUserId: string) => ({
+  method: 'GET' as const,
+  path: providerReviewApiRoutes.list(providerUserId),
+  headers: {} as Record<string, string>,
+});
