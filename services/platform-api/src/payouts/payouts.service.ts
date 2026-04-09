@@ -4,7 +4,12 @@ import type { PaymentRecord, PayoutCreatedDomainEvent, PayoutRecord } from '@qui
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
-import { PAYOUT_REPOSITORY, PayoutRepository } from './domain/payout.repository';
+import {
+  ListPayoutsPageInput,
+  ListPayoutsPageResult,
+  PAYOUT_REPOSITORY,
+  PayoutRepository,
+} from './domain/payout.repository';
 
 @Injectable()
 export class PayoutsService {
@@ -74,8 +79,11 @@ export class PayoutsService {
     return payout;
   }
 
-  async getMyPayouts(session: AuthSession): Promise<PayoutRecord[]> {
-    return this.payouts.findPayoutsByProviderUserId(session.userId);
+  async getMyPayouts(
+    session: AuthSession,
+    input?: ListPayoutsPageInput,
+  ): Promise<ListPayoutsPageResult> {
+    return this.payouts.findPayoutsByProviderUserId(session.userId, input);
   }
 
   async getPayoutById(

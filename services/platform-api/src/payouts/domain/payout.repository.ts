@@ -9,10 +9,24 @@ export type CreatePayoutInput = {
   createdAt: string;
 };
 
+export type ListPayoutsPageInput = {
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type ListPayoutsPageResult = {
+  payouts: PayoutRecord[];
+  nextCursor: string | null;
+  limit: number;
+};
+
 export interface PayoutRepository {
   createPayout(input: CreatePayoutInput): Promise<PayoutRecord>;
   findPayoutById(payoutId: string): Promise<PayoutRecord | null>;
-  findPayoutsByProviderUserId(providerUserId: string): Promise<PayoutRecord[]>;
+  findPayoutsByProviderUserId(
+    providerUserId: string,
+    input?: ListPayoutsPageInput,
+  ): Promise<ListPayoutsPageResult>;
   findPayoutByBookingId(bookingId: string): Promise<PayoutRecord | null>;
 }
 

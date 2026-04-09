@@ -79,16 +79,54 @@ describe('PayoutsService', () => {
       await service.createPayoutForCapture(makePayment({ bookingId: 'b-1', paymentId: 'p-1' }), 'provider-1', 'c1');
       await service.createPayoutForCapture(makePayment({ bookingId: 'b-2', paymentId: 'p-2', providerUserId: 'provider-2' }), 'provider-2', 'c2');
 
-      const payouts = await service.getMyPayouts(makeProviderSession('provider-1'));
+      const page = await service.getMyPayouts(makeProviderSession('provider-1'));
 
-      expect(payouts).toHaveLength(1);
-      expect(payouts[0].providerUserId).toBe('provider-1');
+      expect(page.payouts).toHaveLength(1);
+      expect(page.payouts[0].providerUserId).toBe('provider-1');
+      expect(page.nextCursor).toBeNull();
+      expect(page.limit).toBe(20);
     });
 
     it('returns empty array when provider has no payouts', async () => {
       const service = createService();
-      const payouts = await service.getMyPayouts(makeProviderSession('provider-no-payouts'));
-      expect(payouts).toHaveLength(0);
+      const page = await service.getMyPayouts(makeProviderSession('provider-no-payouts'));
+      expect(page.payouts).toHaveLength(0);
+      expect(page.nextCursor).toBeNull();
+      expect(page.limit).toBe(20);
+    });
+
+    it('supports bounded cursor pagination', async () => {
+      const service = createService();
+      await service.createPayoutForCapture(
+        makePayment({
+          bookingId: 'b-1',
+          paymentId: 'p-1',
+        }),
+        'provider-1',
+        'c1',
+      );
+      await service.createPayoutForCapture(
+        makePayment({
+          bookingId: 'b-2',
+          paymentId: 'p-2',
+        }),
+        'provider-1',
+        'c2',
+      );
+
+      const firstPage = await service.getMyPayouts(makeProviderSession('provider-1'), { limit: 1 });
+      expect(firstPage.payouts).toHaveLength(1);
+      expect(firstPage.nextCursor).toBeTruthy();
+      expect(firstPage.limit).toBe(1);
+
+      const secondPage = await service.getMyPayouts(makeProviderSession('provider-1'), {
+        limit: 1,
+        cursor: firstPage.nextCursor ?? undefined,
+      });
+
+      expect(secondPage.payouts).toHaveLength(1);
+      expect(secondPage.payouts[0]?.payoutId).not.toBe(firstPage.payouts[0]?.payoutId);
+      expect(secondPage.nextCursor).toBeNull();
     });
   });
 

@@ -1,4 +1,14 @@
-import { Controller, Get, Headers, HttpException, Param, Req, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Headers,
+  HttpException,
+  Param,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
 import { extractBearerToken } from '../http/auth-header';
@@ -14,6 +24,14 @@ type RequestLike = {
 type ResponseLike = {
   setHeader(name: string, value: string): void;
 };
+
+type ListMyPayoutsQuery = {
+  cursor?: string;
+  limit?: string;
+};
+
+const defaultPayoutPageLimit = 20;
+const maxPayoutPageLimit = 100;
 
 @Controller('api/v1/providers/me/payouts')
 export class PayoutsController {
@@ -31,6 +49,7 @@ export class PayoutsController {
     @Req() request: RequestLike,
     @Res({ passthrough: true }) response: ResponseLike,
     @Headers('authorization') authorizationHeader: string | undefined,
+    @Query() query: ListMyPayoutsQuery,
   ) {
     const token = extractBearerToken(authorizationHeader);
     const correlationId = resolveCorrelationId({
@@ -53,7 +72,10 @@ export class PayoutsController {
       throw new HttpException('Only providers can view payouts.', 403);
     }
 
-    return this.payoutsService.getMyPayouts(session);
+    return this.payoutsService.getMyPayouts(session, {
+      cursor: query.cursor ?? null,
+      limit: parsePayoutLimit(query.limit, defaultPayoutPageLimit, maxPayoutPageLimit),
+    });
   }
 
   /**
@@ -96,4 +118,21 @@ export class PayoutsController {
 
     return result.payout;
   }
+}
+
+function parsePayoutLimit(
+  rawLimit: string | undefined,
+  fallback: number,
+  max: number,
+): number {
+  if (rawLimit == null || rawLimit.trim() === '') {
+    return fallback;
+  }
+
+  const parsed = Number(rawLimit);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new BadRequestException('Query parameter "limit" must be a positive integer.');
+  }
+
+  return Math.min(parsed, max);
 }

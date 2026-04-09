@@ -265,11 +265,33 @@ export const providerPayoutApiRoutes = {
   detail: (payoutId: string) => `/api/v1/providers/me/payouts/${payoutId}`,
 } as const;
 
-export const createGetMyPayoutsRequest = (sessionToken: string) => ({
-  method: 'GET',
-  path: providerPayoutApiRoutes.list(),
-  headers: { authorization: `Bearer ${sessionToken}` },
-}) as const;
+export type ListMyPayoutsQuery = {
+  cursor?: string;
+  limit?: number;
+};
+
+export const createGetMyPayoutsRequest = (sessionToken: string, query?: ListMyPayoutsQuery) => {
+  const params = new URLSearchParams();
+
+  if (query?.cursor?.trim()) {
+    params.set('cursor', query.cursor.trim());
+  }
+
+  if (Number.isFinite(query?.limit) && (query?.limit as number) > 0) {
+    params.set('limit', String(Math.floor(query?.limit as number)));
+  }
+
+  const encodedParams = params.toString();
+  const path = encodedParams
+    ? `${providerPayoutApiRoutes.list()}?${encodedParams}`
+    : providerPayoutApiRoutes.list();
+
+  return {
+    method: 'GET',
+    path,
+    headers: { authorization: `Bearer ${sessionToken}` },
+  } as const;
+};
 
 export const createGetPayoutDetailRequest = (sessionToken: string, payoutId: string) => ({
   method: 'GET',

@@ -1,6 +1,11 @@
 import type { PayoutRecord, PayoutStatus } from '@quickwerk/domain';
 
-import { CreatePayoutInput, PayoutRepository } from '../domain/payout.repository';
+import {
+  CreatePayoutInput,
+  ListPayoutsPageInput,
+  ListPayoutsPageResult,
+  PayoutRepository,
+} from '../domain/payout.repository';
 import { PostgresClient } from '../../persistence/postgres-client';
 import { PostgresPersistenceConfig } from '../../persistence/persistence-mode';
 
@@ -29,6 +34,9 @@ const PAYOUT_SELECT_COLUMNS = `
   created_at,
   settled_at
 `;
+
+const defaultPayoutPageLimit = 20;
+const maxPayoutPageLimit = 100;
 
 export class PostgresPayoutRepository implements PayoutRepository {
   constructor(
@@ -98,17 +106,45 @@ export class PostgresPayoutRepository implements PayoutRepository {
     return row ? mapPayoutRow(row) : null;
   }
 
-  async findPayoutsByProviderUserId(providerUserId: string): Promise<PayoutRecord[]> {
+  async findPayoutsByProviderUserId(
+    providerUserId: string,
+    input?: ListPayoutsPageInput,
+  ): Promise<ListPayoutsPageResult> {
+    const limit = clampPayoutPageLimit(input?.limit, defaultPayoutPageLimit, maxPayoutPageLimit);
+    const cursor = input?.cursor ?? null;
+
     const result = await this.postgresClient.query<PayoutRow>(
       this.postgresConfig,
       `SELECT ${PAYOUT_SELECT_COLUMNS}
        FROM payouts
        WHERE provider_user_id = $1::uuid
-       ORDER BY created_at DESC`,
-      [providerUserId],
+         AND (
+           $2::uuid IS NULL
+           OR (
+             created_at,
+             id
+           ) < (
+             SELECT created_at, id
+             FROM payouts
+             WHERE id = $2::uuid
+               AND provider_user_id = $1::uuid
+           )
+         )
+       ORDER BY created_at DESC, id DESC
+       LIMIT $3`,
+      [providerUserId, cursor, limit + 1],
     );
 
-    return result.rows.map(mapPayoutRow);
+    const hasMore = result.rows.length > limit;
+    const rows = hasMore ? result.rows.slice(0, limit) : result.rows;
+    const payouts = rows.map(mapPayoutRow);
+    const nextCursor = hasMore ? payouts[payouts.length - 1]?.payoutId ?? null : null;
+
+    return {
+      payouts,
+      nextCursor,
+      limit,
+    };
   }
 
   async findPayoutByBookingId(bookingId: string): Promise<PayoutRecord | null> {
@@ -144,4 +180,17 @@ function mapPayoutRow(row: PayoutRow): PayoutRecord {
 
 function toIsoString(value: Date | string): string {
   return new Date(value).toISOString();
+}
+
+function clampPayoutPageLimit(value: number | undefined, fallback: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  const bounded = Math.floor(value as number);
+  if (bounded <= 0) {
+    return fallback;
+  }
+
+  return Math.min(bounded, max);
 }

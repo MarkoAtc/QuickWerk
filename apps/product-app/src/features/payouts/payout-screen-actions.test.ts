@@ -12,7 +12,38 @@ const mockFetch =
     } as Response);
 
 describe('loadMyPayouts', () => {
-  it('returns loaded state with payouts on success', async () => {
+  it('returns loaded state with payouts on paginated response success', async () => {
+    const responseBody = {
+      payouts: [
+        {
+          payoutId: 'payout-1',
+          providerUserId: 'provider-1',
+          bookingId: 'booking-1',
+          paymentId: 'payment-1',
+          amountCents: 5000,
+          currency: 'EUR',
+          status: 'pending',
+          settlementRef: null,
+          createdAt: '2026-04-01T12:00:00.000Z',
+          settledAt: null,
+        },
+      ],
+      nextCursor: null,
+      limit: 20,
+    };
+
+    const fetch = mockFetch(200, responseBody);
+    const result = await loadMyPayouts('provider-token', fetch);
+
+    expect(result.status).toBe('loaded');
+    if (result.status === 'loaded') {
+      expect(result.payouts).toHaveLength(1);
+      expect(result.payouts[0].payoutId).toBe('payout-1');
+      expect(result.payouts[0].amountCents).toBe(5000);
+    }
+  });
+
+  it('accepts legacy array response for backward compatibility', async () => {
     const payouts = [
       {
         payoutId: 'payout-1',

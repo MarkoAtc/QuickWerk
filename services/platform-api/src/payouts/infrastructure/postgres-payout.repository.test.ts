@@ -140,27 +140,67 @@ describe('PostgresPayoutRepository', () => {
   });
 
   describe('findPayoutsByProviderUserId', () => {
-    it('returns an array of payouts for the provider', async () => {
+    it('returns a bounded page of payouts for the provider', async () => {
       const payout = makePayoutState();
       const payouts = new Map<string, PayoutState>([[BOOKING_ID, payout]]);
 
       const postgresClient = makePostgresClient(payouts);
       const repository = new PostgresPayoutRepository(postgresClient, postgresConfig);
 
-      const result = await repository.findPayoutsByProviderUserId(PROVIDER_ID);
+      const result = await repository.findPayoutsByProviderUserId(PROVIDER_ID, { limit: 20 });
 
-      expect(Array.isArray(result)).toBe(true);
-      expect(result).toHaveLength(1);
-      expect(result[0]?.providerUserId).toBe(PROVIDER_ID);
+      expect(Array.isArray(result.payouts)).toBe(true);
+      expect(result.payouts).toHaveLength(1);
+      expect(result.payouts[0]?.providerUserId).toBe(PROVIDER_ID);
+      expect(result.nextCursor).toBeNull();
+      expect(result.limit).toBe(20);
     });
 
-    it('returns empty array when no payouts found', async () => {
+    it('returns empty page when no payouts found', async () => {
       const postgresClient = makePostgresClient(new Map());
       const repository = new PostgresPayoutRepository(postgresClient, postgresConfig);
 
       const result = await repository.findPayoutsByProviderUserId(PROVIDER_ID);
 
-      expect(result).toEqual([]);
+      expect(result.payouts).toEqual([]);
+      expect(result.nextCursor).toBeNull();
+      expect(result.limit).toBe(20);
+    });
+
+    it('returns nextCursor and supports cursor pagination', async () => {
+      const olderPayout = makePayoutState({
+        id: '44444444-4444-4444-8444-444444444441',
+        bookingId: '22222222-2222-4222-8222-222222222221',
+        createdAt: '2026-03-20T12:00:00.000Z',
+      });
+      const newerPayout = makePayoutState({
+        id: '44444444-4444-4444-8444-444444444442',
+        bookingId: '22222222-2222-4222-8222-222222222223',
+        createdAt: '2026-03-20T13:00:00.000Z',
+      });
+
+      const payouts = new Map<string, PayoutState>([
+        [olderPayout.bookingId, olderPayout],
+        [newerPayout.bookingId, newerPayout],
+      ]);
+
+      const postgresClient = makePostgresClient(payouts);
+      const repository = new PostgresPayoutRepository(postgresClient, postgresConfig);
+
+      const firstPage = await repository.findPayoutsByProviderUserId(PROVIDER_ID, { limit: 1 });
+      expect(firstPage.payouts).toHaveLength(1);
+      expect(firstPage.payouts[0]?.payoutId).toBe(newerPayout.id);
+      expect(firstPage.nextCursor).toBe(newerPayout.id);
+      expect(firstPage.limit).toBe(1);
+
+      const secondPage = await repository.findPayoutsByProviderUserId(PROVIDER_ID, {
+        limit: 1,
+        cursor: firstPage.nextCursor,
+      });
+      expect(secondPage.payouts).toHaveLength(1);
+      expect(secondPage.payouts[0]?.payoutId).toBe(olderPayout.id);
+      expect(secondPage.nextCursor).toBeNull();
+      expect(secondPage.limit).toBe(1);
     });
   });
 
@@ -265,8 +305,24 @@ async function queryAgainstState<T>(
 
   if (text.includes('WHERE provider_user_id = $1::uuid')) {
     const providerUserId = values[0] as string;
-    const rows = Array.from(payouts.values())
+    const cursor = (values[1] as string | null | undefined) ?? null;
+    const limit = values[2] as number;
+    const allRows = Array.from(payouts.values())
       .filter((p) => p.providerUserId === providerUserId)
+      .sort((left, right) => {
+        const createdAtDiff = Date.parse(right.createdAt) - Date.parse(left.createdAt);
+        if (createdAtDiff !== 0) {
+          return createdAtDiff;
+        }
+
+        return right.id.localeCompare(left.id);
+      });
+
+    const cursorIndex = cursor == null ? -1 : allRows.findIndex((p) => p.id === cursor);
+    const startIndex = cursorIndex < 0 ? (cursor == null ? 0 : allRows.length) : cursorIndex + 1;
+
+    const rows = allRows
+      .slice(startIndex, startIndex + limit)
       .map(toRow);
 
     return { rows: rows as T[], rowCount: rows.length };

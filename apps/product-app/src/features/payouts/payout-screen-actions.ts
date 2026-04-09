@@ -4,6 +4,14 @@ import type { PayoutRecord } from '@quickwerk/domain';
 import { runtimeConfig } from '../../shared/runtime-config';
 import type { PayoutLoadState } from './payout-state';
 
+type PayoutListResponse =
+  | PayoutRecord[]
+  | {
+      payouts: PayoutRecord[];
+      nextCursor: string | null;
+      limit: number;
+    };
+
 export async function loadMyPayouts(
   sessionToken: string,
   fetchImpl: typeof fetch = fetch,
@@ -20,7 +28,8 @@ export async function loadMyPayouts(
       return { status: 'error', message: `Failed to load payouts: HTTP ${response.status}.` };
     }
 
-    const payouts = (await response.json()) as PayoutRecord[];
+    const responseBody = (await response.json()) as PayoutListResponse;
+    const payouts = Array.isArray(responseBody) ? responseBody : responseBody.payouts;
 
     return { status: 'loaded', payouts };
   } catch (error) {
