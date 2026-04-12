@@ -231,10 +231,13 @@ export class PostgresDisputeRepository implements DisputeRepository {
       const nextResolutionNote = input.resolutionNote === undefined ? current.resolution_note : input.resolutionNote;
 
       if (current.status === input.nextStatus) {
-        const resolvedAtMatches = nextResolvedAt === current.resolved_at;
-        const resolutionNoteMatches = nextResolutionNote === current.resolution_note;
+        // Normalize resolutionNote for comparison (treat null and undefined as equivalent)
+        const normalizedInputNote = nextResolutionNote === undefined ? null : nextResolutionNote;
+        const normalizedCurrentNote = current.resolution_note === undefined ? null : current.resolution_note;
+        const resolutionNoteMatches = normalizedInputNote === normalizedCurrentNote;
 
-        if (resolvedAtMatches && resolutionNoteMatches) {
+        // Ignore resolvedAt differences (server-assigned), check only resolutionNote intent
+        if (resolutionNoteMatches) {
           return { ok: true, dispute: mapDisputeRow(current), replayed: true } as const;
         }
 
