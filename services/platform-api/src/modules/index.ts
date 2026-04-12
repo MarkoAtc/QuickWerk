@@ -1,1 +1,1 @@
-export const platformApiModules = ['auth', 'bookings', 'health', 'operators'] as const;
+export const platformApiModules = ['auth', 'bookings', 'disputes', 'health', 'operators'] as const;

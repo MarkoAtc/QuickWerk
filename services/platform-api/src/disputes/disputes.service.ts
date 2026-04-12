@@ -1,7 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
-import type { DisputeRecord, DisputeSubmittedDomainEvent } from '@quickwerk/domain';
+import {
+  canApplyDisputeOperatorAction,
+  disputeOperatorActionTransitions,
+  type DisputeOperatorActionType,
+  type DisputeRecord,
+  type DisputeSubmittedDomainEvent,
+} from '@quickwerk/domain';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BOOKING_REPOSITORY, BookingRepository } from '../bookings/domain/booking.repository';
@@ -145,7 +151,101 @@ export class DisputesService {
       return { ok: false, statusCode: 403, error: 'Only operators can view pending disputes.' };
     }
 
-    const disputes = await this.disputes.findByStatus('open');
+    const disputes = await this.disputes.findByStatuses(['open', 'under-review']);
+
     return { ok: true, disputes };
+  }
+
+  async startReviewDispute(
+    session: AuthSession,
+    disputeId: string,
+    correlationId: string,
+  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 403 | 404 | 409; error: string }> {
+    return this.transitionDispute(session, disputeId, 'startReview', null, correlationId);
+  }
+
+  async resolveDispute(
+    session: AuthSession,
+    disputeId: string,
+    resolutionNote: unknown,
+    correlationId: string,
+  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 400 | 403 | 404 | 409; error: string }> {
+    if (typeof resolutionNote !== 'string') {
+      return { ok: false, statusCode: 400, error: 'resolutionNote must be a string and non-empty.' };
+    }
+
+    const note = resolutionNote.trim();
+    if (!note) {
+      return { ok: false, statusCode: 400, error: 'resolutionNote is required to resolve a dispute.' };
+    }
+
+    return this.transitionDispute(session, disputeId, 'resolve', note, correlationId);
+  }
+
+  async closeDispute(
+    session: AuthSession,
+    disputeId: string,
+    resolutionNote: unknown,
+    correlationId: string,
+  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 400 | 403 | 404 | 409; error: string }> {
+    if (resolutionNote !== undefined && resolutionNote !== null && typeof resolutionNote !== 'string') {
+      return { ok: false, statusCode: 400, error: 'resolutionNote must be a string when provided.' };
+    }
+
+    const note = typeof resolutionNote === 'string' ? resolutionNote.trim() : null;
+    return this.transitionDispute(session, disputeId, 'close', note && note.length > 0 ? note : null, correlationId);
+  }
+
+  private async transitionDispute(
+    session: AuthSession,
+    disputeId: string,
+    action: DisputeOperatorActionType,
+    resolutionNote: string | null,
+    correlationId: string,
+  ): Promise<{ ok: true; dispute: DisputeRecord } | { ok: false; statusCode: 403 | 404 | 409; error: string }> {
+    if (session.role !== 'operator') {
+      return { ok: false, statusCode: 403, error: 'Only operators can transition disputes.' };
+    }
+
+    const targetStatus = disputeOperatorActionTransitions[action];
+
+    const allowedCurrentStatuses = ['open', 'under-review', 'resolved', 'closed'].filter((status) =>
+      canApplyDisputeOperatorAction(status as DisputeRecord['status'], action),
+    ) as DisputeRecord['status'][];
+
+    const transitionResult = await this.disputes.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses,
+      nextStatus: targetStatus,
+      resolvedAt: action === 'startReview' ? undefined : new Date().toISOString(),
+      resolutionNote: action === 'startReview' ? undefined : resolutionNote,
+    });
+
+    if (!transitionResult.ok) {
+      if (transitionResult.reason === 'not-found') {
+        return { ok: false, statusCode: 404, error: 'Dispute not found.' };
+      }
+
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Dispute cannot transition from ${transitionResult.currentStatus} via ${action}.`,
+      };
+    }
+
+    logStructuredBreadcrumb({
+      event: 'dispute.operator.transition',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        disputeId,
+        action,
+        actorUserId: session.userId,
+        replayed: transitionResult.replayed,
+        nextStatus: transitionResult.dispute.status,
+      },
+    });
+
+    return { ok: true, dispute: transitionResult.dispute };
   }
 }

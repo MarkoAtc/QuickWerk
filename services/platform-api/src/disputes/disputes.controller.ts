@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, HttpException, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpException, Param, Patch, Post, Req, Res } from '@nestjs/common';
 
 import { AuthService } from '../auth/auth.service';
 import { extractBearerToken } from '../http/auth-header';
@@ -18,6 +18,14 @@ type ResponseLike = {
 type SubmitDisputeBody = {
   category: string;
   description: string;
+};
+
+type ResolveDisputeBody = {
+  resolutionNote: unknown;
+};
+
+type CloseDisputeBody = {
+  resolutionNote?: unknown;
 };
 
 @Controller('api/v1/bookings')
@@ -113,5 +121,103 @@ export class DisputesOperatorController {
     }
 
     return result.disputes;
+  }
+
+  @Patch(':disputeId/start-review')
+  @HttpCode(200)
+  async startReviewDispute(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('disputeId') disputeId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+    if (!session) {
+      throw new HttpException('Sign-in required to review disputes.', 401);
+    }
+
+    const result = await this.disputesService.startReviewDispute(session, disputeId, correlationId);
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.dispute;
+  }
+
+  @Patch(':disputeId/resolve')
+  @HttpCode(200)
+  async resolveDispute(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('disputeId') disputeId: string,
+    @Body() body: ResolveDisputeBody,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+    if (!session) {
+      throw new HttpException('Sign-in required to review disputes.', 401);
+    }
+
+    const result = await this.disputesService.resolveDispute(session, disputeId, body.resolutionNote, correlationId);
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.dispute;
+  }
+
+  @Patch(':disputeId/close')
+  @HttpCode(200)
+  async closeDispute(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('disputeId') disputeId: string,
+    @Body() body: CloseDisputeBody,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+    if (!session) {
+      throw new HttpException('Sign-in required to review disputes.', 401);
+    }
+
+    const result = await this.disputesService.closeDispute(session, disputeId, body?.resolutionNote, correlationId);
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.dispute;
   }
 }

@@ -290,3 +290,38 @@ export type DisputeSubmittedDomainEvent = {
   correlationId: string;
   occurredAt: string;
 };
+
+export type DisputeOperatorActionType = 'startReview' | 'resolve' | 'close';
+
+export type StartDisputeReviewAction = {
+  type: 'startReview';
+};
+
+export type ResolveDisputeAction = {
+  type: 'resolve';
+  resolutionNote: string;
+};
+
+export type CloseDisputeAction = {
+  type: 'close';
+  resolutionNote?: string;
+};
+
+export type DisputeOperatorAction = StartDisputeReviewAction | ResolveDisputeAction | CloseDisputeAction;
+
+export const disputeOperatorActionTransitions: Record<DisputeOperatorActionType, DisputeStatus> = {
+  startReview: 'under-review',
+  resolve: 'resolved',
+  close: 'closed',
+};
+
+const disputeOperatorActionAllowedFromStatuses: Record<DisputeOperatorActionType, DisputeStatus[]> = {
+  startReview: ['open'],
+  resolve: ['under-review'],
+  close: ['under-review'],
+};
+
+export const canApplyDisputeOperatorAction = (
+  currentStatus: DisputeStatus,
+  action: DisputeOperatorActionType,
+): boolean => disputeOperatorActionAllowedFromStatuses[action].includes(currentStatus);

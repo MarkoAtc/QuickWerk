@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { PostgresAuthSessionRepository } from '../auth/infrastructure/postgres-auth-session.repository';
 import { PostgresBookingRepository } from '../bookings/infrastructure/postgres-booking.repository';
+import { PostgresDisputeRepository } from '../disputes/infrastructure/postgres-dispute.repository';
 import { PostgresClient } from './postgres-client';
 
 const shouldRun = process.env.RUN_POSTGRES_INTEGRATION_TESTS === '1';
@@ -15,9 +16,13 @@ describe.runIf(shouldRun && Boolean(databaseUrl))('postgres mode integration (op
 
   const authRepository = new PostgresAuthSessionRepository(postgresClient, config);
   const bookingRepository = new PostgresBookingRepository(postgresClient, config);
+  const disputeRepository = new PostgresDisputeRepository(postgresClient, config);
 
   beforeAll(async () => {
-    await postgresClient.query(config, 'TRUNCATE TABLE booking_status_history, bookings, sessions, users RESTART IDENTITY CASCADE');
+    await postgresClient.query(
+      config,
+      'TRUNCATE TABLE disputes, booking_status_history, bookings, sessions, users RESTART IDENTITY CASCADE',
+    );
   });
 
   afterAll(async () => {
@@ -96,5 +101,92 @@ describe.runIf(shouldRun && Boolean(databaseUrl))('postgres mode integration (op
 
     await expect(authRepository.deleteSession(customerSession.token)).resolves.toBe(true);
     await expect(authRepository.resolveSession(customerSession.token)).resolves.toBeNull();
+  });
+
+  it('persists dispute transitions end-to-end', async () => {
+    const customerSession = await authRepository.createSession({
+      email: 'integration.dispute.customer@quickwerk.local',
+      role: 'customer',
+    });
+
+    const providerSession = await authRepository.createSession({
+      email: 'integration.dispute.provider@quickwerk.local',
+      role: 'provider',
+    });
+
+    const booking = await bookingRepository.createSubmittedBooking({
+      createdAt: new Date().toISOString(),
+      customerUserId: customerSession.userId,
+      requestedService: 'Dispute integration service',
+      actorRole: 'customer',
+      actorUserId: customerSession.userId,
+    });
+
+    await bookingRepository.acceptSubmittedBooking({
+      bookingId: booking.bookingId,
+      acceptedAt: new Date().toISOString(),
+      providerUserId: providerSession.userId,
+      actorRole: 'provider',
+      actorUserId: providerSession.userId,
+    });
+
+    const disputeId = '0f8fad5b-d9cb-469f-a165-70867728950e';
+    await disputeRepository.save({
+      disputeId,
+      bookingId: booking.bookingId,
+      reporterUserId: customerSession.userId,
+      reporterRole: 'customer',
+      category: 'quality',
+      description: 'Integration dispute.',
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+      resolutionNote: null,
+    });
+
+    const reviewTransition = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['open'],
+      nextStatus: 'under-review',
+    });
+    expect(reviewTransition.ok).toBe(true);
+    if (!reviewTransition.ok) return;
+    expect(reviewTransition.dispute.status).toBe('under-review');
+
+    const resolveTransition = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['under-review'],
+      nextStatus: 'resolved',
+      resolvedAt: new Date().toISOString(),
+      resolutionNote: 'Resolved in integration test.',
+    });
+    expect(resolveTransition.ok).toBe(true);
+    if (!resolveTransition.ok) return;
+    expect(resolveTransition.dispute.status).toBe('resolved');
+    expect(resolveTransition.dispute.resolutionNote).toContain('integration test');
+
+    const replayResolve = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['under-review'],
+      nextStatus: 'resolved',
+      resolvedAt: new Date().toISOString(),
+      resolutionNote: 'Resolved in integration test.',
+    });
+    expect(replayResolve.ok).toBe(true);
+    if (replayResolve.ok) {
+      expect(replayResolve.replayed).toBe(true);
+      expect(replayResolve.dispute.status).toBe('resolved');
+    }
+
+    const invalidClose = await disputeRepository.transitionStatus({
+      disputeId,
+      allowedCurrentStatuses: ['under-review'],
+      nextStatus: 'closed',
+    });
+    expect(invalidClose.ok).toBe(false);
+    if (!invalidClose.ok && invalidClose.reason === 'transition-conflict') {
+      expect(invalidClose.reason).toBe('transition-conflict');
+      expect(invalidClose.currentStatus).toBe('resolved');
+    }
   });
 });

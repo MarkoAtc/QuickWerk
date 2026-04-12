@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { DisputeRecord } from '@quickwerk/domain';
 
-import { loadDisputeQueueState } from './dispute-queue-actions';
+import { loadDisputeQueueState, submitDisputeTransition } from './dispute-queue-actions';
+import { createLoadedState } from './dispute-queue-state';
 
 const makeDispute = (id: string): DisputeRecord => ({
   disputeId: id,
@@ -34,6 +35,7 @@ describe('dispute-queue-actions', () => {
     if (state.status !== 'loaded') return;
     expect(state.disputes).toHaveLength(2);
     expect(state.disputes[0]?.disputeId).toBe('d-1');
+    expect(state.queueAction.status).toBe('idle');
   });
 
   it('returns empty state when array is empty', async () => {
@@ -74,5 +76,68 @@ describe('dispute-queue-actions', () => {
     expect(state.status).toBe('error');
     if (state.status !== 'error') return;
     expect(state.errorMessage).toBe('Network unavailable');
+  });
+
+  it('applies successful resolve transition and removes terminal dispute from queue', async () => {
+    const current = createLoadedState([makeDispute('d-1')]);
+
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      expect(_url).toBe('http://127.0.0.1:3101/api/v1/disputes/d-1/resolve');
+      expect(init?.method).toBe('PATCH');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...makeDispute('d-1'),
+          status: 'resolved',
+          resolvedAt: '2026-01-01T11:00:00.000Z',
+          resolutionNote: 'Resolved by operator',
+        }),
+      } as Response;
+    };
+
+    const next = await submitDisputeTransition(
+      current,
+      'token',
+      'd-1',
+      'resolve',
+      { resolutionNote: 'Resolved by operator' },
+      fetchImpl as typeof fetch,
+    );
+
+    expect(next.status).toBe('empty');
+  });
+
+  it('rolls back optimistic transition when API call fails', async () => {
+    const current = createLoadedState([makeDispute('d-1')]);
+
+    const fetchImpl = async (_url: string, init?: RequestInit) => {
+      expect(_url).toBe('http://127.0.0.1:3101/api/v1/disputes/d-1/start-review');
+      expect(init?.method).toBe('PATCH');
+      return {
+        ok: false,
+        status: 409,
+        json: async () => ({ message: 'Transition conflict' }),
+      } as Response;
+    };
+
+    const next = await submitDisputeTransition(
+      current,
+      'token',
+      'd-1',
+      'startReview',
+      {},
+      fetchImpl as typeof fetch,
+    );
+
+    expect(next.status).toBe('loaded');
+    if (next.status !== 'loaded') return;
+    expect(next.disputes[0]?.status).toBe('open');
+    expect(next.queueAction).toEqual({
+      status: 'error',
+      disputeId: 'd-1',
+      actionType: 'startReview',
+      errorMessage: 'Transition conflict',
+    });
   });
 });

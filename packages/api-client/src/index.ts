@@ -316,6 +316,9 @@ export const createGetBookingInvoiceRequest = (sessionToken: string, bookingId: 
 export const disputeApiRoutes = {
   submit: (bookingId: string) => `/api/v1/bookings/${bookingId}/dispute`,
   pending: () => '/api/v1/disputes/pending',
+  startReview: (disputeId: string) => `/api/v1/disputes/${disputeId}/start-review`,
+  resolve: (disputeId: string) => `/api/v1/disputes/${disputeId}/resolve`,
+  close: (disputeId: string) => `/api/v1/disputes/${disputeId}/close`,
 } as const;
 
 export const createSubmitDisputeRequest = (
@@ -333,6 +336,34 @@ export const createGetPendingDisputesRequest = (sessionToken: string) => ({
   method: 'GET' as const,
   path: disputeApiRoutes.pending(),
   headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createStartReviewDisputeRequest = (sessionToken: string, disputeId: string) => ({
+  method: 'PATCH' as const,
+  path: disputeApiRoutes.startReview(disputeId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createResolveDisputeRequest = (
+  sessionToken: string,
+  disputeId: string,
+  body: { resolutionNote?: string },
+) => ({
+  method: 'PATCH' as const,
+  path: disputeApiRoutes.resolve(disputeId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
+}) as const;
+
+export const createCloseDisputeRequest = (
+  sessionToken: string,
+  disputeId: string,
+  body?: { resolutionNote?: string },
+) => ({
+  method: 'PATCH' as const,
+  path: disputeApiRoutes.close(disputeId),
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
+  body,
 }) as const;
 
 // --- Reviews ---
