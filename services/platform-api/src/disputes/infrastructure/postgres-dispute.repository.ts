@@ -227,16 +227,23 @@ export class PostgresDisputeRepository implements DisputeRepository {
         return { ok: false, reason: 'not-found' } as const;
       }
 
+      const nextResolvedAt = input.resolvedAt === undefined ? current.resolved_at : input.resolvedAt;
+      const nextResolutionNote = input.resolutionNote === undefined ? current.resolution_note : input.resolutionNote;
+
       if (current.status === input.nextStatus) {
-        return { ok: true, dispute: mapDisputeRow(current), replayed: true } as const;
+        const resolvedAtMatches = nextResolvedAt === current.resolved_at;
+        const resolutionNoteMatches = nextResolutionNote === current.resolution_note;
+
+        if (resolvedAtMatches && resolutionNoteMatches) {
+          return { ok: true, dispute: mapDisputeRow(current), replayed: true } as const;
+        }
+
+        return { ok: false, reason: 'transition-conflict', currentStatus: current.status } as const;
       }
 
       if (!input.allowedCurrentStatuses.includes(current.status)) {
         return { ok: false, reason: 'transition-conflict', currentStatus: current.status } as const;
       }
-
-      const nextResolvedAt = input.resolvedAt === undefined ? current.resolved_at : input.resolvedAt;
-      const nextResolutionNote = input.resolutionNote === undefined ? current.resolution_note : input.resolutionNote;
 
       const updatedResult = await client.query<DisputeRow>(
         `UPDATE disputes

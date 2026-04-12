@@ -36,13 +36,26 @@ export const beginOptimisticDisputeTransition = (
     return state;
   }
 
+  if (state.queueAction?.status === 'transitioning') {
+    return state;
+  }
+
+  const dispute = state.disputes.find((d) => d.disputeId === disputeId);
+  if (!dispute) {
+    return state;
+  }
+
   const nextStatus = disputeOperatorActionTransitions[actionType];
-  const disputes = state.disputes.map((dispute) => {
-    if (dispute.disputeId !== disputeId) {
-      return dispute;
+  if (!nextStatus || nextStatus === dispute.status) {
+    return state;
+  }
+
+  const disputes = state.disputes.map((d) => {
+    if (d.disputeId !== disputeId) {
+      return d;
     }
 
-    return { ...dispute, status: nextStatus };
+    return { ...d, status: nextStatus };
   });
 
   return {
