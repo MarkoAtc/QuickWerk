@@ -53,8 +53,20 @@ export class InMemoryDisputeRepository implements DisputeRepository {
       return { ok: false, reason: 'not-found' };
     }
 
+    const nextResolutionNote = input.resolutionNote === undefined ? current.resolutionNote : input.resolutionNote;
+
     if (current.status === input.nextStatus) {
-      return { ok: true, dispute: current, replayed: true };
+      // Normalize resolutionNote for comparison (treat null and undefined as equivalent)
+      const normalizedInputNote = nextResolutionNote === undefined ? null : nextResolutionNote;
+      const normalizedCurrentNote = current.resolutionNote === undefined ? null : current.resolutionNote;
+      const resolutionNoteMatches = normalizedInputNote === normalizedCurrentNote;
+
+      // Ignore resolvedAt differences (server-assigned), check only resolutionNote intent
+      if (resolutionNoteMatches) {
+        return { ok: true, dispute: current, replayed: true };
+      }
+
+      return { ok: false, reason: 'transition-conflict', currentStatus: current.status };
     }
 
     if (!input.allowedCurrentStatuses.includes(current.status)) {
@@ -65,7 +77,7 @@ export class InMemoryDisputeRepository implements DisputeRepository {
       ...current,
       status: input.nextStatus,
       resolvedAt: input.resolvedAt === undefined ? current.resolvedAt : input.resolvedAt,
-      resolutionNote: input.resolutionNote === undefined ? current.resolutionNote : input.resolutionNote,
+      resolutionNote: nextResolutionNote,
     };
 
     this.disputes.set(updated.disputeId, updated);
