@@ -62,6 +62,10 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0002
 # apply durable relay transport table (needed for postgres-persistent relay mode)
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003_booking_accepted_relay_attempts.sql
 
+# apply snapshot storage and operator-role migrations
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005_operator_role_support.sql
+
 # run platform API tests + typecheck
 corepack pnpm --filter @quickwerk/platform-api test
 corepack pnpm --filter @quickwerk/platform-api typecheck

@@ -16,7 +16,7 @@ Completed:
 
 - lightweight producer→consumer relay path (in-memory, no queue infra):
   - platform-api now uses `RelayBookingDomainEventPublisher` for `booking.accepted` emission
-  - relay invokes `consumeBookingAcceptedAttempt` from `@quickwerk/background-workers` directly
+  - relay publishes attempts via the executor seam by calling `relayAttemptExecutor.execute(...)` which drives the publisher flow and ultimately triggers worker processing
   - public API response payloads are unchanged (correlation response header behavior remains the same)
 - worker envelope contract hardening:
   - `@quickwerk/domain` now defines `BookingAcceptedWorkerEnvelope`
