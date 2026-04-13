@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.11.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck workspace
+        run: pnpm check
+
+      - name: Test platform API
+        run: pnpm --filter @quickwerk/platform-api test
+
+      - name: Test admin web
+        run: pnpm --filter @quickwerk/admin-web test
+
+      - name: Test product app
+        run: pnpm --filter @quickwerk/product-app test
+
+      - name: Build admin web
+        run: pnpm --filter @quickwerk/admin-web build
+
+      - name: Build platform API
+        run: pnpm --filter @quickwerk/platform-api build

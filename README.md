@@ -1,5 +1,7 @@
 # QuickWerk / Handwerker OnDemand
 
+[![CI](https://github.com/MarkoAtc/QuickWerk/actions/workflows/ci.yml/badge.svg)](https://github.com/MarkoAtc/QuickWerk/actions/workflows/ci.yml)
+
 QuickWerk is a cross-platform SME services marketplace: one shared product app for customers and providers, one web-first admin surface for operations, and a modular platform API behind both.
 
 ## Repository structure
