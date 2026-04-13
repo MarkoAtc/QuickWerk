@@ -156,12 +156,27 @@ export function ProviderScreen() {
             </Text>
           ) : null}
           <Pressable
+            accessibilityLabel="Open booking status"
+            accessibilityRole="button"
+            onPress={() => router.replace({ pathname: '/active-job', params: { bookingId: acceptedBooking.bookingId } })}
+            testID="provider-open-booking-status"
+            style={{
+              marginTop: 12,
+              paddingVertical: 10,
+              borderRadius: 8,
+              backgroundColor: productAppShell.theme.color.primary,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Open booking status</Text>
+          </Pressable>
+          <Pressable
             accessibilityLabel="Accept another booking"
             accessibilityRole="button"
             onPress={handleReset}
             testID="provider-accept-another"
             style={{
-              marginTop: 12,
+              marginTop: 8,
               paddingVertical: 10,
               borderRadius: 8,
               borderWidth: 1,
