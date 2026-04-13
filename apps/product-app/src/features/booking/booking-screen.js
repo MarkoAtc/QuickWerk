@@ -111,6 +111,21 @@ export function BookingScreen() {
           <Text testID="booking-status" style={{ marginTop: 4, color: '#166534', fontWeight: '600' }}>
             Status: {createdBooking.status}
           </Text>
+          <Pressable
+            accessibilityLabel="Open booking status"
+            accessibilityRole="button"
+            onPress={() => router.replace({ pathname: '/active-job', params: { bookingId: createdBooking.bookingId } })}
+            testID="booking-open-active-job"
+            style={{
+              marginTop: 12,
+              paddingVertical: 10,
+              borderRadius: 8,
+              backgroundColor: productAppShell.theme.color.primary,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Open booking status</Text>
+          </Pressable>
         </View>
       ) : (
         <View

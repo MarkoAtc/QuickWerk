@@ -45,7 +45,7 @@ export default function BookingWizardRoute() {
 
     router.replace({
       pathname: '/active-job',
-      params: { bookingId: result.bookingId, providerName: 'Finding your pro...' },
+      params: { bookingId: result.bookingId },
     });
   };
 
