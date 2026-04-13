@@ -73,6 +73,7 @@ describe('resolveActiveJobRouteState', () => {
         requestedService: 'Fix sink',
         counterpartLabel: 'Provider',
         counterpartValue: 'Not assigned yet',
+        canContactCounterpart: false,
         paymentSummary: 'Payment details are not available yet.',
         timeline: [],
         statusHistory: [],

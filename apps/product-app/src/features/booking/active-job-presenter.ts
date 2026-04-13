@@ -21,6 +21,7 @@ export type ActiveJobViewModel = {
   requestedService: string;
   counterpartLabel: string;
   counterpartValue: string;
+  canContactCounterpart: boolean;
   paymentSummary: string;
   timeline: ActiveJobTimelineStep[];
   statusHistory: string[];
@@ -42,19 +43,25 @@ const defaultStatusLabels: Record<BookingContinuationStatus, string> = {
   completed: 'Completed',
 };
 
-function resolveHeadline(status: BookingContinuationStatus): string {
+function resolveHeadline(status: BookingContinuationStatus, viewerRole: ViewerRole): string {
   if (status === 'submitted') return 'Booking submitted';
-  if (status === 'accepted') return 'Provider assigned';
+  if (status === 'accepted') {
+    return viewerRole === 'customer' ? 'Provider assigned' : 'Customer assigned';
+  }
   if (status === 'completed') return 'Booking completed';
   return 'Booking declined';
 }
 
-function resolveSubheadline(booking: BookingContinuationRecord): string {
+function resolveSubheadline(booking: BookingContinuationRecord, viewerRole: ViewerRole): string {
   if (booking.status === 'submitted') {
     return 'We are waiting for a provider to accept this booking.';
   }
 
   if (booking.status === 'accepted') {
+    if (viewerRole === 'provider') {
+      return 'You accepted this booking.';
+    }
+
     if (booking.providerUserId) {
       return `Provider ${booking.providerUserId} accepted this booking.`;
     }
@@ -135,16 +142,20 @@ function resolveStatusHistory(booking: BookingContinuationRecord): string[] {
 
 export function presentActiveJob(input: PresentActiveJobInput): ActiveJobViewModel {
   const counterpart = resolveCounterpart(input.viewerRole, input.booking);
+  const canContactCounterpart = input.viewerRole === 'customer'
+    ? Boolean(input.booking.providerUserId)
+    : true;
 
   return {
     bookingId: input.booking.bookingId,
     status: input.booking.status,
     statusLabel: defaultStatusLabels[input.booking.status],
-    headline: resolveHeadline(input.booking.status),
-    subheadline: resolveSubheadline(input.booking),
+    headline: resolveHeadline(input.booking.status, input.viewerRole),
+    subheadline: resolveSubheadline(input.booking, input.viewerRole),
     requestedService: input.booking.requestedService,
     counterpartLabel: counterpart.counterpartLabel,
     counterpartValue: counterpart.counterpartValue,
+    canContactCounterpart,
     paymentSummary: resolvePaymentSummary(input.payment, input.warningMessage),
     timeline: resolveTimeline(input.booking.status),
     statusHistory: resolveStatusHistory(input.booking),

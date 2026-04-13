@@ -58,8 +58,6 @@ function TimelineStep({ step, isLast }) {
 }
 
 export function ActiveJob({ viewModel, onChat, onCall, onRefresh }) {
-  const hasProvider = viewModel.counterpartLabel === 'Provider' && viewModel.counterpartValue !== 'Not assigned yet';
-
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -165,7 +163,7 @@ export function ActiveJob({ viewModel, onChat, onCall, onRefresh }) {
           onPress={onChat}
           accessibilityRole="button"
           accessibilityLabel="Open chat"
-          disabled={!hasProvider}
+          disabled={!viewModel.canContactCounterpart}
           style={{
             width: 56,
             height: 56,
@@ -175,7 +173,7 @@ export function ActiveJob({ viewModel, onChat, onCall, onRefresh }) {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.surface,
-            opacity: hasProvider ? 1 : 0.5,
+            opacity: viewModel.canContactCounterpart ? 1 : 0.5,
           }}
         >
           <Text style={{ fontSize: 22 }}>💬</Text>
@@ -185,7 +183,7 @@ export function ActiveJob({ viewModel, onChat, onCall, onRefresh }) {
           onPress={onCall}
           accessibilityRole="button"
           accessibilityLabel={`Call ${viewModel.counterpartLabel.toLowerCase()}`}
-          disabled={!hasProvider}
+          disabled={!viewModel.canContactCounterpart}
           style={{
             flex: 1,
             height: 56,
@@ -196,7 +194,7 @@ export function ActiveJob({ viewModel, onChat, onCall, onRefresh }) {
             flexDirection: 'row',
             gap: spacing.sm,
             ...shadow.soft,
-            opacity: hasProvider ? 1 : 0.5,
+            opacity: viewModel.canContactCounterpart ? 1 : 0.5,
           }}
         >
           <Text style={{ fontSize: 18 }}>📞</Text>

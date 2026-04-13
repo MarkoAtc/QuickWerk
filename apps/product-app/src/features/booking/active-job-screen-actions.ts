@@ -57,6 +57,10 @@ function parseStatusHistory(raw: unknown): BookingStatusHistoryEvent[] {
 
   return raw
     .map((item) => {
+      if (typeof item !== 'object' || item === null) {
+        return null;
+      }
+
       const event = item as Record<string, unknown>;
       const to = parseStatus(event['to']);
       const fromRaw = event['from'];
@@ -84,6 +88,10 @@ function parseStatusHistory(raw: unknown): BookingStatusHistoryEvent[] {
 }
 
 function parseBooking(payload: unknown): BookingContinuationRecord | null {
+  if (payload === null || typeof payload !== 'object') {
+    return null;
+  }
+
   const booking = payload as Record<string, unknown>;
   const status = parseStatus(booking['status']);
 
@@ -110,6 +118,10 @@ function parseBooking(payload: unknown): BookingContinuationRecord | null {
 }
 
 function parsePayment(payload: unknown): BookingContinuationPayment | null {
+  if (payload === null || typeof payload !== 'object') {
+    return null;
+  }
+
   const payment = payload as Record<string, unknown>;
 
   if (
