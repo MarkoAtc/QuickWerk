@@ -127,9 +127,18 @@ function parsePayment(payload: unknown): BookingContinuationPayment | null {
   if (
     typeof payment['paymentId'] !== 'string'
     || typeof payment['bookingId'] !== 'string'
-    || typeof payment['amountCents'] !== 'number'
     || typeof payment['currency'] !== 'string'
     || typeof payment['status'] !== 'string'
+  ) {
+    return null;
+  }
+
+  const amountCents = payment['amountCents'];
+  if (
+    typeof amountCents !== 'number'
+    || !Number.isFinite(amountCents)
+    || !Number.isInteger(amountCents)
+    || amountCents < 0
   ) {
     return null;
   }
@@ -137,7 +146,7 @@ function parsePayment(payload: unknown): BookingContinuationPayment | null {
   return {
     paymentId: payment['paymentId'],
     bookingId: payment['bookingId'],
-    amountCents: payment['amountCents'],
+    amountCents: amountCents,
     currency: payment['currency'],
     status: payment['status'],
   };
@@ -165,33 +174,40 @@ export async function loadBookingContinuation(
       return { errorMessage: 'Booking details response missing required fields.' };
     }
 
-    const paymentRequest = createGetBookingPaymentRequest(input.sessionToken, input.bookingId);
-    const paymentResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${paymentRequest.path}`, {
-      method: paymentRequest.method,
-      headers: paymentRequest.headers,
-    });
+    try {
+      const paymentRequest = createGetBookingPaymentRequest(input.sessionToken, input.bookingId);
+      const paymentResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${paymentRequest.path}`, {
+        method: paymentRequest.method,
+        headers: paymentRequest.headers,
+      });
 
-    if (!paymentResponse.ok) {
-      if (paymentResponse.status === 403 || paymentResponse.status === 404) {
-        return { booking };
+      if (!paymentResponse.ok) {
+        if (paymentResponse.status === 403 || paymentResponse.status === 404) {
+          return { booking };
+        }
+
+        return {
+          booking,
+          warningMessage: `Payment details unavailable (HTTP ${paymentResponse.status}).`,
+        };
       }
 
+      const payment = parsePayment(await paymentResponse.json());
+
+      if (!payment) {
+        return {
+          booking,
+          warningMessage: 'Payment details response missing required fields.',
+        };
+      }
+
+      return { booking, payment };
+    } catch (paymentError) {
       return {
         booking,
-        warningMessage: `Payment details unavailable (HTTP ${paymentResponse.status}).`,
+        warningMessage: `Payment details unavailable: ${paymentError instanceof Error ? paymentError.message : 'Unknown error'}.`,
       };
     }
-
-    const payment = parsePayment(await paymentResponse.json());
-
-    if (!payment) {
-      return {
-        booking,
-        warningMessage: 'Payment details response missing required fields.',
-      };
-    }
-
-    return { booking, payment };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown booking continuation failure.',
