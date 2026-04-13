@@ -35,7 +35,14 @@ export default function ActiveJobRoute() {
       sessionToken,
       bookingId,
       viewerRole: session.role,
-    }).then(setScreenState);
+    }).then((nextState) => {
+      if (nextState.status === 'handoff') {
+        router.replace({ pathname: '/booking-completion', params: { bookingId: nextState.bookingId } });
+        return;
+      }
+
+      setScreenState(nextState);
+    });
   }, [bookingId, router, session, signOut]);
 
   useEffect(() => {
