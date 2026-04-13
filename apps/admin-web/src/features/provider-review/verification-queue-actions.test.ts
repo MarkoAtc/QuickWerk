@@ -14,6 +14,54 @@ const makeSummary = (id: string) => ({
 });
 
 describe('verification-queue-actions', () => {
+  it('loads pending verification queue on success', async () => {
+    const fetchImpl = async () =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => [makeSummary('v-1'), makeSummary('v-2')],
+      }) as Response;
+
+    const { loadQueueState } = await import('./verification-queue-actions');
+    const next = await loadQueueState('token', fetchImpl as typeof fetch);
+
+    expect(next.status).toBe('loaded');
+    if (next.status !== 'loaded') return;
+    expect(next.verifications.map((v) => v.verificationId)).toEqual(['v-1', 'v-2']);
+    expect(next.reviewAction.status).toBe('idle');
+  });
+
+  it('applies successful review decision and removes item from queue', async () => {
+    const state = createLoadedQueueState([makeSummary('v-1'), makeSummary('v-2')]);
+
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      expect(url).toBe('http://127.0.0.1:3101/api/v1/providers/verifications/v-1/review');
+      expect(init?.method).toBe('POST');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...makeSummary('v-1'),
+          status: 'approved',
+          reviewedAt: '2026-01-01T11:00:00.000Z',
+          reviewedByUserId: 'operator-1',
+          reviewNote: 'Looks good.',
+        }),
+      } as Response;
+    };
+
+    const next = await submitReviewDecision(state, 'token', 'v-1', 'approved', 'Looks good.', fetchImpl as typeof fetch);
+
+    expect(next.status).toBe('loaded');
+    if (next.status !== 'loaded') return;
+    expect(next.verifications.map((v) => v.verificationId)).toEqual(['v-2']);
+    expect(next.reviewAction).toEqual({
+      status: 'done',
+      verificationId: 'v-1',
+      decision: 'approved',
+    });
+  });
+
   it('removes stale queue item on 409 review conflict', async () => {
     const state = createLoadedQueueState([makeSummary('v-1'), makeSummary('v-2')]);
 
