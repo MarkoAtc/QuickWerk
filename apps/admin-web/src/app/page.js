@@ -13,7 +13,7 @@ async function reviewVerificationAction(formData) {
 
   const sessionResult = await resolveOperatorSession();
   if (!sessionResult.ok) {
-    return;
+    return { ok: false, error: `Session authentication failed: ${sessionResult.errorMessage || 'Unable to resolve operator session'}` };
   }
 
   const verificationId = String(formData.get('verificationId') ?? '');
@@ -21,8 +21,12 @@ async function reviewVerificationAction(formData) {
   const reviewNote = String(formData.get('reviewNote') ?? '').trim();
 
   const currentState = await loadQueueState(sessionResult.sessionToken);
-  if (currentState.status !== 'loaded' || (decision !== 'approved' && decision !== 'rejected')) {
-    return;
+  if (currentState.status !== 'loaded') {
+    return { ok: false, error: `Failed to load verification queue: ${currentState.status === 'error' ? currentState.errorMessage : 'Queue state not loaded'}` };
+  }
+
+  if (decision !== 'approved' && decision !== 'rejected') {
+    return { ok: false, error: `Invalid decision: "${decision}". Must be "approved" or "rejected"` };
   }
 
   await submitReviewDecision(
@@ -34,6 +38,7 @@ async function reviewVerificationAction(formData) {
   );
 
   revalidatePath('/');
+  return { ok: true };
 }
 
 async function advanceDisputeAction(formData) {
