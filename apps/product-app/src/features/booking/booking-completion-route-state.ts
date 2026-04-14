@@ -59,6 +59,7 @@ export async function resolveBookingCompletionRouteState(
       payment: result.payment,
       invoice: result.invoice,
       reviews: result.reviews,
+      latestDispute: result.latestDispute,
       warningMessages: result.warningMessages,
     }),
   };

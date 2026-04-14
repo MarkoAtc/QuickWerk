@@ -19,6 +19,8 @@ export function BookingCompletionScreen({
   onRefresh,
   reviewFeedback,
   disputeFeedback,
+  isReviewSubmitting = false,
+  isDisputeSubmitting = false,
 }) {
   return (
     <ScrollView
@@ -110,15 +112,19 @@ export function BookingCompletionScreen({
           accessibilityRole="button"
           accessibilityLabel="Submit review"
           testID="booking-completion-submit-review"
+          disabled={isReviewSubmitting}
           style={{
             marginTop: spacing.sm,
             borderRadius: radius.pill,
             backgroundColor: colors.primary,
             paddingVertical: 10,
             alignItems: 'center',
+            opacity: isReviewSubmitting ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Submit review</Text>
+          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>
+            {isReviewSubmitting ? 'Submitting review...' : 'Submit review'}
+          </Text>
         </TouchableOpacity>
 
         {reviewFeedback ? <Text style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>{reviewFeedback}</Text> : null}
@@ -177,15 +183,19 @@ export function BookingCompletionScreen({
           accessibilityRole="button"
           accessibilityLabel="Open dispute"
           testID="booking-completion-open-dispute"
+          disabled={isDisputeSubmitting}
           style={{
             marginTop: spacing.sm,
             borderRadius: radius.pill,
             backgroundColor: '#B91C1C',
             paddingVertical: 10,
             alignItems: 'center',
+            opacity: isDisputeSubmitting ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Open dispute</Text>
+          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>
+            {isDisputeSubmitting ? 'Opening dispute...' : 'Open dispute'}
+          </Text>
         </TouchableOpacity>
 
         {disputeFeedback ? <Text style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>{disputeFeedback}</Text> : null}

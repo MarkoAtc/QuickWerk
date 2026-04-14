@@ -1,8 +1,10 @@
 import {
   createGetBookingInvoiceRequest,
   createGetBookingReviewsRequest,
+  createGetPendingDisputesRequest,
   createSubmitDisputeRequest,
   createSubmitReviewRequest,
+  disputeApiRoutes,
 } from '@quickwerk/api-client';
 import type { DisputeCategory, DisputeRecord, InvoiceRecord, ReviewRecord } from '@quickwerk/domain';
 
@@ -24,6 +26,7 @@ export type LoadBookingCompletionResult =
     payment?: BookingContinuationPayment;
     invoice?: InvoiceRecord;
     reviews: ReviewRecord[];
+    latestDispute?: DisputeRecord;
     warningMessages: string[];
     errorMessage?: undefined;
   }
@@ -32,6 +35,7 @@ export type LoadBookingCompletionResult =
     payment?: undefined;
     invoice?: undefined;
     reviews?: undefined;
+    latestDispute?: undefined;
     warningMessages?: undefined;
     errorMessage: string;
   };
@@ -273,11 +277,79 @@ export async function loadBookingCompletion(
     warningMessages.push(error instanceof Error ? error.message : 'Unknown review fetch failure.');
   }
 
+  let latestDispute: DisputeRecord | undefined;
+  const bookingDisputePath = disputeApiRoutes.submit(input.bookingId);
+
+  try {
+    const bookingDisputeResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${bookingDisputePath}`, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${input.sessionToken}` },
+    });
+
+    if (bookingDisputeResponse.ok) {
+      const payload = await bookingDisputeResponse.json();
+      const disputePayload = Array.isArray(payload) ? payload : [payload];
+
+      const disputes = disputePayload
+        .map((entry) => parseDispute(entry))
+        .filter((entry): entry is DisputeRecord => entry != null)
+        .filter((entry) => entry.bookingId === input.bookingId);
+
+      if (disputes.length > 0) {
+        latestDispute = [...disputes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+      } else if (disputePayload.length > 0) {
+        warningMessages.push('Dispute response missing required fields.');
+      }
+    } else if (bookingDisputeResponse.status !== 403 && bookingDisputeResponse.status !== 404 && bookingDisputeResponse.status !== 405) {
+      warningMessages.push(`Dispute details unavailable (HTTP ${bookingDisputeResponse.status}).`);
+    }
+  } catch (error) {
+    warningMessages.push(error instanceof Error ? error.message : 'Unknown dispute fetch failure.');
+  }
+
+  if (!latestDispute) {
+    const pendingDisputesRequest = createGetPendingDisputesRequest(input.sessionToken);
+
+    try {
+      const pendingDisputesResponse = await fetchImpl(
+        `${runtimeConfig.platformApiBaseUrl}${pendingDisputesRequest.path}`,
+        {
+          method: pendingDisputesRequest.method,
+          headers: pendingDisputesRequest.headers,
+        },
+      );
+
+      if (pendingDisputesResponse.ok) {
+        const payload = await pendingDisputesResponse.json();
+
+        if (!Array.isArray(payload)) {
+          warningMessages.push('Disputes response format is invalid.');
+        } else {
+          const disputes = payload
+            .map((entry) => parseDispute(entry))
+            .filter((entry): entry is DisputeRecord => entry != null)
+            .filter((entry) => entry.bookingId === input.bookingId);
+
+          latestDispute = [...disputes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+
+          if (payload.length > 0 && disputes.length === 0) {
+            warningMessages.push('Disputes response missing required fields.');
+          }
+        }
+      } else if (pendingDisputesResponse.status !== 403 && pendingDisputesResponse.status !== 404) {
+        warningMessages.push(`Dispute details unavailable (HTTP ${pendingDisputesResponse.status}).`);
+      }
+    } catch (error) {
+      warningMessages.push(error instanceof Error ? error.message : 'Unknown dispute fetch failure.');
+    }
+  }
+
   return {
     booking: continuation.booking,
     payment: continuation.payment,
     invoice,
     reviews,
+    latestDispute,
     warningMessages,
   };
 }

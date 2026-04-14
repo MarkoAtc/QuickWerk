@@ -67,6 +67,25 @@ describe('loadBookingCompletion', () => {
         } as Response;
       }
 
+      if (path.includes('/dispute')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            disputeId: 'disp-1',
+            bookingId: 'bk-1',
+            reporterUserId: 'cust-1',
+            reporterRole: 'customer',
+            category: 'quality',
+            description: 'Work quality issue',
+            status: 'open',
+            createdAt: '2026-04-13T20:30:00.000Z',
+            resolvedAt: null,
+            resolutionNote: null,
+          }),
+        } as Response;
+      }
+
       return {
         ok: true,
         status: 200,
@@ -89,6 +108,7 @@ describe('loadBookingCompletion', () => {
     expect(result.payment?.paymentId).toBe('pay-1');
     expect(result.invoice?.invoiceId).toBe('inv-1');
     expect(result.reviews).toHaveLength(1);
+    expect(result.latestDispute?.disputeId).toBe('disp-1');
     expect(result.warningMessages).toEqual([]);
   });
 
