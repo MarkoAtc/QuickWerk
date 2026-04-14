@@ -42,6 +42,12 @@ export default function ActiveJobRoute() {
       }
 
       setScreenState(nextState);
+    }).catch((error) => {
+      console.error('Failed to load active job state:', error);
+      setScreenState({
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : 'An unexpected error occurred while loading booking details.',
+      });
     });
   }, [bookingId, router, session, signOut]);
 

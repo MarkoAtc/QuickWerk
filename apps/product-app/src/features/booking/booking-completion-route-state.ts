@@ -34,32 +34,40 @@ export async function resolveBookingCompletionRouteState(
   const loadImpl = input.loadBookingCompletionImpl ?? loadBookingCompletion;
   const presentImpl = input.presentBookingCompletionImpl ?? presentBookingCompletion;
 
-  const result = await loadImpl({ sessionToken: input.sessionToken, bookingId: input.bookingId });
+  try {
+    const result = await loadImpl({ sessionToken: input.sessionToken, bookingId: input.bookingId });
 
-  if (result.errorMessage) {
-    return { status: 'error', errorMessage: result.errorMessage };
-  }
+    if (result.errorMessage) {
+      return { status: 'error', errorMessage: result.errorMessage };
+    }
 
-  if (!result.booking) {
-    return { status: 'error', errorMessage: 'Booking details are unavailable.' };
-  }
+    if (!result.booking) {
+      return { status: 'error', errorMessage: 'Booking details are unavailable.' };
+    }
 
-  if (result.booking.status !== 'completed') {
+    if (result.booking.status !== 'completed') {
+      return {
+        status: 'empty',
+        message: 'Completion details will appear once the booking is marked completed.',
+        bookingStatus: result.booking.status,
+      };
+    }
+
     return {
-      status: 'empty',
-      message: 'Completion details will appear once the booking is marked completed.',
-      bookingStatus: result.booking.status,
+      status: 'loaded',
+      viewModel: presentImpl({
+        booking: result.booking,
+        payment: result.payment,
+        invoice: result.invoice,
+        reviews: result.reviews,
+        latestDispute: result.latestDispute,
+        warningMessages: result.warningMessages,
+      }),
+    };
+  } catch (err) {
+    return {
+      status: 'error',
+      errorMessage: `Failed to load booking completion details: ${String(err)}`,
     };
   }
-
-  return {
-    status: 'loaded',
-    viewModel: presentImpl({
-      booking: result.booking,
-      payment: result.payment,
-      invoice: result.invoice,
-      reviews: result.reviews,
-      warningMessages: result.warningMessages,
-    }),
-  };
 }

@@ -19,6 +19,8 @@ export function BookingCompletionScreen({
   onRefresh,
   reviewFeedback,
   disputeFeedback,
+  isReviewSubmitting,
+  isDisputeSubmitting,
 }) {
   return (
     <ScrollView
@@ -110,12 +112,15 @@ export function BookingCompletionScreen({
           accessibilityRole="button"
           accessibilityLabel="Submit review"
           testID="booking-completion-submit-review"
+          disabled={isReviewSubmitting}
           style={{
             marginTop: spacing.sm,
             borderRadius: radius.pill,
             backgroundColor: colors.primary,
             paddingVertical: 10,
             alignItems: 'center',
+            opacity: isReviewSubmitting ? 0.5 : 1,
+            pointerEvents: isReviewSubmitting ? 'none' : 'auto',
           }}
         >
           <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Submit review</Text>
@@ -177,12 +182,15 @@ export function BookingCompletionScreen({
           accessibilityRole="button"
           accessibilityLabel="Open dispute"
           testID="booking-completion-open-dispute"
+          disabled={isDisputeSubmitting}
           style={{
             marginTop: spacing.sm,
             borderRadius: radius.pill,
             backgroundColor: '#B91C1C',
             paddingVertical: 10,
             alignItems: 'center',
+            opacity: isDisputeSubmitting ? 0.5 : 1,
+            pointerEvents: isDisputeSubmitting ? 'none' : 'auto',
           }}
         >
           <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Open dispute</Text>

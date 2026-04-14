@@ -42,8 +42,6 @@ export default function BookingCompletionRoute() {
     const sessionToken = resolveSessionToken(session);
 
     if (!sessionToken) {
-      signOut();
-      router.replace('/auth');
       return;
     }
 
@@ -53,7 +51,7 @@ export default function BookingCompletionRoute() {
       sessionToken,
       bookingId,
     }).then(setScreenState);
-  }, [bookingId, router, session, signOut]);
+  }, [bookingId, session]);
 
   useEffect(() => {
     if (session.status !== 'authenticated') {
@@ -64,6 +62,19 @@ export default function BookingCompletionRoute() {
     load();
   }, [load, router, session.status]);
 
+  useEffect(() => {
+    if (session.status !== 'authenticated') {
+      return;
+    }
+
+    const sessionToken = resolveSessionToken(session);
+
+    if (!sessionToken) {
+      signOut();
+      router.replace('/auth');
+    }
+  }, [session, signOut, router]);
+
   if (session.status !== 'authenticated') {
     return null;
   }
@@ -71,14 +82,16 @@ export default function BookingCompletionRoute() {
   const sessionToken = resolveSessionToken(session);
 
   if (!sessionToken) {
-    signOut();
-    router.replace('/auth');
     return null;
   }
 
   const handleSubmitReview = () => {
     if (!bookingId) {
       setReviewState({ status: 'error', message: 'Missing booking id in route params.' });
+      return;
+    }
+
+    if (reviewState.status === 'submitting') {
       return;
     }
 
@@ -108,6 +121,10 @@ export default function BookingCompletionRoute() {
 
     if (!disputeDescription.trim()) {
       setDisputeState({ status: 'error', message: 'Please describe the dispute before submitting.' });
+      return;
+    }
+
+    if (disputeState.status === 'submitting') {
       return;
     }
 
@@ -225,6 +242,8 @@ export default function BookingCompletionRoute() {
       onRefresh={load}
       reviewFeedback={reviewFeedback}
       disputeFeedback={disputeFeedback}
+      isReviewSubmitting={reviewState.status === 'submitting'}
+      isDisputeSubmitting={disputeState.status === 'submitting'}
     />
   );
 }

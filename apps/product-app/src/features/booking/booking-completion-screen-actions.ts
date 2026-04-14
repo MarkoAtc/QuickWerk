@@ -24,6 +24,7 @@ export type LoadBookingCompletionResult =
     payment?: BookingContinuationPayment;
     invoice?: InvoiceRecord;
     reviews: ReviewRecord[];
+    latestDispute?: DisputeRecord;
     warningMessages: string[];
     errorMessage?: undefined;
   }
@@ -32,6 +33,7 @@ export type LoadBookingCompletionResult =
     payment?: undefined;
     invoice?: undefined;
     reviews?: undefined;
+    latestDispute?: undefined;
     warningMessages?: undefined;
     errorMessage: string;
   };
@@ -217,6 +219,7 @@ export async function loadBookingCompletion(
       booking: continuation.booking,
       payment: continuation.payment,
       reviews: [],
+      latestDispute: undefined,
       warningMessages,
     };
   }
@@ -273,11 +276,19 @@ export async function loadBookingCompletion(
     warningMessages.push(error instanceof Error ? error.message : 'Unknown review fetch failure.');
   }
 
+  let latestDispute: DisputeRecord | undefined;
+
+  // TODO: Add GET endpoint for booking disputes - for now, latestDispute is not fetched
+  // Once API endpoint is available, fetch dispute here using:
+  // const disputeRequest = createGetBookingDisputeRequest(input.sessionToken, input.bookingId);
+  // and parse the response using parseDispute()
+
   return {
     booking: continuation.booking,
     payment: continuation.payment,
     invoice,
     reviews,
+    latestDispute,
     warningMessages,
   };
 }
