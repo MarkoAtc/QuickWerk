@@ -329,12 +329,16 @@ export async function loadBookingCompletion(
         } else {
           const disputes = payload
             .map((entry) => parseDispute(entry))
-            .filter((entry): entry is DisputeRecord => entry != null)
-            .filter((entry) => entry.bookingId === input.bookingId);
+            .filter((entry): entry is DisputeRecord => entry != null);
 
-          latestDispute = [...disputes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+          const bookingId = input.bookingId;
+          const disputesForBooking = disputes.filter((d) => d.bookingId === bookingId);
+
+          latestDispute = [...disputesForBooking].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 
           if (payload.length > 0 && disputes.length === 0) {
+            warningMessages.push('Disputes response missing required fields.');
+          } else if (payload.length > 0 && disputesForBooking.length === 0) {
             warningMessages.push('Disputes response missing required fields.');
           }
         }
