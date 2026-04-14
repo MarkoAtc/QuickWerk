@@ -7,6 +7,7 @@
 
 import { createGetPublicProviderRequest } from '@quickwerk/api-client';
 
+import { runtimeConfig } from '../../shared/runtime-config';
 import type { PublicProviderSummary } from './provider-discovery-state';
 
 export type LoadProviderDetailResult =
@@ -34,7 +35,7 @@ export async function loadProviderDetail(
 
   let response: Response;
   try {
-    response = await fetchImpl(request.path, { method: request.method });
+    response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, { method: request.method });
   } catch (err) {
     return { errorMessage: err instanceof Error ? err.message : 'Unexpected error loading provider.' };
   }

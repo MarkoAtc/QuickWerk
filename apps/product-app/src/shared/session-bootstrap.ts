@@ -100,7 +100,7 @@ export async function loadSessionBootstrap(
 
 export async function signInWithSessionBootstrap(
   fetchImpl: typeof fetch = fetch,
-  signIn: SignInRequestBody = { email: 'customer.demo@quickwerk.local', role: 'customer' },
+  signIn: SignInRequestBody = { role: 'customer' },
 ): Promise<SignInResult> {
   const request = createSignInRequest(signIn);
 

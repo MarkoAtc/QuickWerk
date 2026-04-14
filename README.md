@@ -83,7 +83,7 @@ The backend also includes persistence-mode switching, relay execution/orchestrat
 
 ### Product-facing surfaces
 
-The user-facing app has real route structure and state modules, but several flows still rely on demo fixtures, safe fallbacks, or placeholder actions while the backend docking continues. In practice, the product app is ahead on screen coverage and interaction scaffolding, but not every surface is fully wired to production data end-to-end.
+The user-facing app now resolves auth session bootstrap, marketplace preview, provider discovery, and provider profile/detail from platform API contracts by default. Fallback fixtures remain only for true request failures and some non-critical UX paths still contain placeholder actions while backend docking continues.
 
 ### Backend and operator logic
 

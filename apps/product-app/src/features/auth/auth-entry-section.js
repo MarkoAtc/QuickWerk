@@ -116,7 +116,7 @@ export function AuthEntrySection({ authEntryState, actionStatusMessage, isSubmit
       </Text>
       {authEntryState.errorMessage ? (
         <Text testID="auth-entry-error-message" style={{ marginTop: 8, color: '#B26A00' }}>
-          Local demo data is active so the walkthrough stays reliable.
+          Session bootstrap is degraded: {authEntryState.errorMessage}
         </Text>
       ) : null}
     </View>

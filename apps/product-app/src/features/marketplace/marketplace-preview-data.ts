@@ -158,6 +158,25 @@ const buildPreviewStatusDigest = ({
   `${level}|${severityBadgeToken}|${coverageBandToken}|${alignmentToken}|g${goodSections}-w${watchSections}-c${criticalSections}|cw${coverageWellSections}-cp${coveragePartialSections}-cm${coverageMinimalSections}`;
 
 const derivePreviewHealth = (sections: readonly MarketplacePreviewSection[]): PreviewHealthIndicator => {
+  if (sections.length === 0) {
+    return {
+      level: 'critical',
+      summary: 'Marketplace preview payload is empty.',
+      narrative: 'No valid preview sections were returned by platform-api.',
+      riskHeadline: 'Critical risk: preview cannot render customer entry sections from live data.',
+      severityBadgeToken: 'badge-critical',
+      statusDigest: 'critical|badge-critical|coverage-low|align-risk|g0-w0-c0|cw0-cp0-cm0',
+      coverageBandToken: 'coverage-low',
+      alignmentToken: 'align-risk',
+      criticalSections: 0,
+      watchSections: 0,
+      goodSections: 0,
+      coverageMinimalSections: 0,
+      coveragePartialSections: 0,
+      coverageWellSections: 0,
+    };
+  }
+
   const completenessValues = sections
     .map((section) => section.payloadCompletenessPercent)
     .filter((value): value is number => typeof value === 'number');
@@ -424,11 +443,18 @@ export async function loadMarketplacePreview(fetchImpl: typeof fetch = fetch): P
         ?.map((section) => normalizeMarketplacePreviewSection(section))
         .filter((section): section is MarketplacePreviewSection => section !== null) ?? [];
 
-    const resolvedSections = sections.length > 0 ? sections : fallbackMarketplacePreviewSections;
+    if (sections.length === 0) {
+      return {
+        sections: [],
+        previewHealth: derivePreviewHealth([]),
+        source: 'platform-api',
+        errorMessage: 'Marketplace preview payload did not include valid sections.',
+      };
+    }
 
     return {
-      sections: resolvedSections,
-      previewHealth: derivePreviewHealth(resolvedSections),
+      sections,
+      previewHealth: derivePreviewHealth(sections),
       source: 'platform-api',
     };
   } catch (error) {
