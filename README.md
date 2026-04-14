@@ -53,8 +53,9 @@ Backend-facing operator state modules already exist for:
 
 - provider verification queue loading/review transitions
 - dispute queue loading and operator action transitions (`start-review`, `resolve`, `close`)
+- finance/support exception queue derived from billing dispute anomalies, including bounded payout/invoice anomaly typing (`payout-delayed`, `payout-blocked`, `invoice-missing`, `invoice-customer-mismatch`) and triage actions (`acknowledge`, `follow-up`, `route to dispute/manual review`)
 
-Today the rendered app shell is still minimal (`src/app/page.js`), so the queue logic exists before the real dashboard UI does.
+The rendered dashboard (`src/app/page.js`) now shows all three operator sections with explicit loading/empty/error/loaded states and row-level operator actions.
 
 ### Platform API (`services/platform-api`)
 
@@ -87,7 +88,7 @@ The user-facing app has real route structure and state modules, but several flow
 
 ### Backend and operator logic
 
-The platform API and shared domain packages carry the strongest implementation depth right now: auth/session handling, booking lifecycle endpoints, provider verification workflows, dispute operations, and relay/operator infrastructure are implemented as backend modules with tests. The biggest remaining presentation gap is the admin-web dashboard rendering layer, not the underlying provider/dispute queue logic.
+The platform API and shared domain packages carry the strongest implementation depth right now: auth/session handling, booking lifecycle endpoints, provider verification workflows, dispute operations, and relay/operator infrastructure are implemented as backend modules with tests. The admin dashboard now renders live provider/dispute/finance exception queues; the main remaining gap is a dedicated finance-exceptions backend endpoint (today this section is intentionally derived from billing dispute signals).
 
 ## Ops docs
 

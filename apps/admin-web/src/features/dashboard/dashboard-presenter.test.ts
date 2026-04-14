@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { DisputeRecord } from '@quickwerk/domain';
 
-import { describeDisputeQueue, describeVerificationQueue } from './dashboard-presenter';
+import { describeDisputeQueue, describeFinanceExceptionQueue, describeVerificationQueue } from './dashboard-presenter';
 import { createErrorState, createLoadedState, createLoadingState } from '../disputes/dispute-queue-state';
+import {
+  createFinanceErrorState,
+  createFinanceLoadedState,
+  createFinanceLoadingState,
+} from '../finance-exceptions/finance-exception-state';
 import {
   createLoadedQueueState,
   createLoadingQueueState,
@@ -32,6 +37,19 @@ const dispute = {
   resolvedAt: null,
   resolutionNote: null,
 } satisfies DisputeRecord;
+
+const financeException = {
+  exceptionId: 'finance-dispute-1',
+  disputeId: 'dispute-1',
+  bookingId: 'booking-1',
+  providerUserId: 'unknown-provider',
+  customerUserId: 'customer-1',
+  anomalyType: 'invoice-missing' as const,
+  anomalyReason: 'Missing invoice after payout was created.',
+  disputeStatus: 'open' as const,
+  reportedAt: '2026-01-01T10:00:00.000Z',
+  resolutionState: 'new' as const,
+};
 
 describe('dashboard-presenter', () => {
   it('describes verification loading state', () => {
@@ -95,6 +113,38 @@ describe('dashboard-presenter', () => {
       badge: '1 pending',
       headline: 'Dispute queue is live.',
       detail: 'Move disputes through review, resolution, or closure.',
+    });
+  });
+
+  it('describes finance loading state', () => {
+    expect(describeFinanceExceptionQueue(createFinanceLoadingState())).toEqual({
+      badge: 'loading',
+      headline: 'Loading finance/support exceptions…',
+      detail: 'Payout and invoice anomaly signals are still being fetched.',
+    });
+  });
+
+  it('describes finance empty state', () => {
+    expect(describeFinanceExceptionQueue({ status: 'empty' })).toEqual({
+      badge: 'clear',
+      headline: 'No finance/support exceptions need review.',
+      detail: 'No payout/invoice billing anomalies are currently active.',
+    });
+  });
+
+  it('describes finance error state', () => {
+    expect(describeFinanceExceptionQueue(createFinanceErrorState('HTTP 500'))).toEqual({
+      badge: 'error',
+      headline: 'Finance/support exceptions failed to load.',
+      detail: 'HTTP 500',
+    });
+  });
+
+  it('describes finance loaded state', () => {
+    expect(describeFinanceExceptionQueue(createFinanceLoadedState([financeException]))).toEqual({
+      badge: '1 pending',
+      headline: 'Finance/support exception cockpit is live.',
+      detail: 'Acknowledge anomalies, mark follow-up, or route into dispute/manual review.',
     });
   });
 });
