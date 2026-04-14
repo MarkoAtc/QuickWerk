@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, scrypt } from 'node:crypto';
+import { promisify } from 'node:util';
 
 import { resolveAuthSessionTtlSeconds } from '../domain/auth-session-expiry';
 import {
@@ -73,6 +74,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
     const userId = randomUUID();
     const token = randomUUID();
     const normalizedEmail = input.email.toLowerCase();
+    const passwordHash = await hashPassword(input.password);
 
     const userResult = await this.postgresClient.query<{ id: string }>(
       this.postgresConfig,
@@ -80,7 +82,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
        VALUES ($1::uuid, $2, 'customer', $3, $4)
        ON CONFLICT (email) DO NOTHING
        RETURNING id::text`,
-      [userId, normalizedEmail, input.name, input.password],
+      [userId, normalizedEmail, input.name, passwordHash],
     );
 
     const createdUser = userResult.rows[0];
@@ -179,4 +181,12 @@ function toIsoString(value: Date | string): string {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `scrypt$${salt}$${derivedKey.toString('hex')}`;
 }

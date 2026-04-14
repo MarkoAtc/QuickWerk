@@ -139,6 +139,12 @@ describe('PostgresAuthSessionRepository', () => {
       token: '11111111-1111-4111-8111-111111111111',
       userId: '22222222-2222-4222-8222-222222222222',
     });
+
+    const registrationQueryParams = query.mock.calls[0]?.[2] as unknown[] | undefined;
+    const storedPasswordHash = registrationQueryParams?.[3];
+    expect(typeof storedPasswordHash).toBe('string');
+    expect(storedPasswordHash).toMatch(/^scrypt\$/);
+    expect(storedPasswordHash).not.toBe('supersecure');
   });
 
   it('throws a duplicate-email error when registration email already exists', async () => {

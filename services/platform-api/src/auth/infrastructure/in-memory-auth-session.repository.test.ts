@@ -47,7 +47,7 @@ describe('InMemoryAuthSessionRepository', () => {
     await expect(
       repository.registerCustomer({
         name: 'Marta Meister',
-        email: 'marta@quickwerk.local',
+        email: 'MARTA@quickwerk.local',
         password: 'supersecure',
       }),
     ).rejects.toThrow('already exists');

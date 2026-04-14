@@ -42,7 +42,12 @@ export default function ProductAuthScreen() {
     }
   };
 
-  const handleCreateAccount = async ({ name, email, password }) => {
+  const handleCreateAccount = async ({ name, email, password, role }) => {
+    if (role !== 'customer') {
+      setError('Provider account creation is not available yet.');
+      return;
+    }
+
     if (loading) return;
     setLoading(true);
     setError(null);

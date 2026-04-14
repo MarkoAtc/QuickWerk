@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, scrypt } from 'node:crypto';
+import { promisify } from 'node:util';
 
 import { computeSessionExpiryIso, isSessionExpired, resolveAuthSessionTtlSeconds } from '../domain/auth-session-expiry';
 import {
@@ -14,7 +15,7 @@ type RegisteredCustomer = {
   userId: string;
   name: string;
   email: string;
-  password: string;
+  passwordHash: string;
 };
 
 @Injectable()
@@ -42,20 +43,22 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
   }
 
   async registerCustomer(input: RegisterCustomerInput): Promise<AuthSession> {
-    if (this.customersByEmail.has(input.email)) {
-      throw new DuplicateEmailError(input.email);
+    const normalizedEmail = input.email.toLowerCase();
+
+    if (this.customersByEmail.has(normalizedEmail)) {
+      throw new DuplicateEmailError(normalizedEmail);
     }
 
     const userId = `customer-${randomUUID().slice(0, 8)}`;
-    this.customersByEmail.set(input.email, {
+    this.customersByEmail.set(normalizedEmail, {
       userId,
       name: input.name,
-      email: input.email,
-      password: input.password,
+      email: normalizedEmail,
+      passwordHash: await hashPassword(input.password),
     });
 
     return this.createSession({
-      email: input.email,
+      email: normalizedEmail,
       role: 'customer',
     });
   }
@@ -86,4 +89,12 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
 
     return this.sessions.delete(token);
   }
+}
+
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `scrypt$${salt}$${derivedKey.toString('hex')}`;
 }

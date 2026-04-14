@@ -106,7 +106,6 @@ export class AuthService {
           status: 'failed',
           details: {
             reason: 'duplicate-email',
-            email,
           },
         });
 
