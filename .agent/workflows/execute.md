@@ -81,3 +81,14 @@ Return:
 - Files touched
 - Verification results + commands to reproduce
 - Follow-ups / new issues discovered (as Issue Drafts)
+
+## Step 7) Post-PR: CodeRabbit + CI Review Loop (required)
+
+After opening a PR, do **not** stop. Run `.agent/workflows/review-pr.md` to:
+
+1. Check CI status — fix any failures on the same branch.
+2. Read CodeRabbit feedback — address all actionable comments.
+3. Re-push until CI is green and no actionable CodeRabbit feedback remains.
+4. Only then update the Paperclip issue to `in_review` and stop.
+
+Rationale: Board should not be expected to merge PRs with unresolved CI failures or meaningful CodeRabbit feedback. Agents own the feedback loop through completion.
