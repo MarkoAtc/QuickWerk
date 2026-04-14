@@ -1,6 +1,7 @@
 import {
   createGetPendingDisputesRequest,
   createResolveDisputeRequest,
+  createRouteToDisputeRequest,
   createStartReviewDisputeRequest,
 } from '@quickwerk/api-client';
 import type { DisputeRecord, DisputeStatus } from '@quickwerk/domain';
@@ -92,8 +93,8 @@ const toFinanceExceptionSummary = (dispute: DisputeRecord): FinanceExceptionSumm
   exceptionId: `finance-${dispute.disputeId}`,
   disputeId: dispute.disputeId,
   bookingId: dispute.bookingId,
-  providerUserId: dispute.reporterRole === 'provider' ? dispute.reporterUserId : 'unknown-provider',
-  customerUserId: dispute.reporterRole === 'customer' ? dispute.reporterUserId : 'unknown-customer',
+  providerUserId: dispute.reporterRole === 'provider' ? dispute.reporterUserId : null,
+  customerUserId: dispute.reporterRole === 'customer' ? dispute.reporterUserId : null,
   anomalyType: classifyBillingAnomalyType(dispute.description),
   anomalyReason: dispute.description,
   disputeStatus: dispute.status,
@@ -179,6 +180,7 @@ const failAction = (
 async function transitionDispute(
   request:
     | ReturnType<typeof createStartReviewDisputeRequest>
+    | ReturnType<typeof createRouteToDisputeRequest>
     | ReturnType<typeof createResolveDisputeRequest>,
   fetchImpl: typeof fetch,
 ): Promise<{ dispute?: DisputeRecord; errorMessage?: string }> {
@@ -297,29 +299,59 @@ export async function submitFinanceExceptionTriage(
       return replaceDisputeInState(triagingState, resolveResult.dispute, actionType);
     }
 
-    if (exception.disputeStatus !== 'open') {
-      return createFinanceLoadedState(currentState.exceptions, {
-        status: 'done',
-        exceptionId,
-        disputeId: exception.disputeId,
-        actionType,
-      });
+    if (actionType === 'followUp') {
+      if (exception.disputeStatus !== 'open') {
+        return createFinanceLoadedState(currentState.exceptions, {
+          status: 'done',
+          exceptionId,
+          disputeId: exception.disputeId,
+          actionType,
+        });
+      }
+
+      const startReviewRequest = createStartReviewDisputeRequest(sessionToken, exception.disputeId);
+      const result = await transitionDispute(startReviewRequest, fetchImpl);
+
+      if (!result.dispute) {
+        return failAction(
+          triagingState,
+          exceptionId,
+          exception.disputeId,
+          actionType,
+          result.errorMessage ?? 'Unable to follow up on finance exception.',
+        );
+      }
+
+      return replaceDisputeInState(triagingState, result.dispute, actionType);
     }
 
-    const startReviewRequest = createStartReviewDisputeRequest(sessionToken, exception.disputeId);
-    const result = await transitionDispute(startReviewRequest, fetchImpl);
+    if (actionType === 'routeToDispute') {
+      if (exception.disputeStatus !== 'open') {
+        return createFinanceLoadedState(currentState.exceptions, {
+          status: 'done',
+          exceptionId,
+          disputeId: exception.disputeId,
+          actionType,
+        });
+      }
 
-    if (!result.dispute) {
-      return failAction(
-        triagingState,
-        exceptionId,
-        exception.disputeId,
-        actionType,
-        result.errorMessage ?? 'Unable to route finance exception.',
-      );
+      const routeToDisputeRequest = createRouteToDisputeRequest(sessionToken, exception.disputeId);
+      const result = await transitionDispute(routeToDisputeRequest, fetchImpl);
+
+      if (!result.dispute) {
+        return failAction(
+          triagingState,
+          exceptionId,
+          exception.disputeId,
+          actionType,
+          result.errorMessage ?? 'Unable to route finance exception to dispute.',
+        );
+      }
+
+      return replaceDisputeInState(triagingState, result.dispute, actionType);
     }
 
-    return replaceDisputeInState(triagingState, result.dispute, actionType);
+    return currentState;
   } catch (error) {
     return failAction(
       triagingState,

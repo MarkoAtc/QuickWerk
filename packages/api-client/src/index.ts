@@ -344,6 +344,12 @@ export const createStartReviewDisputeRequest = (sessionToken: string, disputeId:
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 
+export const createRouteToDisputeRequest = (sessionToken: string, disputeId: string) => ({
+  method: 'PATCH' as const,
+  path: disputeApiRoutes.startReview(disputeId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
 export const createResolveDisputeRequest = (
   sessionToken: string,
   disputeId: string,

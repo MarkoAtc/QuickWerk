@@ -12,8 +12,8 @@ export type FinanceExceptionSummary = {
   exceptionId: string;
   disputeId: string;
   bookingId: string;
-  providerUserId: string;
-  customerUserId: string;
+  providerUserId: string | null;
+  customerUserId: string | null;
   anomalyType: FinanceExceptionType;
   anomalyReason: string;
   disputeStatus: DisputeStatus;

@@ -91,10 +91,10 @@ async function triageFinanceExceptionAction(formData) {
   }
 
   const exceptionId = String(formData.get('exceptionId') ?? '');
-  const actionType = String(formData.get('actionType') ?? 'routeToDispute');
+  const actionType = String(formData.get('actionType') ?? '');
 
   if (actionType !== 'acknowledge' && actionType !== 'followUp' && actionType !== 'routeToDispute') {
-    return;
+    return { ok: false, error: `Invalid actionType: "${actionType}". Must be "acknowledge", "followUp", or "routeToDispute"` };
   }
 
   const currentState = await loadFinanceExceptionState(sessionResult.sessionToken);
@@ -102,12 +102,16 @@ async function triageFinanceExceptionAction(formData) {
     return;
   }
 
-  await submitFinanceExceptionTriage(
+  const newState = await submitFinanceExceptionTriage(
     currentState,
     sessionResult.sessionToken,
     exceptionId,
     actionType,
   );
+
+  if (newState.status === 'loaded' && newState.queueAction.status === 'error') {
+    return { ok: false, error: newState.queueAction.errorMessage };
+  }
 
   revalidatePath('/');
 }
@@ -355,7 +359,9 @@ function FinanceExceptionSection({ state }) {
                   </h3>
                   <p style={{ margin: '6px 0 0', color: '#475569' }}>{exception.anomalyReason}</p>
                   <p style={{ margin: '6px 0 0', color: '#64748b' }}>
-                    Provider: {exception.providerUserId} • Customer: {exception.customerUserId}
+                    {exception.providerUserId && `Provider: ${exception.providerUserId}`}
+                    {exception.providerUserId && exception.customerUserId && ' • '}
+                    {exception.customerUserId && `Customer: ${exception.customerUserId}`}
                   </p>
                   <p style={{ margin: '6px 0 0', color: '#64748b' }}>
                     Dispute: {exception.disputeId} • Resolution state: {exception.resolutionState}
