@@ -438,10 +438,11 @@ export async function loadMarketplacePreview(fetchImpl: typeof fetch = fetch): P
     }
 
     const payload = (await response.json()) as MarketplacePreviewPayload;
-    const sections =
-      payload.sections
-        ?.map((section) => normalizeMarketplacePreviewSection(section))
-        .filter((section): section is MarketplacePreviewSection => section !== null) ?? [];
+    const sections = Array.isArray(payload.sections)
+      ? payload.sections
+          .map((section) => normalizeMarketplacePreviewSection(section))
+          .filter((section): section is MarketplacePreviewSection => section !== null)
+      : [];
 
     if (sections.length === 0) {
       return {
