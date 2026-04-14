@@ -4,6 +4,7 @@ import { loadBookingContinuation } from './active-job-screen-actions';
 export type ActiveJobRouteState =
   | { status: 'loading' }
   | { status: 'error'; errorMessage: string }
+  | { status: 'handoff'; bookingId: string }
   | { status: 'loaded'; viewModel: ActiveJobViewModel };
 
 type ViewerRole = 'customer' | 'provider';
@@ -44,6 +45,10 @@ export async function resolveActiveJobRouteState(
 
   if (!result.booking) {
     return { status: 'error', errorMessage: 'Booking details are unavailable.' };
+  }
+
+  if (result.booking.status === 'completed') {
+    return { status: 'handoff', bookingId: result.booking.bookingId };
   }
 
   return {

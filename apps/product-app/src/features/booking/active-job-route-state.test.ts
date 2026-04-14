@@ -86,4 +86,29 @@ describe('resolveActiveJobRouteState', () => {
       expect(state.viewModel.headline).toBe('Booking submitted');
     }
   });
+
+  it('returns handoff state when booking is completed', async () => {
+    const loadImpl = async (): Promise<LoadBookingContinuationResult> => ({
+      booking: {
+        bookingId: 'bk-complete',
+        createdAt: '2026-04-13T20:00:00.000Z',
+        customerUserId: 'cust-1',
+        requestedService: 'Fix sink',
+        status: 'completed',
+        statusHistory: [],
+      },
+    });
+
+    const state = await resolveActiveJobRouteState({
+      sessionToken: 'tok',
+      bookingId: 'bk-complete',
+      viewerRole: 'customer',
+      loadBookingContinuationImpl: loadImpl,
+    });
+
+    expect(state).toEqual({
+      status: 'handoff',
+      bookingId: 'bk-complete',
+    });
+  });
 });

@@ -35,7 +35,20 @@ export default function ActiveJobRoute() {
       sessionToken,
       bookingId,
       viewerRole: session.role,
-    }).then(setScreenState);
+    }).then((nextState) => {
+      if (nextState.status === 'handoff') {
+        router.replace({ pathname: '/booking-completion', params: { bookingId: nextState.bookingId } });
+        return;
+      }
+
+      setScreenState(nextState);
+    }).catch((error) => {
+      console.error('Failed to load active job state:', error);
+      setScreenState({
+        status: 'error',
+        errorMessage: error instanceof Error ? error.message : 'An unexpected error occurred while loading booking details.',
+      });
+    });
   }, [bookingId, router, session, signOut]);
 
   useEffect(() => {
