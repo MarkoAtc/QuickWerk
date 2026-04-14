@@ -96,7 +96,20 @@ This document defines how AI assistants may safely accelerate delivery, document
 - acceptance criteria: decline reasons saved, exposed to support, analytics event emitted
 - validation: unit tests + integration test for API
 
-## 7. Automation Workflows
+## 7. PR Review Policy (CodeRabbit)
+
+Every PR in this repo is automatically reviewed by CodeRabbit after each push. Execution agents must not treat "PR opened" as the end of their work.
+
+**Required behavior after opening a PR:**
+
+1. Check CI status — investigate and fix any failures on the same branch.
+2. Read CodeRabbit feedback — address all actionable comments (bugs, correctness issues, clear improvements).
+3. Re-push until CI is green and no actionable CodeRabbit feedback remains.
+4. Only then set the Paperclip issue to `in_review` and stop.
+
+Agents must not wait passively in "in_review" when automated reviewer output creates clear next actions. Detailed steps are in `.agent/workflows/review-pr.md`.
+
+## 8. Automation Workflows
 
 ## 7.1 Story decomposition workflow
 
@@ -136,7 +149,7 @@ This document defines how AI assistants may safely accelerate delivery, document
 - summarize blockers, risks, and next decisions
 - output a concise sponsor-ready report
 
-## 8. Human Review Checklist for AI Output
+## 9. Human Review Checklist for AI Output
 
 - [ ] assumptions are explicit
 - [ ] changed scope matches the approved task
@@ -146,7 +159,7 @@ This document defines how AI assistants may safely accelerate delivery, document
 - [ ] docs were updated where needed
 - [ ] approval-requiring tasks were not executed without consent
 
-## 9. Acceptance Criteria for AI-Assisted Delivery
+## 10. Acceptance Criteria for AI-Assisted Delivery
 
 - [ ] AI outputs are traceable to approved requirements
 - [ ] validation evidence accompanies every material code change
