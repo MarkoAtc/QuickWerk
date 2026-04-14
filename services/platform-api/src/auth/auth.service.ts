@@ -43,13 +43,16 @@ export class AuthService {
     } as const;
   }
 
-  async signIn(input: { email?: string; role?: string }, context?: { correlationId?: string }) {
+  async signIn(input: { email?: string; role?: string; password?: string }, context?: { correlationId?: string }) {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const role = this.resolveRole(input.role);
+    const email = input.email ? this.normalizeEmail(input.email) : 'demo.customer@quickwerk.local';
+    const password = input.password;
 
     const session = await this.sessionStore.createSession({
-      email: input.email?.trim() || 'demo.customer@quickwerk.local',
+      email,
       role,
+      password,
     });
 
     logStructuredBreadcrumb({

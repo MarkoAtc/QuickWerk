@@ -32,14 +32,61 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
   async createSession(input: CreateAuthSessionInput): Promise<AuthSession> {
     const userId = randomUUID();
     const token = randomUUID();
+    const normalizedEmail = input.email.toLowerCase();
 
+    // If password is provided, verify it
+    if ('password' in input && input.password) {
+      const userResult = await this.postgresClient.query<{ id: string; password_hash: string | null; role: string }>(
+        this.postgresConfig,
+        `SELECT id::text, password_hash, role FROM users WHERE email = $1`,
+        [normalizedEmail],
+      );
+
+      const user = userResult.rows[0];
+
+      if (!user || !user.password_hash) {
+        throw new Error('Invalid email or password.');
+      }
+
+      const isValidPassword = await verifyPassword(input.password, user.password_hash);
+
+      if (!isValidPassword) {
+        throw new Error('Invalid email or password.');
+      }
+
+      // Create session for authenticated user
+      const sessionResult = await this.postgresClient.query<SessionRow>(
+        this.postgresConfig,
+        `INSERT INTO sessions (token, user_id, expires_at)
+         VALUES ($1::uuid, $2::uuid, NOW() + make_interval(secs => $3::int))
+         RETURNING token::text, user_id::text, created_at, expires_at`,
+        [token, user.id, this.sessionTtlSeconds],
+      );
+
+      const row = sessionResult.rows[0];
+
+      if (!row) {
+        throw new Error('Failed to create auth session in postgres repository.');
+      }
+
+      return {
+        createdAt: toIsoString(row.created_at),
+        expiresAt: toIsoString(row.expires_at),
+        email: normalizedEmail,
+        role: user.role as 'customer' | 'provider' | 'operator',
+        token: row.token,
+        userId: row.user_id,
+      };
+    }
+
+    // Legacy path: upsert user and create session (no password verification)
     await this.postgresClient.query(
       this.postgresConfig,
       `INSERT INTO users (id, email, role)
        VALUES ($1::uuid, $2, $3)
        ON CONFLICT (email)
        DO UPDATE SET role = EXCLUDED.role`,
-      [userId, input.email, input.role],
+      [userId, normalizedEmail, input.role],
     );
 
     const sessionResult = await this.postgresClient.query<SessionRow>(
@@ -51,7 +98,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
        FROM users
        WHERE users.email = $2
        RETURNING token::text, user_id::text, created_at, expires_at`,
-      [token, input.email, this.sessionTtlSeconds],
+      [token, normalizedEmail, this.sessionTtlSeconds],
     );
 
     const row = sessionResult.rows[0];
@@ -63,7 +110,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
     return {
       createdAt: toIsoString(row.created_at),
       expiresAt: toIsoString(row.expires_at),
-      email: input.email,
+      email: normalizedEmail,
       role: input.role,
       token: row.token,
       userId: row.user_id,
@@ -76,43 +123,43 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
     const normalizedEmail = input.email.toLowerCase();
     const passwordHash = await hashPassword(input.password);
 
-    const userResult = await this.postgresClient.query<{ id: string }>(
-      this.postgresConfig,
-      `INSERT INTO users (id, email, role, full_name, password_hash)
-       VALUES ($1::uuid, $2, 'customer', $3, $4)
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id::text`,
-      [userId, normalizedEmail, input.name, passwordHash],
-    );
+    return this.postgresClient.withTransaction(async (client) => {
+      const userResult = await client.query<{ id: string }>(
+        `INSERT INTO users (id, email, role, full_name, password_hash)
+         VALUES ($1::uuid, $2, 'customer', $3, $4)
+         ON CONFLICT (email) DO NOTHING
+         RETURNING id::text`,
+        [userId, normalizedEmail, input.name, passwordHash],
+      );
 
-    const createdUser = userResult.rows[0];
+      const createdUser = userResult.rows[0];
 
-    if (!createdUser) {
-      throw new DuplicateEmailError(normalizedEmail);
-    }
+      if (!createdUser) {
+        throw new DuplicateEmailError(normalizedEmail);
+      }
 
-    const sessionResult = await this.postgresClient.query<SessionRow>(
-      this.postgresConfig,
-      `INSERT INTO sessions (token, user_id, expires_at)
-       VALUES ($1::uuid, $2::uuid, NOW() + make_interval(secs => $3::int))
-       RETURNING token::text, user_id::text, created_at, expires_at`,
-      [token, createdUser.id, this.sessionTtlSeconds],
-    );
+      const sessionResult = await client.query<SessionRow>(
+        `INSERT INTO sessions (token, user_id, expires_at)
+         VALUES ($1::uuid, $2::uuid, NOW() + make_interval(secs => $3::int))
+         RETURNING token::text, user_id::text, created_at, expires_at`,
+        [token, createdUser.id, this.sessionTtlSeconds],
+      );
 
-    const row = sessionResult.rows[0];
+      const row = sessionResult.rows[0];
 
-    if (!row) {
-      throw new Error('Failed to create auth session during customer registration.');
-    }
+      if (!row) {
+        throw new Error('Failed to create auth session during customer registration.');
+      }
 
-    return {
-      createdAt: toIsoString(row.created_at),
-      expiresAt: toIsoString(row.expires_at),
-      email: normalizedEmail,
-      role: 'customer',
-      token: row.token,
-      userId: row.user_id,
-    };
+      return {
+        createdAt: toIsoString(row.created_at),
+        expiresAt: toIsoString(row.expires_at),
+        email: normalizedEmail,
+        role: 'customer' as const,
+        token: row.token,
+        userId: row.user_id,
+      };
+    });
   }
 
   async resolveSession(token: string | null | undefined): Promise<AuthSession | null> {
@@ -189,4 +236,15 @@ async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
   const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
   return `scrypt$${salt}$${derivedKey.toString('hex')}`;
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const parts = hash.split('$');
+  if (parts.length !== 3 || parts[0] !== 'scrypt') {
+    return false;
+  }
+  const salt = parts[1];
+  const storedHash = parts[2];
+  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  return derivedKey.toString('hex') === storedHash;
 }

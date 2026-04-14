@@ -12,6 +12,7 @@ export type AuthSession = {
 export type CreateAuthSessionInput = {
   email: string;
   role: SessionRole;
+  password?: string;
 };
 
 export type RegisterCustomerInput = {
