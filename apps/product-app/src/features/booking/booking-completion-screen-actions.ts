@@ -167,6 +167,10 @@ function parseReview(payload: unknown): ReviewRecord | null {
 }
 
 function parseDispute(payload: unknown): DisputeRecord | null {
+  if (payload == null || typeof payload !== 'object') {
+    return null;
+  }
+
   const dispute = payload as Record<string, unknown>;
 
   if (
