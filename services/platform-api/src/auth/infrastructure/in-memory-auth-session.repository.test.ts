@@ -34,4 +34,22 @@ describe('InMemoryAuthSessionRepository', () => {
 
     vi.useRealTimers();
   });
+
+  it('rejects duplicate customer registration emails', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    await repository.registerCustomer({
+      name: 'Marta Meister',
+      email: 'marta@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    await expect(
+      repository.registerCustomer({
+        name: 'Marta Meister',
+        email: 'marta@quickwerk.local',
+        password: 'supersecure',
+      }),
+    ).rejects.toThrow('already exists');
+  });
 });

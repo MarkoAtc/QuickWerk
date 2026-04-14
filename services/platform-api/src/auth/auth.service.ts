@@ -1,10 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import {
   AUTH_SESSION_REPOSITORY,
   AuthSession,
   AuthSessionRepository,
+  DuplicateEmailError,
   SessionRole,
 } from './domain/auth-session.repository';
 
@@ -67,6 +68,55 @@ export class AuthService {
     } as const;
   }
 
+  async signUp(
+    input: { name?: string; email?: string; password?: string },
+    context?: { correlationId?: string },
+  ) {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const name = this.normalizeName(input.name);
+    const email = this.normalizeEmail(input.email);
+    const password = this.normalizePassword(input.password);
+
+    try {
+      const session = await this.sessionStore.registerCustomer({
+        name,
+        email,
+        password,
+      });
+
+      logStructuredBreadcrumb({
+        event: 'auth.sign-up.write',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          userId: session.userId,
+          role: session.role,
+        },
+      });
+
+      return {
+        ...(await this.getSession(session.token)),
+        token: session.token,
+      } as const;
+    } catch (error) {
+      if (error instanceof DuplicateEmailError) {
+        logStructuredBreadcrumb({
+          event: 'auth.sign-up.write',
+          correlationId,
+          status: 'failed',
+          details: {
+            reason: 'duplicate-email',
+            email,
+          },
+        });
+
+        throw new ConflictException('An account with this email already exists.');
+      }
+
+      throw error;
+    }
+  }
+
   async signOut(token: string | undefined, context?: { correlationId?: string }) {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const signedOut = await this.sessionStore.deleteSession(token);
@@ -106,5 +156,35 @@ export class AuthService {
     }
 
     return 'customer';
+  }
+
+  private normalizeName(name: string | undefined): string {
+    const normalized = name?.trim() ?? '';
+
+    if (normalized.length < 2) {
+      throw new BadRequestException('Name must include at least 2 characters.');
+    }
+
+    return normalized;
+  }
+
+  private normalizeEmail(email: string | undefined): string {
+    const normalized = email?.trim().toLowerCase() ?? '';
+
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      throw new BadRequestException('Email must be a valid address.');
+    }
+
+    return normalized;
+  }
+
+  private normalizePassword(password: string | undefined): string {
+    const normalized = password ?? '';
+
+    if (normalized.length < 8) {
+      throw new BadRequestException('Password must include at least 8 characters.');
+    }
+
+    return normalized;
   }
 }

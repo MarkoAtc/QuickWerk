@@ -91,9 +91,11 @@ function TrustBadge({ label }) {
 
 export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false }) {
   const [role, setRole] = useState('customer');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const isSignInDisabled = isSigningIn || !email.trim() || !password;
+  const isCreateAccountDisabled = isSigningIn || !fullName.trim() || !email.trim() || !password;
 
   const handleSignIn = () => {
     if (onSignIn) {
@@ -103,7 +105,7 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
 
   const handleCreateAccount = () => {
     if (onCreateAccount) {
-      onCreateAccount(role);
+      onCreateAccount({ name: fullName, email, password, role });
     }
   };
 
@@ -171,6 +173,28 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
 
       {/* Divider */}
       <OrDivider />
+
+      {/* Email input */}
+      <TextInput
+        accessibilityLabel="Full name"
+        editable={!isSigningIn}
+        onChangeText={setFullName}
+        placeholder="Full Name"
+        placeholderTextColor={colors.muted}
+        testID="auth-entry-full-name"
+        value={fullName}
+        style={{
+          backgroundColor: colors.surface,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.muted,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.md,
+          fontSize: typography.fontSize.md,
+          color: colors.text,
+          marginBottom: spacing.sm,
+        }}
+      />
 
       {/* Email input */}
       <TextInput
@@ -255,8 +279,8 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Create an account"
-          accessibilityState={{ disabled: isSigningIn }}
-          disabled={isSigningIn}
+          accessibilityState={{ disabled: isCreateAccountDisabled }}
+          disabled={isCreateAccountDisabled}
           onPress={handleCreateAccount}
           testID="auth-entry-create-account"
         >

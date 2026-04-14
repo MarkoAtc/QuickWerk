@@ -35,7 +35,7 @@ QuickWerk is a cross-platform SME services marketplace: one shared product app f
 
 Implemented routes/screens exist for:
 
-- auth entry + sign-in
+- auth entry + sign-in/sign-up
 - home triage / post-auth entry
 - marketplace preview
 - public provider discovery
@@ -60,7 +60,7 @@ Today the rendered app shell is still minimal (`src/app/page.js`), so the queue 
 
 Implemented controller surfaces include:
 
-- `auth` — sign-in, sign-out, session resolution
+- `auth` — sign-in, sign-up, sign-out, session resolution
 - `bookings` — preview, list/detail, create, accept, decline, complete, payment lookup
 - `providers` — public discovery, provider verification submit/status/review, provider profile upsert/read
 - `disputes` — booking dispute submission plus operator dispute queue/actions

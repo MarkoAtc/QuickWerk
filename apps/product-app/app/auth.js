@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { AuthEntryScreen } from '../src/features/auth/auth-entry-screen';
-import { signInWithCredentials } from '../src/features/auth/auth-entry-actions';
+import { signInWithCredentials, signUpWithCredentials } from '../src/features/auth/auth-entry-actions';
 import { useSession } from '../src/shared/session-provider';
 
 export default function ProductAuthScreen() {
@@ -42,9 +42,29 @@ export default function ProductAuthScreen() {
     }
   };
 
-  const handleCreateAccount = (role) => {
-    // TODO: wire to sign-up flow once registration endpoint is available
-    setError('Account creation is not yet available. Please sign in.');
+  const handleCreateAccount = async ({ name, email, password }) => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await signUpWithCredentials({ name, email, password });
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setSession({
+        status: 'authenticated',
+        sessionToken: result.sessionToken,
+        role: result.role,
+      });
+
+      router.replace('/home-triage');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

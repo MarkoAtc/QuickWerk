@@ -51,4 +51,67 @@ describe('AuthService', () => {
       expect(signedIn.session.role).toBe('operator');
     }
   });
+
+  it('registers a customer on sign-up and returns an authenticated session token', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const signedUp = await service.signUp({
+      name: 'Marta Meister',
+      email: 'marta@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    expect(signedUp.sessionState).toBe('authenticated');
+    expect(signedUp.token).toBeTruthy();
+    if (signedUp.sessionState === 'authenticated') {
+      expect(signedUp.session.email).toBe('marta@quickwerk.local');
+      expect(signedUp.session.role).toBe('customer');
+    }
+  });
+
+  it('rejects invalid sign-up payloads', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    await expect(
+      service.signUp({
+        name: 'A',
+        email: 'invalid-email',
+        password: 'short',
+      }),
+    ).rejects.toThrow('Name must include at least 2 characters.');
+
+    await expect(
+      service.signUp({
+        name: 'Marta Meister',
+        email: 'invalid-email',
+        password: 'supersecure',
+      }),
+    ).rejects.toThrow('Email must be a valid address.');
+
+    await expect(
+      service.signUp({
+        name: 'Marta Meister',
+        email: 'marta@quickwerk.local',
+        password: 'short',
+      }),
+    ).rejects.toThrow('Password must include at least 8 characters.');
+  });
+
+  it('rejects duplicate email registration attempts', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    await service.signUp({
+      name: 'Marta Meister',
+      email: 'marta@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    await expect(
+      service.signUp({
+        name: 'Marta Meister',
+        email: 'marta@quickwerk.local',
+        password: 'supersecure',
+      }),
+    ).rejects.toThrow('An account with this email already exists.');
+  });
 });
