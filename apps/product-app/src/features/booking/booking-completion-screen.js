@@ -201,8 +201,8 @@ export function BookingCompletionScreen({
 
       {viewModel.warningMessages.length > 0 ? (
         <View style={{ backgroundColor: '#FEFCE8', borderColor: '#FDE68A', borderWidth: 1, borderRadius: radius.card, padding: spacing.md, gap: spacing.xs }}>
-          {viewModel.warningMessages.map((message) => (
-            <Text key={message} style={{ color: '#854D0E', fontSize: typography.fontSize.xs }}>
+          {viewModel.warningMessages.map((message, i) => (
+            <Text key={`${message}-${i}`} style={{ color: '#854D0E', fontSize: typography.fontSize.xs }}>
               {message}
             </Text>
           ))}
@@ -214,8 +214,8 @@ export function BookingCompletionScreen({
           <Text style={{ color: colors.text, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold }}>
             Status history
           </Text>
-          {viewModel.statusHistory.map((entry) => (
-            <Text key={entry} style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>
+          {viewModel.statusHistory.map((entry, i) => (
+            <Text key={`${entry}-${i}`} style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>
               {entry}
             </Text>
           ))}

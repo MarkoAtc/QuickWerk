@@ -90,27 +90,28 @@ function parseInvoice(payload: unknown): InvoiceRecord | null {
     return null;
   }
 
-  const lineItems = invoice['lineItems']
-    .map((item) => {
-      const line = item as Record<string, unknown>;
+  // Validate all line items first - if any are invalid, reject the entire invoice
+  const lineItems: InvoiceRecord['lineItems'] = [];
 
-      if (
-        typeof line['description'] !== 'string'
-        || typeof line['quantity'] !== 'number'
-        || typeof line['unitAmountCents'] !== 'number'
-        || typeof line['totalAmountCents'] !== 'number'
-      ) {
-        return null;
-      }
+  for (const item of invoice['lineItems']) {
+    const line = item as Record<string, unknown>;
 
-      return {
-        description: line['description'],
-        quantity: line['quantity'],
-        unitAmountCents: line['unitAmountCents'],
-        totalAmountCents: line['totalAmountCents'],
-      };
-    })
-    .filter((item): item is InvoiceRecord['lineItems'][number] => item != null);
+    if (
+      typeof line['description'] !== 'string'
+      || typeof line['quantity'] !== 'number'
+      || typeof line['unitAmountCents'] !== 'number'
+      || typeof line['totalAmountCents'] !== 'number'
+    ) {
+      return null;
+    }
+
+    lineItems.push({
+      description: line['description'],
+      quantity: line['quantity'],
+      unitAmountCents: line['unitAmountCents'],
+      totalAmountCents: line['totalAmountCents'],
+    });
+  }
 
   if (lineItems.length === 0) {
     return null;
@@ -265,8 +266,8 @@ export async function loadBookingCompletion(
           .map((entry) => parseReview(entry))
           .filter((entry): entry is ReviewRecord => entry != null);
 
-        if (payload.length > 0 && reviews.length === 0) {
-          warningMessages.push('Reviews response missing required fields.');
+        if (payload.length > reviews.length) {
+          warningMessages.push('Some reviews missing required fields.');
         }
       }
     } else if (reviewsResponse.status !== 403 && reviewsResponse.status !== 404) {
