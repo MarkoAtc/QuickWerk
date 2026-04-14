@@ -32,6 +32,9 @@ jobs:
       - name: Typecheck workspace
         run: pnpm check
 
+      - name: Build background workers (workspace dependency for platform-api tests)
+        run: pnpm --filter @quickwerk/background-workers build
+
       - name: Test platform API
         run: pnpm --filter @quickwerk/platform-api test
 
