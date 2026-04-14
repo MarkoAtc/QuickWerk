@@ -30,7 +30,7 @@ const createPanelContent = (actionId, authEntryState) => {
         title: 'Sign in',
         description: 'Fast returning-customer entry, now wired to a real session token endpoint.',
         fields: [
-          ['Email address', 'customer.demo@quickwerk.local'],
+          ['Email address', 'customer@quickwerk.local'],
           ['Role', 'customer'],
         ],
         buttonLabel: 'Continue with sign in',

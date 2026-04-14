@@ -170,7 +170,12 @@ export function MarketplacePreviewScreen() {
         }}
       >
         <Text style={{ color: productAppShell.theme.color.accent }}>
-          Demo mode: {isLoading ? 'loading…' : previewResult.source === 'platform-api' ? 'Live preview fixtures' : 'Local fallback fixtures'}
+          Data source:{' '}
+          {isLoading
+            ? 'loading…'
+            : previewResult.source === 'platform-api'
+              ? 'Platform API'
+              : 'Fallback fixture (request failure)'}
         </Text>
 
         <View
@@ -215,7 +220,7 @@ export function MarketplacePreviewScreen() {
 
         {previewResult.errorMessage ? (
           <Text testID="marketplace-preview-error-message" style={{ marginTop: 10, color: '#B26A00' }}>
-            We are currently showing local demo data to keep the walkthrough stable.
+            {previewResult.errorMessage}
           </Text>
         ) : null}
       </View>

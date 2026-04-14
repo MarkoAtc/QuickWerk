@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   defaultMarketplacePreviewResult,
-  fallbackMarketplacePreviewSections,
   loadMarketplacePreview,
 } from './marketplace-preview-data';
 
@@ -35,7 +34,7 @@ describe('loadMarketplacePreview', () => {
     });
   });
 
-  it('sanitizes invalid payload sections and returns fallback sections with platform-api source', async () => {
+  it('returns an explicit degraded platform-api result when payload sections are invalid', async () => {
     const fetchMock = async () =>
       ({
         ok: true,
@@ -47,10 +46,11 @@ describe('loadMarketplacePreview', () => {
     const result = await loadMarketplacePreview(fetchMock as typeof fetch);
 
     expect(result).toMatchObject({
-      sections: fallbackMarketplacePreviewSections,
+      sections: [],
       source: 'platform-api',
+      errorMessage: 'Marketplace preview payload did not include valid sections.',
     });
-    expect(result.errorMessage).toBeUndefined();
+    expect(result.previewHealth.level).toBe('critical');
   });
 
   it('sanitizes invalid optional fields while preserving an otherwise valid section', async () => {
@@ -305,5 +305,81 @@ describe('loadMarketplacePreview', () => {
     expect(result.sections[0]?.sectionSeverityBadgeToken).toBe('badge-watch');
     expect(result.sections[0]?.dataCoverageBandToken).toBe('coverage-medium');
     expect(result.sections[0]?.sectionAlignmentToken).toBe('align-mixed');
+  });
+
+  it('returns degraded platform-api response when payload.sections is an object', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: { invalid: 'object' },
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      sections: [],
+      source: 'platform-api',
+      errorMessage: 'Marketplace preview payload did not include valid sections.',
+    });
+    expect(result.previewHealth.level).toBe('critical');
+  });
+
+  it('returns degraded platform-api response when payload.sections is a string', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: 'bad',
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      sections: [],
+      source: 'platform-api',
+      errorMessage: 'Marketplace preview payload did not include valid sections.',
+    });
+    expect(result.previewHealth.level).toBe('critical');
+  });
+
+  it('returns degraded platform-api response when payload.sections is a number', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: 42,
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      sections: [],
+      source: 'platform-api',
+      errorMessage: 'Marketplace preview payload did not include valid sections.',
+    });
+    expect(result.previewHealth.level).toBe('critical');
+  });
+
+  it('returns degraded platform-api response when payload.sections is null', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          sections: null,
+        }),
+      }) as Response;
+
+    const result = await loadMarketplacePreview(fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      sections: [],
+      source: 'platform-api',
+      errorMessage: 'Marketplace preview payload did not include valid sections.',
+    });
+    expect(result.previewHealth.level).toBe('critical');
   });
 });

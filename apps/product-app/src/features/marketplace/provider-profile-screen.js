@@ -166,21 +166,27 @@ function ReviewCard({ review }) {
   );
 }
 
-const DEFAULT_PROVIDER = {
-  name: 'Alex Schneider',
-  title: 'Verified Emergency Plumber',
-  etaMin: 12,
-  rating: 4.9,
-  jobCount: 342,
-  bio: 'With over 15 years of experience in Vienna, I specialize in rapid response plumbing emergencies. My goal is to fix your issue quickly while making sure you understand exactly what\'s being done.',
-  review: {
-    text: '"Alex was a lifesaver! Arrived exactly on time, was very reassuring, and fixed the burst pipe without any hidden fees. Highly recommend for any plumbing emergency."',
-    reviewer: 'Sarah M.',
-  },
-};
+const createResolvedProvider = (provider) => ({
+  name: provider?.name?.trim() || 'Provider',
+  title: provider?.title?.trim() || 'Profile details are loading from platform data.',
+  etaMin: Number.isFinite(provider?.etaMin) ? provider.etaMin : null,
+  rating: Number.isFinite(provider?.rating) ? provider.rating : null,
+  jobCount: Number.isFinite(provider?.jobCount) ? provider.jobCount : null,
+  bio:
+    provider?.bio?.trim() ||
+    'Provider biography is currently unavailable from the API. Please continue with discovery or retry later.',
+  review:
+    provider?.review &&
+    typeof provider.review.text === 'string' &&
+    provider.review.text.trim() &&
+    typeof provider.review.reviewer === 'string' &&
+    provider.review.reviewer.trim()
+      ? provider.review
+      : null,
+});
 
-export function ProviderProfile({ provider = DEFAULT_PROVIDER, onRequest, onClose }) {
-  const p = { ...DEFAULT_PROVIDER, ...provider };
+export function ProviderProfile({ provider, onRequest, onClose }) {
+  const p = createResolvedProvider(provider);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface }}>
@@ -274,11 +280,11 @@ export function ProviderProfile({ provider = DEFAULT_PROVIDER, onRequest, onClos
             ...shadow.soft,
           }}
         >
-          <StatColumn value={`${p.etaMin} min`} label="ETA" />
+          <StatColumn value={p.etaMin == null ? 'N/A' : `${p.etaMin} min`} label="ETA" />
           <StatDivider />
-          <StatColumn value={`${p.rating} ★`} label="RATING" />
+          <StatColumn value={p.rating == null ? 'N/A' : `${p.rating} ★`} label="RATING" />
           <StatDivider />
-          <StatColumn value={String(p.jobCount)} label="JOBS" />
+          <StatColumn value={p.jobCount == null ? 'N/A' : String(p.jobCount)} label="JOBS" />
         </View>
 
         {/* About section */}
@@ -303,18 +309,21 @@ export function ProviderProfile({ provider = DEFAULT_PROVIDER, onRequest, onClos
           {p.bio}
         </Text>
 
-        {/* Recent Review */}
-        <Text
-          style={{
-            color: colors.text,
-            fontSize: typography.fontSize.lg,
-            fontWeight: typography.fontWeight.semibold,
-            marginBottom: spacing.md,
-          }}
-        >
-          Recent Review
-        </Text>
-        <ReviewCard review={p.review} />
+        {p.review ? (
+          <>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: typography.fontSize.lg,
+                fontWeight: typography.fontWeight.semibold,
+                marginBottom: spacing.md,
+              }}
+            >
+              Recent Review
+            </Text>
+            <ReviewCard review={p.review} />
+          </>
+        ) : null}
       </ScrollView>
 
       {/* Fixed bottom CTA */}
