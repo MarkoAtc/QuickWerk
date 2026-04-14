@@ -123,7 +123,9 @@ export function BookingCompletionScreen({
             pointerEvents: isReviewSubmitting ? 'none' : 'auto',
           }}
         >
-          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Submit review</Text>
+          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>
+            {isReviewSubmitting ? 'Submitting review...' : 'Submit review'}
+          </Text>
         </TouchableOpacity>
 
         {reviewFeedback ? <Text style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>{reviewFeedback}</Text> : null}
@@ -193,7 +195,9 @@ export function BookingCompletionScreen({
             pointerEvents: isDisputeSubmitting ? 'none' : 'auto',
           }}
         >
-          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>Open dispute</Text>
+          <Text style={{ color: colors.surface, fontWeight: typography.fontWeight.bold }}>
+            {isDisputeSubmitting ? 'Opening dispute...' : 'Open dispute'}
+          </Text>
         </TouchableOpacity>
 
         {disputeFeedback ? <Text style={{ color: colors.muted, fontSize: typography.fontSize.xs }}>{disputeFeedback}</Text> : null}

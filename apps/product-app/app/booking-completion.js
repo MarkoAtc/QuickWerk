@@ -86,6 +86,10 @@ export default function BookingCompletionRoute() {
   }
 
   const handleSubmitReview = () => {
+    if (reviewState.status === 'submitting') {
+      return;
+    }
+
     if (!bookingId) {
       setReviewState({ status: 'error', message: 'Missing booking id in route params.' });
       return;
@@ -114,6 +118,10 @@ export default function BookingCompletionRoute() {
   };
 
   const handleOpenDispute = () => {
+    if (disputeState.status === 'submitting') {
+      return;
+    }
+
     if (!bookingId) {
       setDisputeState({ status: 'error', message: 'Missing booking id in route params.' });
       return;
