@@ -1,9 +1,18 @@
 import { revalidatePath } from 'next/cache';
 
 import { adminShell } from '../admin-shell';
-import { describeDisputeQueue, describeVerificationQueue } from '../features/dashboard/dashboard-presenter';
+import {
+  describeDisputeQueue,
+  describeFinanceExceptionQueue,
+  describeVerificationQueue,
+} from '../features/dashboard/dashboard-presenter';
 import { loadDisputeQueueState, submitDisputeTransition } from '../features/disputes/dispute-queue-actions';
 import { createErrorState as createDisputeErrorState } from '../features/disputes/dispute-queue-state';
+import {
+  loadFinanceExceptionState,
+  submitFinanceExceptionTriage,
+} from '../features/finance-exceptions/finance-exception-actions';
+import { createFinanceErrorState } from '../features/finance-exceptions/finance-exception-state';
 import { resolveOperatorSession } from '../features/operator-session/operator-session';
 import { loadQueueState, submitReviewDecision } from '../features/provider-review/verification-queue-actions';
 import { createQueueErrorState } from '../features/provider-review/verification-queue-state';
@@ -69,6 +78,40 @@ async function advanceDisputeAction(formData) {
     actionType,
     { resolutionNote: resolutionNote || undefined },
   );
+
+  revalidatePath('/');
+}
+
+async function triageFinanceExceptionAction(formData) {
+  'use server';
+
+  const sessionResult = await resolveOperatorSession();
+  if (!sessionResult.ok) {
+    return;
+  }
+
+  const exceptionId = String(formData.get('exceptionId') ?? '');
+  const actionType = String(formData.get('actionType') ?? '');
+
+  if (actionType !== 'acknowledge' && actionType !== 'followUp' && actionType !== 'routeToDispute') {
+    return { ok: false, error: `Invalid actionType: "${actionType}". Must be "acknowledge", "followUp", or "routeToDispute"` };
+  }
+
+  const currentState = await loadFinanceExceptionState(sessionResult.sessionToken);
+  if (currentState.status !== 'loaded') {
+    return;
+  }
+
+  const newState = await submitFinanceExceptionTriage(
+    currentState,
+    sessionResult.sessionToken,
+    exceptionId,
+    actionType,
+  );
+
+  if (newState.status === 'loaded' && newState.queueAction.status === 'error') {
+    return { ok: false, error: newState.queueAction.errorMessage };
+  }
 
   revalidatePath('/');
 }
@@ -281,17 +324,103 @@ function DisputeQueueSection({ state }) {
   );
 }
 
+const anomalyTypeLabels = {
+  'payout-delayed': 'Payout delayed',
+  'payout-blocked': 'Payout blocked',
+  'invoice-missing': 'Invoice missing',
+  'invoice-customer-mismatch': 'Invoice/customer mismatch',
+};
+
+function FinanceExceptionSection({ state }) {
+  const summary = describeFinanceExceptionQueue(state);
+
+  return (
+    <section style={cardStyle('#fde68a')}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24 }}>Finance/support exceptions</h2>
+          <p style={{ margin: '8px 0 0', color: '#475569' }}>{summary.headline}</p>
+          <p style={{ margin: '6px 0 0', color: '#64748b' }}>{summary.detail}</p>
+        </div>
+        {queueSummaryBadge(summary)}
+      </div>
+
+      {state.status === 'loaded' ? (
+        <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+          {state.exceptions.map((exception) => (
+            <article
+              key={exception.exceptionId}
+              style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, background: '#fefce8' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18 }}>
+                    Booking {exception.bookingId} • {anomalyTypeLabels[exception.anomalyType]}
+                  </h3>
+                  <p style={{ margin: '6px 0 0', color: '#475569' }}>{exception.anomalyReason}</p>
+                  <p style={{ margin: '6px 0 0', color: '#64748b' }}>
+                    {exception.providerUserId && `Provider: ${exception.providerUserId}`}
+                    {exception.providerUserId && exception.customerUserId && ' • '}
+                    {exception.customerUserId && `Customer: ${exception.customerUserId}`}
+                  </p>
+                  <p style={{ margin: '6px 0 0', color: '#64748b' }}>
+                    Dispute: {exception.disputeId} • Resolution state: {exception.resolutionState}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right', color: '#64748b', fontSize: 13 }}>
+                  <div>Dispute status: {exception.disputeStatus}</div>
+                  <div>Reported {new Date(exception.reportedAt).toLocaleString('de-AT')}</div>
+                </div>
+              </div>
+
+              <form action={triageFinanceExceptionAction} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+                <input type="hidden" name="exceptionId" value={exception.exceptionId} />
+                <button
+                  type="submit"
+                  name="actionType"
+                  value="acknowledge"
+                  style={{ border: 0, borderRadius: 10, padding: '10px 14px', background: '#0f766e', color: '#fff' }}
+                >
+                  Acknowledge
+                </button>
+                <button
+                  type="submit"
+                  name="actionType"
+                  value="followUp"
+                  style={{ border: 0, borderRadius: 10, padding: '10px 14px', background: '#0369a1', color: '#fff' }}
+                >
+                  Mark follow-up
+                </button>
+                <button
+                  type="submit"
+                  name="actionType"
+                  value="routeToDispute"
+                  style={{ border: 0, borderRadius: 10, padding: '10px 14px', background: '#7c3aed', color: '#fff' }}
+                >
+                  Route to dispute/manual review
+                </button>
+              </form>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default async function AdminHomePage() {
   const sessionResult = await resolveOperatorSession();
 
-  const [verificationState, disputeState] = sessionResult.ok
+  const [verificationState, disputeState, financeExceptionState] = sessionResult.ok
     ? await Promise.all([
         loadQueueState(sessionResult.sessionToken),
         loadDisputeQueueState(sessionResult.sessionToken),
+        loadFinanceExceptionState(sessionResult.sessionToken),
       ])
     : [
         createQueueErrorState(sessionResult.errorMessage),
         createDisputeErrorState(sessionResult.errorMessage),
+        createFinanceErrorState(sessionResult.errorMessage),
       ];
 
   return (
@@ -311,7 +440,7 @@ export default async function AdminHomePage() {
           </p>
           <h1 style={{ margin: '8px 0 0', fontSize: 34 }}>Operator dashboard</h1>
           <p style={{ margin: '10px 0 0', color: '#475569', maxWidth: 760 }}>
-            Live provider verification and dispute operations powered by the real Phase 4 queue modules.
+            Live provider verification, dispute, and finance/support exception operations powered by real queue modules.
           </p>
           <p style={{ margin: '10px 0 0', color: '#64748b' }}>
             Session bootstrap:{' '}
@@ -324,6 +453,7 @@ export default async function AdminHomePage() {
         <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           <VerificationQueueSection state={verificationState} />
           <DisputeQueueSection state={disputeState} />
+          <FinanceExceptionSection state={financeExceptionState} />
         </div>
       </div>
     </main>

@@ -1,4 +1,5 @@
 import type { DisputeQueueState } from '../disputes/dispute-queue-state';
+import type { FinanceExceptionState } from '../finance-exceptions/finance-exception-state';
 import type { VerificationQueueState } from '../provider-review/verification-queue-state';
 
 export type QueueStatusSummary = {
@@ -67,6 +68,38 @@ export function describeDisputeQueue(state: DisputeQueueState): QueueStatusSumma
           state.queueAction.status === 'error'
             ? state.queueAction.errorMessage
             : 'Move disputes through review, resolution, or closure.',
+      };
+  }
+}
+
+export function describeFinanceExceptionQueue(state: FinanceExceptionState): QueueStatusSummary {
+  switch (state.status) {
+    case 'loading':
+      return {
+        badge: 'loading',
+        headline: 'Loading finance/support exceptions…',
+        detail: 'Payout and invoice anomaly signals are still being fetched.',
+      };
+    case 'empty':
+      return {
+        badge: 'clear',
+        headline: 'No finance/support exceptions need review.',
+        detail: 'No payout/invoice billing anomalies are currently active.',
+      };
+    case 'error':
+      return {
+        badge: 'error',
+        headline: 'Finance/support exceptions failed to load.',
+        detail: state.errorMessage,
+      };
+    case 'loaded':
+      return {
+        badge: `${state.exceptions.length} pending`,
+        headline: 'Finance/support exception cockpit is live.',
+        detail:
+          state.queueAction.status === 'error'
+            ? state.queueAction.errorMessage
+            : 'Acknowledge anomalies, mark follow-up, or route into dispute/manual review.',
       };
   }
 }
