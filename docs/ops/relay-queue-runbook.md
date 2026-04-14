@@ -11,10 +11,11 @@ This runbook covers queue pressure/degradation handling for the Postgres-persist
 - readiness endpoint: `GET /health/readiness`
 - operator inspection endpoints:
   - `GET /operators/relay-queue/attempts`
-  - `GET /operators/relay-queue/snapshots`
-  - `GET /operators/relay-queue/attempts.csv`
-  - `GET /operators/relay-queue/attempts.csv/handoff`
-  - `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
+- `GET /operators/relay-queue/snapshots`
+- `GET /operators/relay-queue/snapshots/preset/:window` (`15m|1h|6h`)
+- `GET /operators/relay-queue/attempts.csv`
+- `GET /operators/relay-queue/attempts.csv/handoff`
+- `GET /operators/relay-queue/attempts.csv/handoff/:handoffId`
 
 ## Operator access policy (authN/authZ)
 
@@ -47,6 +48,8 @@ From `GET /health/readiness` (`relayQueue` payload):
 - `sloWindow.*` (rolling occupancy summary)
 
 From `/operators/relay-queue/*` (`relayQueue.operatorAuthTelemetry`):
+
+Endpoint latency telemetry is also exposed as `relayQueue.endpointLatencyTelemetry` with rolling `p50`, `p95`, and `p99` values per endpoint.
 
 - `roleModeUsage.operator-provider-transition`
 - `roleModeUsage.operator-strict`
@@ -169,6 +172,6 @@ QW_OPERATOR_BEARER_TOKEN=<operator-or-provider-session-token> \
 - snapshot history in `/operators/relay-queue/snapshots` is persisted in Postgres table `booking_accepted_relay_queue_snapshots`.
 - retention is bounded by `BOOKING_ACCEPTED_RELAY_QUEUE_SNAPSHOT_RETENTION` cleanup on insert.
 - `/operators/relay-queue/attempts.csv` remains bounded and restricted to allow-listed columns for quick dead-letter inspection.
-- `/operators/relay-queue/attempts.csv/handoff*` provides non-blocking staged exports for larger bounded windows.
+  - `/operators/relay-queue/attempts.csv/handoff*` provides non-blocking staged exports for larger bounded windows and persists handoff jobs in `relay_csv_handoff_jobs` when `PERSISTENCE_MODE=postgres`.
 - `/operators/relay-queue/*` responses include additive `operatorAuthTelemetry` counters to de-risk `operator-strict` rollout.
 - `/health` legacy payload remains unchanged; queue pressure is surfaced via `/health/readiness`.

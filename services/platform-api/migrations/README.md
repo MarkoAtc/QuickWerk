@@ -30,6 +30,10 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
   - creates durable `disputes` table with lifecycle states (`open`, `under-review`, `resolved`, `closed`)
   - enforces one dispute per (`booking_id`, `reporter_user_id`) and resolution field consistency checks
   - adds indexes for operator queue and reporter/booking lookups
+- `0008_relay_csv_handoff_jobs.sql`
+  - creates durable relay CSV handoff jobs table (`relay_csv_handoff_jobs`)
+  - persists async export handoff lifecycle (`pending`, `ready`, `failed`) and payload/filter snapshots
+  - adds created/expiry indexes for TTL cleanup and bounded retention scans
 
 ## How to run later (manual)
 
@@ -43,6 +47,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005_operator_role_support.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0006_booking_declined_support.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0007_disputes_lifecycle.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0008_relay_csv_handoff_jobs.sql
 ```
 
 Rollback is currently manual (early scaffold phase).

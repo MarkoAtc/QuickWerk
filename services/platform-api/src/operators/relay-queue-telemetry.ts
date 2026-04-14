@@ -19,6 +19,20 @@ type RelayQueueOperatorTelemetryState = {
   lastEventAt: string | null;
 };
 
+type RelayQueueEndpointLatencyTelemetryState = {
+  endpointWindows: Record<string, number[]>;
+  sampleCap: number;
+  totalObservedRequests: number;
+  lastEventAt: string | null;
+};
+
+type RelayQueueEndpointLatencySummary = {
+  p50: number;
+  p95: number;
+  p99: number;
+  sampleCount: number;
+};
+
 const initialState = (): RelayQueueOperatorTelemetryState => ({
   roleModeUsage: {
     'operator-provider-transition': 0,
@@ -34,7 +48,15 @@ const initialState = (): RelayQueueOperatorTelemetryState => ({
   lastEventAt: null,
 });
 
+const initialLatencyState = (): RelayQueueEndpointLatencyTelemetryState => ({
+  endpointWindows: {},
+  sampleCap: 200,
+  totalObservedRequests: 0,
+  lastEventAt: null,
+});
+
 let state = initialState();
+let latencyState = initialLatencyState();
 
 export function recordRelayQueueOperatorAccess(input: {
   endpoint: string;
@@ -88,6 +110,67 @@ export function getRelayQueueOperatorTelemetrySnapshot(): RelayQueueOperatorTele
   };
 }
 
+export function recordRelayQueueEndpointLatency(input: { endpoint: string; durationMs: number }) {
+  const durationMs = Math.max(0, Math.round(input.durationMs));
+  const existingWindow = latencyState.endpointWindows[input.endpoint] ?? [];
+  const nextWindow = [...existingWindow, durationMs];
+  const overflow = Math.max(0, nextWindow.length - latencyState.sampleCap);
+
+  latencyState.endpointWindows[input.endpoint] = overflow > 0 ? nextWindow.slice(overflow) : nextWindow;
+  latencyState.totalObservedRequests += 1;
+  latencyState.lastEventAt = new Date().toISOString();
+}
+
+export function getRelayQueueEndpointLatencyTelemetrySnapshot(): {
+  sampleCap: number;
+  totalObservedRequests: number;
+  lastEventAt: string | null;
+  byEndpoint: Record<string, RelayQueueEndpointLatencySummary>;
+} {
+  const byEndpoint: Record<string, RelayQueueEndpointLatencySummary> = {};
+
+  for (const [endpoint, samples] of Object.entries(latencyState.endpointWindows)) {
+    byEndpoint[endpoint] = summarizeLatency(samples);
+  }
+
+  return {
+    sampleCap: latencyState.sampleCap,
+    totalObservedRequests: latencyState.totalObservedRequests,
+    lastEventAt: latencyState.lastEventAt,
+    byEndpoint,
+  };
+}
+
 export function resetRelayQueueOperatorTelemetryForTests() {
   state = initialState();
+  latencyState = initialLatencyState();
+}
+
+function summarizeLatency(samples: number[]): RelayQueueEndpointLatencySummary {
+  if (samples.length === 0) {
+    return {
+      p50: 0,
+      p95: 0,
+      p99: 0,
+      sampleCount: 0,
+    };
+  }
+
+  const sorted = [...samples].sort((left, right) => left - right);
+
+  return {
+    p50: percentile(sorted, 0.5),
+    p95: percentile(sorted, 0.95),
+    p99: percentile(sorted, 0.99),
+    sampleCount: sorted.length,
+  };
+}
+
+function percentile(sortedSamples: number[], percentileValue: number): number {
+  if (sortedSamples.length === 0) {
+    return 0;
+  }
+
+  const index = Math.min(sortedSamples.length - 1, Math.ceil(percentileValue * sortedSamples.length) - 1);
+  return sortedSamples[index];
 }

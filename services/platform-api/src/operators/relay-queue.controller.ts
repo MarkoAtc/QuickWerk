@@ -25,13 +25,21 @@ import {
   resolveRelayQueueSloWindowConfig,
   summarizeRelayQueueSloWindow,
 } from '../health/readiness-thresholds';
+import { PostgresClient } from '../persistence/postgres-client';
 import {
   createRelayQueueExportHandoff,
   getRelayQueueExportHandoff,
 } from './relay-queue-export-handoff';
+import {
+  InMemoryRelayQueueExportHandoffStore,
+  RelayQueueExportHandoffStore,
+  resolveRelayQueueExportHandoffStore,
+} from './relay-queue-export-handoff-store';
 import { resolveOperatorAccessPolicy } from './operator-access-policy';
 import {
+  getRelayQueueEndpointLatencyTelemetrySnapshot,
   getRelayQueueOperatorTelemetrySnapshot,
+  recordRelayQueueEndpointLatency,
   recordRelayQueueOperatorAccess,
 } from './relay-queue-telemetry';
 
@@ -65,6 +73,8 @@ type QueueAttemptsCsvHandoffPollQuery = {
   download?: string;
 };
 
+type QueueSnapshotsPresetWindow = '15m' | '1h' | '6h';
+
 type ResponseLike = {
   setHeader(name: string, value: string): void;
 };
@@ -90,81 +100,90 @@ const relayQueueExportBatchSize = 100;
 
 @Controller('operators/relay-queue')
 export class RelayQueueOperatorController {
+  private readonly relayQueueExportHandoffStore: RelayQueueExportHandoffStore;
+
   constructor(
     private readonly authService: AuthService,
     private readonly postgresRelayAttemptExecutor: PostgresRelayAttemptExecutor,
-  ) {}
+    postgresClient?: PostgresClient,
+  ) {
+    this.relayQueueExportHandoffStore = postgresClient
+      ? resolveRelayQueueExportHandoffStore({ postgresClient, env: process.env })
+      : new InMemoryRelayQueueExportHandoffStore();
+  }
 
   @Get('attempts')
   async getAttempts(
     @Headers('authorization') authorizationHeader: string | undefined,
     @Query() query: QueueAttemptsQuery,
   ) {
-    await this.assertOperatorAccess('attempts', authorizationHeader);
-    const relayMode = resolveRelayAttemptExecutorMode(process.env);
+    return this.captureEndpointLatency('attempts', async () => {
+      await this.assertOperatorAccess('attempts', authorizationHeader);
+      const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
-    if (relayMode !== 'postgres-persistent') {
+      if (relayMode !== 'postgres-persistent') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'queue inspection requires postgres-persistent relay mode',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
+
+      const persistenceMode = process.env.PERSISTENCE_MODE?.trim().toLowerCase();
+
+      if (persistenceMode !== 'postgres') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'postgres-persistent relay mode requires PERSISTENCE_MODE=postgres',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
+
+      const limit = parseLimit(query.limit, 20, 100);
+      const offset = parseOffset(query.offset);
+      const status = parseStatus(query.status);
+      const terminalOnly = parseBooleanQuery(query.terminalOnly, false);
+
+      const attempts = await this.postgresRelayAttemptExecutor.listQueueAttempts({
+        limit,
+        offset,
+        status,
+        correlationId: query.correlationId?.trim(),
+        eventId: query.eventId?.trim(),
+        terminalOnly,
+      });
+
       return {
         service: 'platform-api',
         relayQueue: {
           mode: relayMode,
-          enabled: false,
-          reason: 'queue inspection requires postgres-persistent relay mode',
-          operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
+          enabled: true,
+          attempts: attempts.items,
+          pagination: {
+            limit,
+            offset,
+            returned: attempts.items.length,
+            hasMore: attempts.hasMore,
+            nextOffset: attempts.nextOffset,
+          },
+          filters: {
+            status: status ?? null,
+            correlationId: query.correlationId?.trim() || null,
+            eventId: query.eventId?.trim() || null,
+            terminalOnly,
+          },
+          ...this.buildTelemetryPayload(),
         },
       };
-    }
-
-    const persistenceMode = process.env.PERSISTENCE_MODE?.trim().toLowerCase();
-
-    if (persistenceMode !== 'postgres') {
-      return {
-        service: 'platform-api',
-        relayQueue: {
-          mode: relayMode,
-          enabled: false,
-          reason: 'postgres-persistent relay mode requires PERSISTENCE_MODE=postgres',
-          operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-        },
-      };
-    }
-
-    const limit = parseLimit(query.limit, 20, 100);
-    const offset = parseOffset(query.offset);
-    const status = parseStatus(query.status);
-    const terminalOnly = parseBooleanQuery(query.terminalOnly, false);
-
-    const attempts = await this.postgresRelayAttemptExecutor.listQueueAttempts({
-      limit,
-      offset,
-      status,
-      correlationId: query.correlationId?.trim(),
-      eventId: query.eventId?.trim(),
-      terminalOnly,
     });
-
-    return {
-      service: 'platform-api',
-      relayQueue: {
-        mode: relayMode,
-        enabled: true,
-        attempts: attempts.items,
-        pagination: {
-          limit,
-          offset,
-          returned: attempts.items.length,
-          hasMore: attempts.hasMore,
-          nextOffset: attempts.nextOffset,
-        },
-        filters: {
-          status: status ?? null,
-          correlationId: query.correlationId?.trim() || null,
-          eventId: query.eventId?.trim() || null,
-          terminalOnly,
-        },
-        operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-      },
-    };
   }
 
   @Get('attempts.csv')
@@ -173,8 +192,9 @@ export class RelayQueueOperatorController {
     @Query() query: QueueAttemptsCsvQuery,
     @Res({ passthrough: true }) response: ResponseLike,
   ) {
-    await this.assertOperatorAccess('attempts.csv', authorizationHeader);
-    const relayMode = resolveRelayAttemptExecutorMode(process.env);
+    return this.captureEndpointLatency('attempts.csv', async () => {
+      await this.assertOperatorAccess('attempts.csv', authorizationHeader);
+      const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
     if (relayMode !== 'postgres-persistent') {
       throw new HttpException('CSV export requires postgres-persistent relay mode.', 409);
@@ -191,7 +211,7 @@ export class RelayQueueOperatorController {
     const terminalOnly = parseBooleanQuery(query.terminalOnly, true);
     const selectedFields = parseCsvFields(query.fields);
 
-    const attempts = await this.postgresRelayAttemptExecutor.listQueueAttempts({
+      const attempts = await this.postgresRelayAttemptExecutor.listQueueAttempts({
       limit,
       offset: 0,
       status,
@@ -200,10 +220,14 @@ export class RelayQueueOperatorController {
       terminalOnly,
     });
 
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    response.setHeader('Content-Disposition', `attachment; filename="relay-queue-attempts-${new Date().toISOString()}.csv"`);
+      response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      response.setHeader(
+        'Content-Disposition',
+        `attachment; filename="relay-queue-attempts-${new Date().toISOString()}.csv"`,
+      );
 
-    return toCsv(selectedFields, attempts.items);
+      return toCsv(selectedFields, attempts.items);
+    });
   }
 
   @Get('attempts.csv/handoff')
@@ -211,8 +235,9 @@ export class RelayQueueOperatorController {
     @Headers('authorization') authorizationHeader: string | undefined,
     @Query() query: QueueAttemptsCsvHandoffQuery,
   ) {
-    await this.assertOperatorAccess('attempts.csv/handoff', authorizationHeader);
-    const relayMode = resolveRelayAttemptExecutorMode(process.env);
+    return this.captureEndpointLatency('attempts.csv/handoff', async () => {
+      await this.assertOperatorAccess('attempts.csv/handoff', authorizationHeader);
+      const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
     if (relayMode !== 'postgres-persistent') {
       throw new HttpException('CSV export handoff requires postgres-persistent relay mode.', 409);
@@ -229,7 +254,7 @@ export class RelayQueueOperatorController {
     const terminalOnly = parseBooleanQuery(query.terminalOnly, true);
     const selectedFields = parseCsvFields(query.fields);
 
-    const handoff = createRelayQueueExportHandoff({
+      const handoff = await createRelayQueueExportHandoff({
       rowLimit: limit,
       filters: {
         status,
@@ -250,26 +275,28 @@ export class RelayQueueOperatorController {
 
         return toCsv(selectedFields, attempts);
       },
+      store: this.relayQueueExportHandoffStore,
     });
 
-    return {
-      service: 'platform-api',
-      relayQueue: {
-        mode: relayMode,
-        enabled: true,
-        exportHandoff: {
-          id: handoff.id,
-          status: handoff.status,
-          createdAt: handoff.createdAt,
-          expiresAt: handoff.expiresAt,
-          rowLimit: handoff.rowLimit,
-          filters: handoff.filters,
-          pollUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}`,
-          downloadUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}?download=1`,
+      return {
+        service: 'platform-api',
+        relayQueue: {
+          mode: relayMode,
+          enabled: true,
+          exportHandoff: {
+            id: handoff.id,
+            status: handoff.status,
+            createdAt: handoff.createdAt,
+            expiresAt: handoff.expiresAt,
+            rowLimit: handoff.rowLimit,
+            filters: handoff.filters,
+            pollUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}`,
+            downloadUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}?download=1`,
+          },
+          ...this.buildTelemetryPayload(),
         },
-        operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-      },
-    };
+      };
+    });
   }
 
   @Get('attempts.csv/handoff/:handoffId')
@@ -279,43 +306,48 @@ export class RelayQueueOperatorController {
     @Query() query: QueueAttemptsCsvHandoffPollQuery,
     @Res({ passthrough: true }) response: ResponseLike,
   ) {
-    await this.assertOperatorAccess('attempts.csv/handoff.poll', authorizationHeader);
+    return this.captureEndpointLatency('attempts.csv/handoff.poll', async () => {
+      await this.assertOperatorAccess('attempts.csv/handoff.poll', authorizationHeader);
 
-    const handoff = getRelayQueueExportHandoff(handoffId);
+      const handoff = await getRelayQueueExportHandoff(handoffId, this.relayQueueExportHandoffStore);
 
     if (!handoff) {
       throw new HttpException('CSV export handoff not found or expired.', 404);
     }
 
-    if (query.download && query.download !== '0') {
-      if (handoff.status !== 'ready' || !handoff.csv) {
-        throw new HttpException('CSV export handoff is not ready yet.', 409);
+      if (query.download && query.download !== '0') {
+        if (handoff.status !== 'ready' || !handoff.csv) {
+          throw new HttpException('CSV export handoff is not ready yet.', 409);
+        }
+
+        response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        response.setHeader(
+          'Content-Disposition',
+          `attachment; filename="relay-queue-attempts-handoff-${handoff.id}.csv"`,
+        );
+        return handoff.csv;
       }
 
-      response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      response.setHeader('Content-Disposition', `attachment; filename="relay-queue-attempts-handoff-${handoff.id}.csv"`);
-      return handoff.csv;
-    }
-
-    return {
-      service: 'platform-api',
-      relayQueue: {
-        enabled: true,
-        exportHandoff: {
-          id: handoff.id,
-          status: handoff.status,
-          createdAt: handoff.createdAt,
-          expiresAt: handoff.expiresAt,
-          rowLimit: handoff.rowLimit,
-          filters: handoff.filters,
-          ready: handoff.status === 'ready',
-          failed: handoff.status === 'failed',
-          error: handoff.error ?? null,
-          downloadUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}?download=1`,
+      return {
+        service: 'platform-api',
+        relayQueue: {
+          enabled: true,
+          exportHandoff: {
+            id: handoff.id,
+            status: handoff.status,
+            createdAt: handoff.createdAt,
+            expiresAt: handoff.expiresAt,
+            rowLimit: handoff.rowLimit,
+            filters: handoff.filters,
+            ready: handoff.status === 'ready',
+            failed: handoff.status === 'failed',
+            error: handoff.error ?? null,
+            downloadUrl: `/operators/relay-queue/attempts.csv/handoff/${handoff.id}?download=1`,
+          },
+          ...this.buildTelemetryPayload(),
         },
-        operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-      },
-    };
+      };
+    });
   }
 
   @Get('snapshots')
@@ -323,35 +355,35 @@ export class RelayQueueOperatorController {
     @Headers('authorization') authorizationHeader: string | undefined,
     @Query() query: QueueSnapshotsQuery,
   ) {
-    await this.assertOperatorAccess('snapshots', authorizationHeader);
+    return this.captureEndpointLatency('snapshots', async () => {
+      await this.assertOperatorAccess('snapshots', authorizationHeader);
+      const relayMode = resolveRelayAttemptExecutorMode(process.env);
 
-    const relayMode = resolveRelayAttemptExecutorMode(process.env);
-
-    if (relayMode !== 'postgres-persistent') {
-      return {
-        service: 'platform-api',
-        relayQueue: {
-          mode: relayMode,
-          enabled: false,
-          reason: 'queue snapshot inspection requires postgres-persistent relay mode',
-          operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-        },
-      };
-    }
+      if (relayMode !== 'postgres-persistent') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'queue snapshot inspection requires postgres-persistent relay mode',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
 
     const persistenceMode = process.env.PERSISTENCE_MODE?.trim().toLowerCase();
 
-    if (persistenceMode !== 'postgres') {
-      return {
-        service: 'platform-api',
-        relayQueue: {
-          mode: relayMode,
-          enabled: false,
-          reason: 'postgres-persistent relay mode requires PERSISTENCE_MODE=postgres',
-          operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-        },
-      };
-    }
+      if (persistenceMode !== 'postgres') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'postgres-persistent relay mode requires PERSISTENCE_MODE=postgres',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
 
     const limit = parseLimit(query.limit, 20, 100);
     const offset = parseOffset(query.offset);
@@ -402,38 +434,141 @@ export class RelayQueueOperatorController {
       samples: sloSamples,
     });
 
-    return {
-      service: 'platform-api',
-      relayQueue: {
-        mode: relayMode,
-        enabled: true,
-        current: {
+      return {
+        service: 'platform-api',
+        relayQueue: {
+          mode: relayMode,
+          enabled: true,
+          current: {
+            capturedAt: now.toISOString(),
+            level,
+            metrics: current,
+            thresholds,
+            sloWindow,
+            sloTrend,
+          },
+          snapshots: snapshots.items,
+          pagination: {
+            limit,
+            offset,
+            returned: snapshots.items.length,
+            hasMore: snapshots.hasMore,
+            nextOffset: snapshots.nextOffset,
+          },
+          filters: {
+            correlationId: correlationId || null,
+          },
+          retention: {
+            retained: snapshots.retained,
+            maxSnapshots: PostgresRelayAttemptExecutor.resolveQueueMetricSnapshotRetention(process.env),
+            durability: 'postgres-table',
+          },
+          ...this.buildTelemetryPayload(),
+        },
+      };
+    });
+  }
+
+  @Get('snapshots/preset/:window')
+  async getSnapshotsPreset(
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('window') window: string,
+  ) {
+    return this.captureEndpointLatency('snapshots.preset', async () => {
+      await this.assertOperatorAccess('snapshots.preset', authorizationHeader);
+      const relayMode = resolveRelayAttemptExecutorMode(process.env);
+
+      if (relayMode !== 'postgres-persistent') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'queue snapshot inspection requires postgres-persistent relay mode',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
+
+      const persistenceMode = process.env.PERSISTENCE_MODE?.trim().toLowerCase();
+      if (persistenceMode !== 'postgres') {
+        return {
+          service: 'platform-api',
+          relayQueue: {
+            mode: relayMode,
+            enabled: false,
+            reason: 'postgres-persistent relay mode requires PERSISTENCE_MODE=postgres',
+            ...this.buildTelemetryPayload(),
+          },
+        };
+      }
+
+      const presetWindow = parseSnapshotsPresetWindow(window);
+      const windowMinutes = toWindowMinutes(presetWindow);
+      const now = new Date();
+      const sinceCapturedAt = new Date(now.getTime() - windowMinutes * 60_000).toISOString();
+      const bucketMinutes = resolveRelayQueueSloTrendBucketMinutes(process.env);
+      const thresholds = resolveRelayQueueReadinessThresholds(process.env);
+      const sloConfig = resolveRelayQueueSloWindowConfig(process.env);
+
+      const snapshots = await this.postgresRelayAttemptExecutor.listQueueMetricSnapshots({
+        limit: 200,
+        offset: 0,
+        sinceCapturedAt,
+      });
+
+      const current = await this.postgresRelayAttemptExecutor.getQueueMetricsSnapshot();
+      const currentLevel = deriveRelayQueueReadinessLevel(current, thresholds);
+      const samples = [
+        ...snapshots.items.map((snapshot) => ({
+          capturedAt: snapshot.capturedAt,
+          level: deriveRelayQueueReadinessLevel(snapshot.metrics, thresholds),
+        })),
+        {
           capturedAt: now.toISOString(),
-          level,
-          metrics: current,
-          thresholds,
-          sloWindow,
+          level: currentLevel,
+        },
+      ];
+
+      const sloTrend = buildRelayQueueSloTrend({
+        now,
+        windowMinutes,
+        bucketMinutes,
+        watchThresholdPercent: sloConfig.watchThresholdPercent,
+        criticalThresholdPercent: sloConfig.criticalThresholdPercent,
+        samples,
+      });
+
+      return {
+        service: 'platform-api',
+        relayQueue: {
+          mode: relayMode,
+          enabled: true,
+          preset: {
+            window: presetWindow,
+            windowMinutes,
+            bucketMinutes,
+            sinceCapturedAt,
+          },
+          current: {
+            capturedAt: now.toISOString(),
+            level: currentLevel,
+            metrics: current,
+            thresholds,
+          },
+          snapshots: snapshots.items,
+          pagination: {
+            limit: 200,
+            offset: 0,
+            returned: snapshots.items.length,
+            hasMore: snapshots.hasMore,
+            nextOffset: snapshots.nextOffset,
+          },
           sloTrend,
+          ...this.buildTelemetryPayload(),
         },
-        snapshots: snapshots.items,
-        pagination: {
-          limit,
-          offset,
-          returned: snapshots.items.length,
-          hasMore: snapshots.hasMore,
-          nextOffset: snapshots.nextOffset,
-        },
-        filters: {
-          correlationId: correlationId || null,
-        },
-        retention: {
-          retained: snapshots.retained,
-          maxSnapshots: PostgresRelayAttemptExecutor.resolveQueueMetricSnapshotRetention(process.env),
-          durability: 'postgres-table',
-        },
-        operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
-      },
-    };
+      };
+    });
   }
 
   private async assertOperatorAccess(endpoint: string, authorizationHeader: string | undefined): Promise<void> {
@@ -486,6 +621,25 @@ export class RelayQueueOperatorController {
       decision: 'allowed',
       sessionRole: session.role,
     });
+  }
+
+  private buildTelemetryPayload() {
+    return {
+      operatorAuthTelemetry: getRelayQueueOperatorTelemetrySnapshot(),
+      endpointLatencyTelemetry: getRelayQueueEndpointLatencyTelemetrySnapshot(),
+    };
+  }
+
+  private async captureEndpointLatency<T>(endpoint: string, operation: () => Promise<T>): Promise<T> {
+    const startedAt = Date.now();
+    try {
+      return await operation();
+    } finally {
+      recordRelayQueueEndpointLatency({
+        endpoint,
+        durationMs: Date.now() - startedAt,
+      });
+    }
   }
 }
 
@@ -568,6 +722,27 @@ function parseBooleanQuery(rawValue: string | undefined, fallback: boolean): boo
   }
 
   throw new BadRequestException('Query parameter "terminalOnly" must be a boolean value.');
+}
+
+function parseSnapshotsPresetWindow(value: string): QueueSnapshotsPresetWindow {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '15m' || normalized === '1h' || normalized === '6h') {
+    return normalized;
+  }
+  throw new BadRequestException('Window must be one of: 15m, 1h, 6h.');
+}
+
+function toWindowMinutes(window: QueueSnapshotsPresetWindow): number {
+  switch (window) {
+    case '15m':
+      return 15;
+    case '1h':
+      return 60;
+    case '6h':
+      return 360;
+    default:
+      return 15;
+  }
 }
 
 function parseCsvFields(rawValue: string | undefined): AllowedCsvField[] {

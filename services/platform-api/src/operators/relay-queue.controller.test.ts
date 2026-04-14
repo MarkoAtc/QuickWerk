@@ -424,6 +424,77 @@ describe('RelayQueueOperatorController', () => {
     vi.useRealTimers();
   });
 
+  it('returns prefiltered snapshot presets for dashboard windows', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-20T18:30:00.000Z'));
+
+    process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
+    process.env.PERSISTENCE_MODE = 'postgres';
+
+    const listQueueMetricSnapshots = vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: 21,
+          capturedAt: '2026-03-20T18:20:00.000Z',
+          correlationId: 'corr-preset-21',
+          metrics: {
+            depth: 4,
+            dueCount: 4,
+            deadLetterCount: 0,
+            processingLagMs: 1200,
+          },
+        },
+      ],
+      hasMore: false,
+      nextOffset: null,
+      retained: 25,
+    });
+
+    const controller = new RelayQueueOperatorController(
+      {
+        resolveSessionOrNull: vi.fn().mockResolvedValue({ role: 'operator' }),
+      } as unknown as AuthService,
+      {
+        listQueueMetricSnapshots,
+        getQueueMetricsSnapshot: vi.fn().mockResolvedValue({
+          depth: 4,
+          dueCount: 4,
+          deadLetterCount: 0,
+          processingLagMs: 1200,
+        }),
+      } as unknown as PostgresRelayAttemptExecutor,
+    );
+
+    const response = await controller.getSnapshotsPreset('Bearer token-operator', '15m');
+
+    expect(listQueueMetricSnapshots).toHaveBeenCalledWith({
+      limit: 200,
+      offset: 0,
+      sinceCapturedAt: '2026-03-20T18:15:00.000Z',
+    });
+
+    expect(response).toMatchObject({
+      relayQueue: {
+        enabled: true,
+        preset: {
+          window: '15m',
+          windowMinutes: 15,
+        },
+        snapshots: [
+          {
+            id: 21,
+            correlationId: 'corr-preset-21',
+          },
+        ],
+        endpointLatencyTelemetry: {
+          sampleCap: 200,
+        },
+      },
+    });
+
+    vi.useRealTimers();
+  });
+
   it('returns bounded dead-letter CSV export with safe default fields', async () => {
     process.env.BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR_MODE = 'postgres-persistent';
     process.env.PERSISTENCE_MODE = 'postgres';
