@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { declineBookingRequest } from '../booking/booking-screen-actions';
 import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
@@ -16,8 +17,13 @@ export function ProviderScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [acceptingId, setAcceptingId] = useState(undefined);
-  const [acceptError, setAcceptError] = useState(undefined);
+  const [decliningId, setDecliningId] = useState(undefined);
+  const [bookingDraftReasons, setBookingDraftReasons] = useState({});
+  const [mutationError, setMutationError] = useState(undefined);
   const [acceptedBooking, setAcceptedBooking] = useState(undefined);
+  const [declinedBooking, setDeclinedBooking] = useState(undefined);
+
+  const pendingActionRef = useRef(false);
 
   useEffect(() => {
     if (session.status !== 'authenticated') {
@@ -63,17 +69,29 @@ export function ProviderScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadOpenBookings(); }, []);
 
-  const handleAccept = (bookingId) => {
-    if (acceptingId) return;
+  const updateBookingDraftReason = (bookingId, value) => {
+    setBookingDraftReasons((prev) => ({ ...prev, [bookingId]: value }));
+  };
 
-    setAcceptError(undefined);
+  const clearMutationFeedback = () => {
+    setAcceptedBooking(undefined);
+    setDeclinedBooking(undefined);
+    setMutationError(undefined);
+  };
+
+  const handleAccept = (bookingId) => {
+    if (pendingActionRef.current || acceptingId || decliningId) return;
+
+    pendingActionRef.current = true;
+    clearMutationFeedback();
     setAcceptingId(bookingId);
 
     const sessionToken = resolveSessionToken(session);
 
     if (!sessionToken) {
-      setAcceptError('Your session has expired. Please sign in again.');
+      setMutationError('Your session has expired. Please sign in again.');
       setAcceptingId(undefined);
+      pendingActionRef.current = false;
       signOut();
       router.replace('/auth');
       return;
@@ -82,18 +100,64 @@ export function ProviderScreen() {
     acceptBookingRequest({ sessionToken, bookingId })
       .then((result) => {
         if (result.errorMessage) {
-          setAcceptError(result.errorMessage);
+          setMutationError(result.errorMessage);
           return;
         }
         setAcceptedBooking(result.booking);
-        // Remove from list immediately
         setBookings((prev) => prev ? prev.filter((b) => b.bookingId !== bookingId) : prev);
       })
       .catch((err) => {
-        setAcceptError(err instanceof Error ? err.message : 'Unexpected accept failure.');
+        setMutationError(err instanceof Error ? err.message : 'Unexpected accept failure.');
       })
       .finally(() => {
         setAcceptingId(undefined);
+        pendingActionRef.current = false;
+      });
+  };
+
+  const handleDecline = (bookingId) => {
+    if (pendingActionRef.current || acceptingId || decliningId) return;
+
+    pendingActionRef.current = true;
+    clearMutationFeedback();
+    setDecliningId(bookingId);
+
+    const sessionToken = resolveSessionToken(session);
+    const declineReason = bookingDraftReasons[bookingId]?.trim();
+
+    if (!sessionToken) {
+      setMutationError('Your session has expired. Please sign in again.');
+      setDecliningId(undefined);
+      pendingActionRef.current = false;
+      signOut();
+      router.replace('/auth');
+      return;
+    }
+
+    declineBookingRequest({
+      sessionToken,
+      bookingId,
+      declineReason: declineReason || undefined,
+    })
+      .then((result) => {
+        if (result.errorMessage) {
+          setMutationError(result.errorMessage);
+          return;
+        }
+        setDeclinedBooking(result.booking);
+        setBookings((prev) => prev ? prev.filter((b) => b.bookingId !== bookingId) : prev);
+        setBookingDraftReasons((prev) => {
+          const next = { ...prev };
+          delete next[bookingId];
+          return next;
+        });
+      })
+      .catch((err) => {
+        setMutationError(err instanceof Error ? err.message : 'Unexpected decline failure.');
+      })
+      .finally(() => {
+        setDecliningId(undefined);
+        pendingActionRef.current = false;
       });
   };
 
@@ -103,15 +167,14 @@ export function ProviderScreen() {
   };
 
   const handleReset = () => {
-    setAcceptedBooking(undefined);
-    setAcceptError(undefined);
+    clearMutationFeedback();
     loadOpenBookings();
   };
 
   return (
     <ProductScreenShell
       title="Provider: Open Bookings"
-      subtitle="Browse submitted bookings and accept one to get started."
+      subtitle="Browse submitted bookings and accept or decline them with an optional reason."
       testID="provider-screen"
     >
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
@@ -132,59 +195,79 @@ export function ProviderScreen() {
         </Pressable>
       </View>
 
-      {acceptedBooking ? (
+      {acceptedBooking || declinedBooking ? (
         <View
-          testID="provider-accept-confirmation"
+          testID={acceptedBooking ? 'provider-accept-confirmation' : 'provider-decline-confirmation'}
           style={{
             padding: 16,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: '#BBF7D0',
-            backgroundColor: '#F0FDF4',
+            borderColor: acceptedBooking ? '#BBF7D0' : '#FDE68A',
+            backgroundColor: acceptedBooking ? '#F0FDF4' : '#FFFBEB',
           }}
         >
-          <Text style={{ color: '#15803D', fontWeight: '700', fontSize: 18 }}>Booking accepted ✓</Text>
-          <Text testID="provider-booking-id" style={{ marginTop: 8, color: '#166534' }}>
-            ID: {acceptedBooking.bookingId}
-          </Text>
-          <Text testID="provider-booking-status" style={{ marginTop: 4, color: '#166534', fontWeight: '600' }}>
-            Status: {acceptedBooking.status}
-          </Text>
-          {acceptedBooking.requestedService ? (
-            <Text testID="provider-booking-service" style={{ marginTop: 4, color: '#166534' }}>
-              Service: {acceptedBooking.requestedService}
-            </Text>
-          ) : null}
-          <Pressable
-            accessibilityLabel="Open booking status"
-            accessibilityRole="button"
-            onPress={() => router.replace({ pathname: '/active-job', params: { bookingId: acceptedBooking.bookingId } })}
-            testID="provider-open-booking-status"
+          <Text
             style={{
-              marginTop: 12,
-              paddingVertical: 10,
-              borderRadius: 8,
-              backgroundColor: productAppShell.theme.color.primary,
-              alignItems: 'center',
+              color: acceptedBooking ? '#15803D' : '#B45309',
+              fontWeight: '700',
+              fontSize: 18,
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Open booking status</Text>
-          </Pressable>
+            {acceptedBooking ? 'Booking accepted ✓' : 'Booking declined ✓'}
+          </Text>
+          <Text testID="provider-booking-id" style={{ marginTop: 8, color: acceptedBooking ? '#166534' : '#92400E' }}>
+            ID: {(acceptedBooking ?? declinedBooking).bookingId}
+          </Text>
+          <Text
+            testID="provider-booking-status"
+            style={{ marginTop: 4, color: acceptedBooking ? '#166534' : '#92400E', fontWeight: '600' }}
+          >
+            Status: {(acceptedBooking ?? declinedBooking).status}
+          </Text>
+          {(acceptedBooking ?? declinedBooking).requestedService ? (
+            <Text testID="provider-booking-service" style={{ marginTop: 4, color: acceptedBooking ? '#166534' : '#92400E' }}>
+              Service: {(acceptedBooking ?? declinedBooking).requestedService}
+            </Text>
+          ) : null}
+          {declinedBooking?.declineReason ? (
+            <Text testID="provider-booking-decline-reason" style={{ marginTop: 4, color: '#92400E' }}>
+              Reason: {declinedBooking.declineReason}
+            </Text>
+          ) : null}
+          {acceptedBooking ? (
+            <Pressable
+              accessibilityLabel="Open booking status"
+              accessibilityRole="button"
+              onPress={() => router.replace({ pathname: '/active-job', params: { bookingId: acceptedBooking.bookingId } })}
+              testID="provider-open-booking-status"
+              style={{
+                marginTop: 12,
+                paddingVertical: 10,
+                borderRadius: 8,
+                backgroundColor: productAppShell.theme.color.primary,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Open booking status</Text>
+            </Pressable>
+          ) : null}
           <Pressable
-            accessibilityLabel="Accept another booking"
+            accessibilityLabel={acceptedBooking ? 'Accept another booking' : 'Review more bookings'}
             accessibilityRole="button"
             onPress={handleReset}
-            testID="provider-accept-another"
+            testID={acceptedBooking ? 'provider-accept-another' : 'provider-decline-another'}
             style={{
               marginTop: 8,
               paddingVertical: 10,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: '#15803D',
+              borderColor: acceptedBooking ? '#15803D' : '#B45309',
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#15803D', fontWeight: '600' }}>Accept another booking</Text>
+            <Text style={{ color: acceptedBooking ? '#15803D' : '#B45309', fontWeight: '600' }}>
+              {acceptedBooking ? 'Accept another booking' : 'Review more bookings'}
+            </Text>
           </Pressable>
         </View>
       ) : (
@@ -222,28 +305,30 @@ export function ProviderScreen() {
             </View>
           ) : bookings ? (
             <ScrollView>
-              {acceptError ? (
+              {mutationError ? (
                 <Text testID="provider-error" style={{ marginBottom: 8, color: '#DC2626', fontSize: 14 }}>
-                  {acceptError}
+                  {mutationError}
                 </Text>
               ) : null}
-              {bookings.map((booking) => (
-                <View
-                  key={booking.bookingId}
-                  testID={`provider-booking-row-${booking.bookingId}`}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 12,
-                    marginBottom: 8,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#D7DFEA',
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  <View style={{ flex: 1, marginRight: 8 }}>
+              {bookings.map((booking) => {
+                const isAccepting = acceptingId === booking.bookingId;
+                const isDeclining = decliningId === booking.bookingId;
+                const isBusy = Boolean(pendingActionRef.current || acceptingId || decliningId);
+                const declineReasonDraft = bookingDraftReasons[booking.bookingId] ?? '';
+
+                return (
+                  <View
+                    key={booking.bookingId}
+                    testID={`provider-booking-row-${booking.bookingId}`}
+                    style={{
+                      padding: 12,
+                      marginBottom: 8,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#D7DFEA',
+                      backgroundColor: '#FFFFFF',
+                    }}
+                  >
                     <Text
                       testID={`provider-booking-service-${booking.bookingId}`}
                       style={{ color: '#0F172A', fontWeight: '600', fontSize: 15 }}
@@ -257,29 +342,72 @@ export function ProviderScreen() {
                     >
                       ID: {booking.bookingId}
                     </Text>
+                    <TextInput
+                      accessibilityLabel={`Optional decline reason for booking ${booking.bookingId}`}
+                      editable={!isBusy}
+                      multiline
+                      onChangeText={(value) => updateBookingDraftReason(booking.bookingId, value)}
+                      placeholder="Optional decline reason"
+                      placeholderTextColor="#94A3B8"
+                      style={{
+                        marginTop: 10,
+                        minHeight: 44,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 10,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        color: '#0F172A',
+                        backgroundColor: isBusy ? '#F8FAFC' : '#FFFFFF',
+                      }}
+                      testID={`provider-decline-reason-${booking.bookingId}`}
+                      value={declineReasonDraft}
+                    />
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                      <Pressable
+                        accessibilityLabel={isAccepting ? `Accepting booking ${booking.bookingId}` : `Accept booking ${booking.bookingId}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: isBusy, busy: isAccepting }}
+                        disabled={isBusy}
+                        onPress={() => handleAccept(booking.bookingId)}
+                        testID={`provider-accept-${booking.bookingId}`}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          backgroundColor: isAccepting ? '#94A3B8' : productAppShell.theme.color.primary,
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                          {isAccepting ? 'Accepting…' : 'Accept'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={isDeclining ? `Declining booking ${booking.bookingId}` : `Decline booking ${booking.bookingId}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: isBusy, busy: isDeclining }}
+                        disabled={isBusy}
+                        onPress={() => handleDecline(booking.bookingId)}
+                        testID={`provider-decline-${booking.bookingId}`}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: isDeclining ? '#FBBF24' : '#F59E0B',
+                          backgroundColor: isDeclining ? '#FEF3C7' : '#FFF7ED',
+                        }}
+                      >
+                        <Text style={{ color: '#B45309', fontWeight: '700', fontSize: 14 }}>
+                          {isDeclining ? 'Declining…' : 'Decline'}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                  <Pressable
-                    accessibilityLabel={acceptingId === booking.bookingId ? `Accepting booking ${booking.bookingId}` : `Accept booking ${booking.bookingId}`}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: !!acceptingId, busy: acceptingId === booking.bookingId }}
-                    disabled={!!acceptingId}
-                    onPress={() => handleAccept(booking.bookingId)}
-                    testID={`provider-accept-${booking.bookingId}`}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 8,
-                      backgroundColor: acceptingId === booking.bookingId
-                        ? '#94A3B8'
-                        : productAppShell.theme.color.primary,
-                    }}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
-                      {acceptingId === booking.bookingId ? 'Accepting…' : 'Accept'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))}
+                );
+              })}
             </ScrollView>
           ) : null}
         </View>
