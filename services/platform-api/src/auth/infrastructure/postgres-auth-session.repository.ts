@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, scrypt } from 'node:crypto';
+import { randomBytes, randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
 import { resolveAuthSessionTtlSeconds } from '../domain/auth-session-expiry';
@@ -246,5 +246,12 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   const salt = parts[1];
   const storedHash = parts[2];
   const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
-  return derivedKey.toString('hex') === storedHash;
+  const storedHashBuffer = Buffer.from(storedHash, 'hex');
+
+  // Ensure lengths match before using timingSafeEqual
+  if (derivedKey.length !== storedHashBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(derivedKey, storedHashBuffer);
 }
