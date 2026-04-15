@@ -1,4 +1,10 @@
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type {
+  BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
+  BookingDeclinedDomainEvent,
+  PaymentCapturedDomainEvent,
+} from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
@@ -25,10 +31,21 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
 };
 
 const createService = () => {
+  const createdEvents: BookingCreatedDomainEvent[] = [];
+  const completedEvents: BookingCompletedDomainEvent[] = [];
+  const paymentCapturedEvents: PaymentCapturedDomainEvent[] = [];
   const eventPublisher: BookingDomainEventPublisher = {
+    async publishBookingCreated(event: BookingCreatedDomainEvent) {
+      createdEvents.push(event);
+    },
     async publishBookingAccepted(_event: BookingAcceptedDomainEvent) {},
     async publishBookingDeclined(_event: BookingDeclinedDomainEvent) {},
-    async publishPaymentCaptured(_event) {},
+    async publishBookingCompleted(event: BookingCompletedDomainEvent) {
+      completedEvents.push(event);
+    },
+    async publishPaymentCaptured(event: PaymentCapturedDomainEvent) {
+      paymentCapturedEvents.push(event);
+    },
   };
   const paymentsService = new PaymentsService(
     new InMemoryPaymentRepository(),
@@ -38,6 +55,9 @@ const createService = () => {
   return {
     service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
     paymentsService,
+    createdEvents,
+    completedEvents,
+    paymentCapturedEvents,
   };
 };
 
@@ -76,7 +96,7 @@ describe('BookingsService.completeBooking', () => {
   });
 
   it('completes an accepted booking and creates a payment record', async () => {
-    const { service, paymentsService } = createService();
+    const { service, paymentsService, completedEvents, paymentCapturedEvents } = createService();
     const customer = createSession('customer', 'customer-1');
     const provider = createSession('provider', 'provider-1');
 
@@ -100,6 +120,9 @@ describe('BookingsService.completeBooking', () => {
     const payment = await paymentsService.getPaymentByBookingId(created.booking.bookingId);
     expect(payment).not.toBeNull();
     expect(payment?.paymentId).toBe(result.payment.paymentId);
+    expect(completedEvents).toHaveLength(1);
+    expect(completedEvents[0]?.booking.status).toBe('completed');
+    expect(paymentCapturedEvents).toHaveLength(1);
   });
 
   it('idempotent: completing again by same provider returns 200 with replayed payment', async () => {

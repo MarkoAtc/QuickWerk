@@ -1,4 +1,10 @@
 export {
+  buildBookingCreatedWorkerEnvelope,
+  consumeBookingCreatedAttempt,
+  markBookingCreatedDlq,
+} from './booking-created.worker.js';
+
+export {
   buildBookingAcceptedWorkerEnvelope,
   consumeBookingAcceptedAttempt,
   markBookingAcceptedDlq,
@@ -11,6 +17,12 @@ export {
 } from './booking-declined.worker.js';
 
 export {
+  buildBookingCompletedWorkerEnvelope,
+  consumeBookingCompletedAttempt,
+  markBookingCompletedDlq,
+} from './booking-completed.worker.js';
+
+export {
   buildPaymentCapturedWorkerEnvelope,
   consumePaymentCapturedAttempt,
   markPaymentCapturedDlq,
@@ -21,7 +33,9 @@ export const workerPipelines = [
   'notifications',
   'documents',
   'payout-reconciliation',
+  'booking-created-orchestration',
   'booking-accepted-orchestration',
   'booking-declined-orchestration',
+  'booking-completed-orchestration',
   'payment-captured-orchestration',
 ] as const;

@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
   BookingDeclinedDomainEvent,
   PaymentCapturedDomainEvent,
   PaymentRecord,
@@ -138,6 +140,23 @@ export class BookingsService {
         actorUserId: session.userId,
       },
     });
+
+    const createdEvent: BookingCreatedDomainEvent = {
+      eventName: 'booking.created',
+      eventId: randomUUID(),
+      occurredAt: created.createdAt,
+      correlationId,
+      replayed: false,
+      booking: {
+        bookingId: created.bookingId,
+        customerUserId: created.customerUserId,
+        requestedService: created.requestedService,
+        customerLocation: created.customerLocation,
+        status: 'submitted',
+      },
+    };
+
+    await this.domainEvents.publishBookingCreated(createdEvent);
 
     return {
       ok: true,
@@ -458,6 +477,22 @@ export class BookingsService {
         },
       };
 
+      const replayedBookingCompletedEvent: BookingCompletedDomainEvent = {
+        eventName: 'booking.completed',
+        eventId: randomUUID(),
+        occurredAt: replayedPayment.capturedAt,
+        correlationId,
+        replayed: true,
+        booking: {
+          bookingId: bookingToComplete.bookingId,
+          customerUserId: bookingToComplete.customerUserId,
+          providerUserId: bookingToComplete.providerUserId ?? session.userId,
+          requestedService: bookingToComplete.requestedService,
+          status: 'completed',
+        },
+      };
+
+      await this.domainEvents.publishBookingCompleted(replayedBookingCompletedEvent);
       await this.domainEvents.publishPaymentCaptured(replayedPaymentCapturedEvent);
 
       logStructuredBreadcrumb({
@@ -608,6 +643,22 @@ export class BookingsService {
       },
     };
 
+    const bookingCompletedEvent: BookingCompletedDomainEvent = {
+      eventName: 'booking.completed',
+      eventId: randomUUID(),
+      occurredAt: completedAt,
+      correlationId,
+      replayed: completed.replayed,
+      booking: {
+        bookingId: completed.booking.bookingId,
+        customerUserId: completed.booking.customerUserId,
+        providerUserId: completed.booking.providerUserId ?? session.userId,
+        requestedService: completed.booking.requestedService,
+        status: 'completed',
+      },
+    };
+
+    await this.domainEvents.publishBookingCompleted(bookingCompletedEvent);
     await this.domainEvents.publishPaymentCaptured(paymentCapturedEvent);
 
     logStructuredBreadcrumb({

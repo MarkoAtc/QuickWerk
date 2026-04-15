@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
+import type {
+  BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
+  BookingDeclinedDomainEvent,
+  PaymentCapturedDomainEvent,
+} from '@quickwerk/domain';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
 
-type BookingDomainEvent = BookingAcceptedDomainEvent | BookingDeclinedDomainEvent;
+type BookingDomainEvent =
+  | BookingAcceptedDomainEvent
+  | BookingCreatedDomainEvent
+  | BookingDeclinedDomainEvent
+  | BookingCompletedDomainEvent;
 type PaymentDomainEvent = PaymentCapturedDomainEvent;
 
 function buildEventLogDetails(event: BookingDomainEvent) {
@@ -18,6 +28,15 @@ function buildEventLogDetails(event: BookingDomainEvent) {
 
 @Injectable()
 export class LoggingBookingDomainEventPublisher implements BookingDomainEventPublisher {
+  async publishBookingCreated(event: BookingCreatedDomainEvent): Promise<void> {
+    logStructuredBreadcrumb({
+      event: 'booking.created.domain-event.emit',
+      correlationId: event.correlationId,
+      status: 'succeeded',
+      details: buildEventLogDetails(event),
+    });
+  }
+
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
     logStructuredBreadcrumb({
       event: 'booking.accepted.domain-event.emit',
@@ -30,6 +49,15 @@ export class LoggingBookingDomainEventPublisher implements BookingDomainEventPub
   async publishBookingDeclined(event: BookingDeclinedDomainEvent): Promise<void> {
     logStructuredBreadcrumb({
       event: 'booking.declined.domain-event.emit',
+      correlationId: event.correlationId,
+      status: 'succeeded',
+      details: buildEventLogDetails(event),
+    });
+  }
+
+  async publishBookingCompleted(event: BookingCompletedDomainEvent): Promise<void> {
+    logStructuredBreadcrumb({
+      event: 'booking.completed.domain-event.emit',
       correlationId: event.correlationId,
       status: 'succeeded',
       details: buildEventLogDetails(event),

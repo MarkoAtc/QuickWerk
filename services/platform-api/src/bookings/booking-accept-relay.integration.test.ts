@@ -324,8 +324,8 @@ describe('booking accept relay integration', () => {
     });
 
     expect(attemptRetryMetadata.map((retry) => retry.nextAttemptAt)).toEqual([
-      '2026-03-20T10:00:01.999Z',
-      '2026-03-20T10:00:03.999Z',
+      '2026-03-20T10:00:04.999Z',
+      '2026-03-20T10:00:05.999Z',
       '2026-03-20T10:00:07.999Z',
     ]);
 
