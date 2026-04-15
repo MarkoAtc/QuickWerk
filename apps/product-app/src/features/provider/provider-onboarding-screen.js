@@ -244,7 +244,8 @@ export function ProviderOnboardingScreen() {
           filename: result.uploadUrl.filename || filename,
           mimeType: result.uploadUrl.mimeType || mimeType,
           description: verificationForm.documentDescription.trim(),
-          uploadedAt: result.uploadUrl.expiresAt,
+          uploadedAt: new Date().toISOString(),
+          expiresAt: result.uploadUrl.expiresAt,
           source: 'upload-url',
         };
 
