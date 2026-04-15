@@ -5,6 +5,7 @@ import {
   AUTH_SESSION_REPOSITORY,
   AuthSession,
   AuthSessionRepository,
+  CreateAuthSessionInput,
   DuplicateEmailError,
   SessionRole,
 } from './domain/auth-session.repository';
@@ -49,11 +50,14 @@ export class AuthService {
     const email = input.email ? this.normalizeEmail(input.email) : 'demo.customer@quickwerk.local';
     const password = input.password;
 
-    const session = await this.sessionStore.createSession({
-      email,
-      role,
-      password,
-    });
+    const createSessionInput: CreateAuthSessionInput = password
+      ? { email, password }
+      : {
+          email,
+          role,
+        };
+
+    const session = await this.sessionStore.createSession(createSessionInput);
 
     logStructuredBreadcrumb({
       event: 'auth.sign-in.write',

@@ -8,6 +8,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  PasswordAuthSessionInput,
   RegisterCustomerInput,
 } from '../domain/auth-session.repository';
 
@@ -27,14 +28,15 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
   async createSession(input: CreateAuthSessionInput): Promise<AuthSession> {
     const token = randomUUID();
     const now = new Date().toISOString();
-    const registeredCustomer = input.role === 'customer' ? this.customersByEmail.get(input.email) : undefined;
+    const registeredCustomer = this.customersByEmail.get(input.email);
+    const role = isPasswordAuthInput(input) ? 'customer' : input.role;
     const session: AuthSession = {
       createdAt: now,
       expiresAt: computeSessionExpiryIso(now, this.sessionTtlSeconds),
       email: input.email,
-      role: input.role,
+      role,
       token,
-      userId: registeredCustomer?.userId ?? `${input.role}-${token.slice(0, 8)}`,
+      userId: registeredCustomer?.userId ?? `${role}-${token.slice(0, 8)}`,
     };
 
     this.sessions.set(token, session);
@@ -97,4 +99,8 @@ async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
   const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
   return `scrypt$${salt}$${derivedKey.toString('hex')}`;
+}
+
+function isPasswordAuthInput(input: CreateAuthSessionInput): input is PasswordAuthSessionInput {
+  return 'password' in input;
 }

@@ -1,5 +1,4 @@
 import { randomBytes, randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
 
 import { resolveAuthSessionTtlSeconds } from '../domain/auth-session-expiry';
 import {
@@ -7,6 +6,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  PasswordAuthSessionInput,
   RegisterCustomerInput,
 } from '../domain/auth-session.repository';
 import { PostgresClient } from '../../persistence/postgres-client';
@@ -34,8 +34,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
     const token = randomUUID();
     const normalizedEmail = input.email.toLowerCase();
 
-    // If password is provided, verify it
-    if ('password' in input && input.password) {
+    if (isPasswordAuthInput(input)) {
       const userResult = await this.postgresClient.query<{ id: string; password_hash: string | null; role: string }>(
         this.postgresConfig,
         `SELECT id::text, password_hash, role FROM users WHERE email = $1`,
@@ -230,11 +229,15 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-const scryptAsync = promisify(scrypt);
+const scryptOptions = {
+  N: 16_384,
+  r: 8,
+  p: 1,
+} as const;
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
-  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  const derivedKey = await scryptHash(password, salt);
   return `scrypt$${salt}$${derivedKey.toString('hex')}`;
 }
 
@@ -245,7 +248,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   }
   const salt = parts[1];
   const storedHash = parts[2];
-  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer;
+  const derivedKey = await scryptHash(password, salt);
   const storedHashBuffer = Buffer.from(storedHash, 'hex');
 
   // Ensure lengths match before using timingSafeEqual
@@ -254,4 +257,20 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
   }
 
   return timingSafeEqual(derivedKey, storedHashBuffer);
+}
+
+function isPasswordAuthInput(input: CreateAuthSessionInput): input is PasswordAuthSessionInput {
+  return 'password' in input;
+}
+
+async function scryptHash(password: string, salt: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, 64, scryptOptions, (error, derivedKey) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(derivedKey);
+    });
+  });
 }

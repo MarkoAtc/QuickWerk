@@ -9,11 +9,19 @@ export type AuthSession = {
   userId: string;
 };
 
-export type CreateAuthSessionInput = {
+export type RoleBasedAuthSessionInput = {
   email: string;
   role: SessionRole;
-  password?: string;
+  password?: never;
 };
+
+export type PasswordAuthSessionInput = {
+  email: string;
+  password: string;
+  role?: never;
+};
+
+export type CreateAuthSessionInput = RoleBasedAuthSessionInput | PasswordAuthSessionInput;
 
 export type RegisterCustomerInput = {
   name: string;
