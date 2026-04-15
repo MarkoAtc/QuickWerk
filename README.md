@@ -43,9 +43,10 @@ Implemented routes/screens exist for:
 - provider workspace / onboarding state
 - booking wizard
 - booking detail flow
+- provider booking accept/decline flow
 - active job flow
 
-The product app also has state/action modules and focused tests around auth bootstrap, discovery, provider flows, booking transitions, payouts, and review-related actions.
+The product app also has state/action modules and focused tests around auth bootstrap, discovery, provider flows, booking accept/decline transitions, payouts, and review-related actions.
 
 ### Admin web (`apps/admin-web`)
 

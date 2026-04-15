@@ -83,30 +83,65 @@ export type AcceptBookingState =
   | { status: 'accepted'; bookingId: string; updatedStatus: string }
   | { status: 'error'; bookingId: string; errorMessage: string };
 
+export type DeclineBookingState =
+  | { status: 'idle'; bookingId: string; declineReason: string }
+  | { status: 'declining'; bookingId: string; declineReason: string }
+  | { status: 'declined'; bookingId: string; updatedStatus: string; declineReason?: string }
+  | { status: 'error'; bookingId: string; declineReason: string; errorMessage: string };
+
 export type ProviderScreenState =
-  | { status: 'idle'; bookingId: string; acceptState: AcceptBookingState }
+  | { status: 'idle'; bookingId: string; acceptState: AcceptBookingState; declineState: DeclineBookingState }
   | { status: 'error'; errorMessage: string };
 
-export const createIdleProviderScreenState = (bookingId: string): ProviderScreenState => ({
+export const createIdleProviderScreenState = (bookingId: string, declineReason = ''): ProviderScreenState => ({
   status: 'idle',
   bookingId,
   acceptState: { status: 'idle', bookingId },
+  declineState: { status: 'idle', bookingId, declineReason },
 });
 
-export const createAcceptingProviderScreenState = (bookingId: string): ProviderScreenState => ({
+export const createAcceptingProviderScreenState = (bookingId: string, declineReason = ''): ProviderScreenState => ({
   status: 'idle',
   bookingId,
   acceptState: { status: 'accepting', bookingId },
+  declineState: { status: 'idle', bookingId, declineReason },
 });
 
-export const createAcceptedProviderScreenState = (bookingId: string, updatedStatus: string): ProviderScreenState => ({
+export const createAcceptedProviderScreenState = (bookingId: string, updatedStatus: string, declineReason = ''): ProviderScreenState => ({
   status: 'idle',
   bookingId,
   acceptState: { status: 'accepted', bookingId, updatedStatus },
+  declineState: { status: 'idle', bookingId, declineReason },
 });
 
-export const createErrorProviderScreenState = (bookingId: string, errorMessage: string): ProviderScreenState => ({
+export const createDecliningProviderScreenState = (bookingId: string, declineReason = ''): ProviderScreenState => ({
+  status: 'idle',
+  bookingId,
+  acceptState: { status: 'idle', bookingId },
+  declineState: { status: 'declining', bookingId, declineReason },
+});
+
+export const createDeclinedProviderScreenState = (bookingId: string, updatedStatus: string, declineReason?: string): ProviderScreenState => ({
+  status: 'idle',
+  bookingId,
+  acceptState: { status: 'idle', bookingId },
+  declineState: { status: 'declined', bookingId, updatedStatus, declineReason },
+});
+
+export const createErrorProviderScreenState = (bookingId: string, errorMessage: string, declineReason = ''): ProviderScreenState => ({
   status: 'idle',
   bookingId,
   acceptState: { status: 'error', bookingId, errorMessage },
+  declineState: { status: 'idle', bookingId, declineReason },
+});
+
+export const createDeclineErrorProviderScreenState = (
+  bookingId: string,
+  declineReason: string,
+  errorMessage: string,
+): ProviderScreenState => ({
+  status: 'idle',
+  bookingId,
+  acceptState: { status: 'idle', bookingId },
+  declineState: { status: 'error', bookingId, declineReason, errorMessage },
 });
