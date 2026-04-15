@@ -10,6 +10,7 @@ export async function submitBooking({ issueType, urgency, address, category, pro
   const parts = [category, issueType, urgency].filter(Boolean);
   if (providerHint) parts.push(providerHint);
   const requestedService = parts.join(' / ');
+  const customerLocation = address?.trim() || undefined;
 
   try {
     const response = await fetch(`${baseUrl}/api/v1/bookings`, {
@@ -18,7 +19,7 @@ export async function submitBooking({ issueType, urgency, address, category, pro
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ requestedService }),
+      body: JSON.stringify({ requestedService, customerLocation }),
     });
 
     if (!response.ok) {

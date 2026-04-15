@@ -191,9 +191,7 @@ function MapPeek() {
   );
 }
 
-export function HomeTriage({ onSelectCategory, onChangeAddress, onBrowseProviders }) {
-  const address = '1010 Vienna, AT';
-
+export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onChangeAddress, onBrowseProviders }) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}

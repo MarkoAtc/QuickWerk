@@ -21,30 +21,32 @@ const FILTER_DEBOUNCE_MS = 400;
  * Includes a trade-category filter input wired to the discovery fetch.
  * Tapping a provider row navigates to the provider detail screen.
  */
-export function DiscoveryScreen() {
+export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '' }) {
   const router = useRouter();
 
   const [providers, setProviders] = useState(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(undefined);
-  const [filterInput, setFilterInput] = useState('');
+  const [tradeCategoryInput, setTradeCategoryInput] = useState(initialTradeCategory);
+  const [locationInput, setLocationInput] = useState(initialLocation);
 
   // Debounce timer ref so rapid typing only fires one fetch
   const debounceRef = useRef(undefined);
   const requestIdRef = useRef(0);
 
   /**
-   * Fetches providers with the given trade-category filter (trimmed; undefined if empty).
+   * Fetches providers with bounded trade category + location filtering.
    */
-  function fetchProviders(filterValue) {
-    const tradeCategory = filterValue?.trim() || undefined;
+  function fetchProviders(filter) {
+    const tradeCategory = filter?.tradeCategory?.trim() || undefined;
+    const location = filter?.location?.trim() || undefined;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
     setErrorMessage(undefined);
     setIsLoading(true);
 
-    loadPublicProviders(tradeCategory ? { tradeCategory } : undefined)
+    loadPublicProviders(tradeCategory || location ? { tradeCategory, location } : undefined)
       .then((result) => {
         if (requestId !== requestIdRef.current) {
           return;
@@ -72,9 +74,14 @@ export function DiscoveryScreen() {
       });
   }
 
-  // Initial load on mount (no filter)
+  // Initial load on mount with route-level default filters.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchProviders(''); }, []);
+  useEffect(() => {
+    fetchProviders({
+      tradeCategory: initialTradeCategory,
+      location: initialLocation,
+    });
+  }, []);
 
   useEffect(() => () => {
     if (debounceRef.current) {
@@ -83,23 +90,28 @@ export function DiscoveryScreen() {
     }
   }, []);
 
-  /**
-   * When filter input changes, debounce the fetch so we don't hammer on every keystroke.
-   */
-  const handleFilterChange = (value) => {
-    setFilterInput(value);
-
+  const scheduleDebouncedFetch = (nextFilter) => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
     debounceRef.current = setTimeout(() => {
-      fetchProviders(value);
+      fetchProviders(nextFilter);
     }, FILTER_DEBOUNCE_MS);
   };
 
+  const handleTradeCategoryChange = (value) => {
+    setTradeCategoryInput(value);
+    scheduleDebouncedFetch({ tradeCategory: value, location: locationInput });
+  };
+
+  const handleLocationChange = (value) => {
+    setLocationInput(value);
+    scheduleDebouncedFetch({ tradeCategory: tradeCategoryInput, location: value });
+  };
+
   const handleRetry = () => {
-    fetchProviders(filterInput);
+    fetchProviders({ tradeCategory: tradeCategoryInput, location: locationInput });
   };
 
   const handleProviderPress = (provider) => {
@@ -115,18 +127,18 @@ export function DiscoveryScreen() {
       subtitle="Browse verified trade professionals in your area."
       testID="discovery-screen"
     >
-      {/* Trade category filter */}
+      {/* Discovery filters */}
       <View
         testID="discovery-filter-container"
         style={{ marginBottom: 16 }}
       >
         <TextInput
           accessibilityLabel="Filter by trade category"
-          onChangeText={handleFilterChange}
+          onChangeText={handleTradeCategoryChange}
           placeholder="Filter by trade category (e.g. plumbing)"
           placeholderTextColor="#94A3B8"
-          testID="discovery-filter-input"
-          value={filterInput}
+          testID="discovery-filter-input-trade-category"
+          value={tradeCategoryInput}
           style={{
             borderWidth: 1,
             borderColor: '#CBD5E1',
@@ -136,6 +148,25 @@ export function DiscoveryScreen() {
             fontSize: 15,
             color: '#0F172A',
             backgroundColor: '#F8FAFC',
+          }}
+        />
+        <TextInput
+          accessibilityLabel="Filter by service location"
+          onChangeText={handleLocationChange}
+          placeholder="Filter by location (e.g. Vienna)"
+          placeholderTextColor="#94A3B8"
+          testID="discovery-filter-input-location"
+          value={locationInput}
+          style={{
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            fontSize: 15,
+            color: '#0F172A',
+            backgroundColor: '#F8FAFC',
+            marginTop: 10,
           }}
         />
       </View>
@@ -179,17 +210,18 @@ export function DiscoveryScreen() {
           style={{ alignItems: 'center', paddingVertical: 32 }}
         >
           <Text style={{ color: '#94A3B8', fontSize: 15 }}>
-            {filterInput.trim()
-              ? `No providers found for "${filterInput.trim()}".`
+            {tradeCategoryInput.trim() || locationInput.trim()
+              ? `No providers found for "${tradeCategoryInput.trim() || 'any trade'}" in "${locationInput.trim() || 'any location'}".`
               : 'No providers available right now.'}
           </Text>
-          {filterInput.trim() ? (
+          {tradeCategoryInput.trim() || locationInput.trim() ? (
             <Pressable
               accessibilityLabel="Clear filter"
               accessibilityRole="button"
               onPress={() => {
-                setFilterInput('');
-                fetchProviders('');
+                setTradeCategoryInput('');
+                setLocationInput('');
+                fetchProviders({ tradeCategory: '', location: '' });
               }}
               testID="discovery-clear-filter"
               style={{ marginTop: 8 }}

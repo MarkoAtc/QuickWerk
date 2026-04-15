@@ -43,6 +43,10 @@ describe('submitBooking', () => {
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({ authorization: 'Bearer tok-123' }),
+          body: JSON.stringify({
+            requestedService: 'Plumbing / Leaky faucet / today',
+            customerLocation: 'Main St',
+          }),
         }),
       );
       expect(result).toMatchObject({ ok: true, bookingId: 'bk-123', status: 'submitted' });

@@ -49,7 +49,8 @@ export class ProvidersController {
   /**
    * GET /api/v1/providers
    * Public provider discovery endpoint. Returns all public provider profiles.
-   * Optionally filtered by trade category via ?tradeCategory=<value>.
+   * Optionally filtered by trade category and bounded location:
+   * ?tradeCategory=<value>&location=<value>.
    * No authentication required — this is a public read-only route for customer discovery.
    */
   @Get()
@@ -57,6 +58,7 @@ export class ProvidersController {
     @Req() request: RequestLike,
     @Res({ passthrough: true }) response: ResponseLike,
     @Query('tradeCategory') tradeCategory?: string,
+    @Query('location') location?: string,
   ) {
     const correlationId = resolveCorrelationId({
       headerValue: request.header(correlationIdHeaderName) ?? undefined,
@@ -67,7 +69,14 @@ export class ProvidersController {
 
     response.setHeader(correlationIdHeaderName, correlationId);
 
-    const filter = tradeCategory?.trim() ? { tradeCategory: tradeCategory.trim() } : undefined;
+    const normalizedTradeCategory = tradeCategory?.trim();
+    const normalizedLocation = location?.trim();
+    const filter = normalizedTradeCategory || normalizedLocation
+      ? {
+        tradeCategory: normalizedTradeCategory || undefined,
+        location: normalizedLocation || undefined,
+      }
+      : undefined;
 
     const result = await this.providersService.listPublicProviders(filter, { correlationId });
 

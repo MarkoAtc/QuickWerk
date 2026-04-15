@@ -125,4 +125,30 @@ describe('InMemoryProviderProfileRepository', () => {
     expect(plumbers).toHaveLength(1);
     expect(plumbers[0]?.providerUserId).toBe('plumber-1');
   });
+
+  it('listPublicProfiles applies combined trade category + location filters', async () => {
+    const repo = new InMemoryProviderProfileRepository();
+
+    await repo.upsertProfile({
+      providerUserId: 'plumber-vienna',
+      displayName: 'Vienna Plumber',
+      tradeCategories: ['plumbing'],
+      serviceArea: 'Vienna 10',
+      isPublic: true,
+      now: now(),
+    });
+
+    await repo.upsertProfile({
+      providerUserId: 'plumber-graz',
+      displayName: 'Graz Plumber',
+      tradeCategories: ['plumbing'],
+      serviceArea: 'Graz',
+      isPublic: true,
+      now: now(),
+    });
+
+    const filtered = await repo.listPublicProfiles({ tradeCategory: 'plumbing', location: 'vienna' });
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.providerUserId).toBe('plumber-vienna');
+  });
 });

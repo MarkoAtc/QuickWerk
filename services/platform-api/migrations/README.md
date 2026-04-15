@@ -34,6 +34,9 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
   - creates durable relay CSV handoff jobs table (`relay_csv_handoff_jobs`)
   - persists async export handoff lifecycle (`pending`, `ready`, `failed`) and payload/filter snapshots
   - adds created/expiry indexes for TTL cleanup and bounded retention scans
+- `0009_booking_customer_location.sql`
+  - adds nullable `bookings.customer_location` for booking address continuity
+  - preserves backward compatibility for existing booking creation flows
 
 ## How to run later (manual)
 
@@ -48,6 +51,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0006_booking_declined_support.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0007_disputes_lifecycle.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0008_relay_csv_handoff_jobs.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0009_booking_customer_location.sql
 ```
 
 Rollback is currently manual (early scaffold phase).

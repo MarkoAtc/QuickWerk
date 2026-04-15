@@ -224,11 +224,10 @@ function LocationStep({ address, onEdit, onConfirm, isSubmitting = false }) {
   );
 }
 
-export function BookingWizard({ category, onComplete, onBack, onEdit, isSubmitting = false }) {
+export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete, onBack, onEdit, isSubmitting = false }) {
   const [step, setStep] = useState(0);
   const [issueType, setIssueType] = useState(null);
   const [urgency, setUrgency] = useState(null);
-  const address = DEFAULT_ADDRESS;
   const totalSteps = 3;
 
   const categoryKey = category && STEPS_BY_CATEGORY[category] ? category : 'default';

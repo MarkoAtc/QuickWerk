@@ -38,7 +38,7 @@ function parsePublicProviderSummary(raw: unknown): PublicProviderSummary | null 
  * This is a public route — no session token required.
  */
 export async function loadPublicProviders(
-  filter?: { tradeCategory?: string },
+  filter?: { tradeCategory?: string; location?: string },
   fetchImpl: typeof fetch = fetch,
 ): Promise<LoadProvidersResult> {
   const request = createListPublicProvidersRequest(filter);

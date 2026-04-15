@@ -118,6 +118,23 @@ describe('BookingsService', () => {
     }
   });
 
+  it('preserves customerLocation when creating a booking', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+
+    const created = await service.createBooking(customer, {
+      requestedService: 'Leak diagnosis',
+      customerLocation: '  1010 Vienna, AT  ',
+    });
+
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    expect(created.booking.customerLocation).toBe('1010 Vienna, AT');
+  });
+
   it('handles near-simultaneous provider accept attempts deterministically', async () => {
     const { service } = createService();
     const customer = createSession('customer', 'customer-1');

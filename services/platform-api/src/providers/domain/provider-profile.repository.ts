@@ -22,7 +22,7 @@ export type UpsertProviderProfileInput = {
 export interface ProviderProfileRepository {
   upsertProfile(input: UpsertProviderProfileInput): Promise<ProviderProfile>;
   getProfileByProviderId(providerUserId: string): Promise<ProviderProfile | null>;
-  listPublicProfiles(filter?: { tradeCategory?: string }): Promise<ProviderProfile[]>;
+  listPublicProfiles(filter?: { tradeCategory?: string; location?: string }): Promise<ProviderProfile[]>;
   getPublicProfileByProviderId(providerUserId: string): Promise<ProviderProfile | null>;
 }
 

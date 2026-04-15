@@ -93,7 +93,7 @@ export class BookingsService {
 
   async createBooking(
     session: AuthSession,
-    input: { requestedService?: string },
+    input: { requestedService?: string; customerLocation?: string },
     context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 403; error: string }
@@ -124,6 +124,7 @@ export class BookingsService {
       createdAt: new Date().toISOString(),
       customerUserId: session.userId,
       requestedService: input.requestedService?.trim() || 'General handyman help',
+      customerLocation: input.customerLocation?.trim() || undefined,
       actorRole: session.role,
       actorUserId: session.userId,
     });
@@ -683,6 +684,7 @@ export class BookingsService {
       customerUserId: record.customerUserId,
       providerUserId: record.providerUserId,
       requestedService: record.requestedService,
+      customerLocation: record.customerLocation,
       status: record.status,
       declineReason: record.declineReason,
       statusHistory: record.statusHistory,

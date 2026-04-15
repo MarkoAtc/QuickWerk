@@ -33,6 +33,7 @@ export class InMemoryBookingRepository implements BookingRepository {
       bookingId,
       createdAt: input.createdAt,
       customerUserId: input.customerUserId,
+      customerLocation: input.customerLocation,
       requestedService: input.requestedService,
       status: 'submitted',
       statusHistory: [initialEvent],
@@ -183,6 +184,7 @@ export class InMemoryBookingRepository implements BookingRepository {
       bookingId: b.bookingId,
       status: b.status,
       requestedService: b.requestedService,
+      customerLocation: b.customerLocation,
       createdAt: b.createdAt,
       customerUserId: b.customerUserId,
     }));

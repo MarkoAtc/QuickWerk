@@ -130,6 +130,57 @@ describe('ProvidersService.listPublicProviders', () => {
     expect(result.providers).toEqual([]);
   });
 
+  it('filters public profiles by bounded location match (case-insensitive substring)', async () => {
+    const service = createService();
+
+    await service.upsertProfile(makeProviderSession('prov-1'), {
+      displayName: 'Vienna Plumber',
+      tradeCategories: ['plumbing'],
+      serviceArea: 'Vienna 10',
+      isPublic: true,
+    });
+
+    await service.upsertProfile(makeProviderSession('prov-2'), {
+      displayName: 'Graz Electrician',
+      tradeCategories: ['electrical'],
+      serviceArea: 'Graz',
+      isPublic: true,
+    });
+
+    const result = await service.listPublicProviders({ location: 'vienna' });
+
+    expect(result.ok).toBe(true);
+    expect(result.providers).toHaveLength(1);
+    expect(result.providers[0]?.displayName).toBe('Vienna Plumber');
+  });
+
+  it('applies combined tradeCategory + location filters', async () => {
+    const service = createService();
+
+    await service.upsertProfile(makeProviderSession('prov-1'), {
+      displayName: 'Vienna Plumber',
+      tradeCategories: ['plumbing'],
+      serviceArea: 'Vienna 10',
+      isPublic: true,
+    });
+
+    await service.upsertProfile(makeProviderSession('prov-2'), {
+      displayName: 'Vienna Electrician',
+      tradeCategories: ['electrical'],
+      serviceArea: 'Vienna 10',
+      isPublic: true,
+    });
+
+    const result = await service.listPublicProviders({
+      tradeCategory: 'plumbing',
+      location: 'vienna',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.providers).toHaveLength(1);
+    expect(result.providers[0]?.displayName).toBe('Vienna Plumber');
+  });
+
   it('serializes profile fields correctly for consumer use', async () => {
     const service = createService();
 
