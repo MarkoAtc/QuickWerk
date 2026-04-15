@@ -382,7 +382,7 @@ export class ProvidersService {
   }
 
   async listPublicProviders(
-    filter?: { tradeCategory?: string },
+    filter?: { tradeCategory?: string; location?: string },
     context?: { correlationId?: string },
   ): Promise<{ ok: true; statusCode: 200; providers: ReturnType<ProvidersService['serializeProfile']>[] }> {
     const correlationId = context?.correlationId ?? 'corr-missing';
@@ -396,6 +396,7 @@ export class ProvidersService {
       details: {
         count: profiles.length,
         tradeCategory: filter?.tradeCategory ?? null,
+        location: filter?.location ?? null,
       },
     });
 

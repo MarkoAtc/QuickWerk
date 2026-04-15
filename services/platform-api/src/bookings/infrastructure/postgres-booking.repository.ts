@@ -24,6 +24,7 @@ type BookingRow = {
   customer_user_id: string;
   provider_user_id: string | null;
   requested_service: string;
+  customer_location: string | null;
   status: BookingStatus;
   created_at: Date | string;
   decline_reason: string | null;
@@ -52,10 +53,11 @@ export class PostgresBookingRepository implements BookingRepository {
           id,
           customer_user_id,
           requested_service,
+          customer_location,
           status,
           created_at
-        ) VALUES ($1::uuid, $2::uuid, $3, 'submitted', $4::timestamptz)`,
-        [bookingId, input.customerUserId, input.requestedService, input.createdAt],
+        ) VALUES ($1::uuid, $2::uuid, $3, $4, 'submitted', $5::timestamptz)`,
+        [bookingId, input.customerUserId, input.requestedService, input.customerLocation ?? null, input.createdAt],
       );
 
       await this.insertStatusEvent(client, {
@@ -296,6 +298,7 @@ export class PostgresBookingRepository implements BookingRepository {
       id: string;
       status: BookingStatus;
       requested_service: string;
+      customer_location: string | null;
       created_at: Date | string;
       customer_user_id: string;
     }>;
@@ -305,11 +308,12 @@ export class PostgresBookingRepository implements BookingRepository {
         id: string;
         status: BookingStatus;
         requested_service: string;
+        customer_location: string | null;
         created_at: Date | string;
         customer_user_id: string;
       }>(
         this.postgresConfig,
-        `SELECT id::text, status, requested_service, created_at, customer_user_id::text
+        `SELECT id::text, status, requested_service, customer_location, created_at, customer_user_id::text
          FROM bookings
          WHERE status = 'submitted'
          ORDER BY created_at ASC`,
@@ -321,11 +325,12 @@ export class PostgresBookingRepository implements BookingRepository {
         id: string;
         status: BookingStatus;
         requested_service: string;
+        customer_location: string | null;
         created_at: Date | string;
         customer_user_id: string;
       }>(
         this.postgresConfig,
-        `SELECT id::text, status, requested_service, created_at, customer_user_id::text
+        `SELECT id::text, status, requested_service, customer_location, created_at, customer_user_id::text
          FROM bookings
          WHERE customer_user_id = $1::uuid
          ORDER BY created_at DESC`,
@@ -338,6 +343,7 @@ export class PostgresBookingRepository implements BookingRepository {
       bookingId: row.id,
       status: row.status,
       requestedService: row.requested_service,
+      customerLocation: row.customer_location ?? undefined,
       createdAt: toIsoString(row.created_at),
       customerUserId: row.customer_user_id,
     }));
@@ -368,6 +374,7 @@ export class PostgresBookingRepository implements BookingRepository {
               customer_user_id::text,
               provider_user_id::text,
               requested_service,
+              customer_location,
               status,
               created_at,
               decline_reason
@@ -405,6 +412,7 @@ export class PostgresBookingRepository implements BookingRepository {
               customer_user_id::text,
               provider_user_id::text,
               requested_service,
+              customer_location,
               status,
               created_at,
               decline_reason
@@ -482,6 +490,7 @@ function mapBookingRecord(booking: BookingRow, historyRows: BookingStatusHistory
     customerUserId: booking.customer_user_id,
     providerUserId: booking.provider_user_id ?? undefined,
     requestedService: booking.requested_service,
+    customerLocation: booking.customer_location ?? undefined,
     status: booking.status,
     declineReason: booking.decline_reason ?? undefined,
     statusHistory,

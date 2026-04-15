@@ -85,7 +85,7 @@ The backend also includes persistence-mode switching, relay execution/orchestrat
 
 ### Product-facing surfaces
 
-The user-facing app now resolves auth session bootstrap, marketplace preview, provider discovery, and provider profile/detail from platform API contracts by default. Fallback fixtures remain only for true request failures and some non-critical UX paths still contain placeholder actions while backend docking continues.
+The user-facing app now resolves auth session bootstrap, marketplace preview, provider discovery (including bounded category + location matching), and provider profile/detail from platform API contracts by default. Fallback fixtures remain only for true request failures; home triage and booking wizard now carry an editable customer location through discovery and booking submission.
 
 ### Backend and operator logic
 

@@ -13,6 +13,7 @@ export type BookingRecord = {
   bookingId: string;
   createdAt: string;
   customerUserId: string;
+  customerLocation?: string;
   providerUserId?: string;
   requestedService: string;
   status: BookingStatus;
@@ -24,6 +25,7 @@ export type CreateSubmittedBookingInput = {
   createdAt: string;
   customerUserId: string;
   requestedService: string;
+  customerLocation?: string;
   actorRole: BookingActorRole;
   actorUserId: string;
 };
@@ -66,6 +68,7 @@ export type BookingSummary = {
   bookingId: string;
   status: BookingStatus;
   requestedService: string;
+  customerLocation?: string;
   createdAt: string;
   customerUserId: string;
 };

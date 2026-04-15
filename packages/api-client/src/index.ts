@@ -63,6 +63,7 @@ export type SignInRequestBody = {
 
 export type CreateBookingRequestBody = {
   requestedService?: string;
+  customerLocation?: string;
 };
 
 export const createSessionBootstrapRequest = (sessionToken?: string) => ({
@@ -200,6 +201,7 @@ export type PublicProviderProfile = {
 
 export type ListPublicProvidersFilter = {
   tradeCategory?: string;
+  location?: string;
 };
 
 /**
@@ -219,10 +221,19 @@ export const createGetPublicProviderRequest = (providerUserId: string) => ({
  */
 export const createListPublicProvidersRequest = (filter?: ListPublicProvidersFilter) => {
   const basePath = providerApiRoutes.listPublicProviders;
-  const path =
-    filter?.tradeCategory?.trim()
-      ? `${basePath}?tradeCategory=${encodeURIComponent(filter.tradeCategory.trim())}`
-      : basePath;
+  const query = new URLSearchParams();
+
+  const normalizedTradeCategory = filter?.tradeCategory?.trim();
+  const normalizedLocation = filter?.location?.trim();
+  if (normalizedTradeCategory) {
+    query.set('tradeCategory', normalizedTradeCategory);
+  }
+  if (normalizedLocation) {
+    query.set('location', normalizedLocation);
+  }
+
+  const queryString = query.toString();
+  const path = queryString ? `${basePath}?${queryString}` : basePath;
 
   return {
     method: 'GET',

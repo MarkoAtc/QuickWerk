@@ -42,14 +42,21 @@ export class InMemoryProviderProfileRepository implements ProviderProfileReposit
     return profile;
   }
 
-  async listPublicProfiles(filter?: { tradeCategory?: string }): Promise<ProviderProfile[]> {
-    const all = Array.from(this.profiles.values()).filter((p) => p.isPublic);
+  async listPublicProfiles(filter?: { tradeCategory?: string; location?: string }): Promise<ProviderProfile[]> {
+    let filtered = Array.from(this.profiles.values()).filter((p) => p.isPublic);
 
-    if (!filter?.tradeCategory) {
-      return all;
+    const normalizedCategory = filter?.tradeCategory?.toLowerCase().trim();
+    if (normalizedCategory) {
+      filtered = filtered.filter((p) =>
+        p.tradeCategories.some((c) => c.toLowerCase() === normalizedCategory),
+      );
     }
 
-    const category = filter.tradeCategory.toLowerCase().trim();
-    return all.filter((p) => p.tradeCategories.some((c) => c.toLowerCase() === category));
+    const normalizedLocation = filter?.location?.toLowerCase().trim();
+    if (normalizedLocation) {
+      filtered = filtered.filter((p) => p.serviceArea?.toLowerCase().includes(normalizedLocation));
+    }
+
+    return filtered;
   }
 }

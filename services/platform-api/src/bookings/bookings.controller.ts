@@ -7,6 +7,7 @@ import { BookingsService } from './bookings.service';
 
 type CreateBookingRequestBody = {
   requestedService?: string;
+  customerLocation?: string;
 };
 
 type DeclineBookingRequestBody = {

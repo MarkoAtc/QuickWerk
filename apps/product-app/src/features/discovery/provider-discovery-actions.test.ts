@@ -112,6 +112,26 @@ describe('loadPublicProviders', () => {
     expect(capturedUrl).toContain('tradeCategory=plumbing');
   });
 
+  it('passes combined tradeCategory + location filters as query params', async () => {
+    let capturedUrl: string | undefined;
+
+    const fetchMock = async (url: string | URL | Request) => {
+      capturedUrl = typeof url === 'string' ? url : url instanceof URL ? url.toString() : String(url);
+      return {
+        ok: true,
+        json: async () => [],
+      } as Response;
+    };
+
+    await loadPublicProviders(
+      { tradeCategory: 'plumbing', location: '  Vienna 10 ' },
+      fetchMock as unknown as typeof fetch,
+    );
+
+    expect(capturedUrl).toContain('tradeCategory=plumbing');
+    expect(capturedUrl).toContain('location=Vienna+10');
+  });
+
   it('omits tradeCategory query param when filter is not provided', async () => {
     let capturedUrl: string | undefined;
 
