@@ -127,4 +127,22 @@ describe('submitOnboarding', () => {
     if (state.status !== 'error') return;
     expect(state.errorMessage).toContain('Duplicate');
   });
+
+  it('supports rejection retry by transitioning back to pending after resubmission', async () => {
+    const rejectedFetch = makeMockFetch(
+      200,
+      {
+        ...makeRecord('rejected'),
+        reviewNote: 'Document was blurry, please resubmit.',
+      },
+    );
+    const rejectedState = await loadOnboardingStatus('tok-1', rejectedFetch);
+
+    expect(rejectedState.status).toBe('rejected');
+
+    const retryFetch = makeMockFetch(201, makeRecord('pending'));
+    const retriedState = await submitOnboarding('tok-1', baseFormData, retryFetch);
+
+    expect(retriedState.status).toBe('pending');
+  });
 });

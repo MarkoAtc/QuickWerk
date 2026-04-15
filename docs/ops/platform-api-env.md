@@ -65,6 +65,10 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0003
 # apply snapshot storage and operator-role migrations
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0004_booking_accepted_relay_queue_snapshots.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0005_operator_role_support.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0006_booking_declined_support.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0007_disputes_lifecycle.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0008_relay_csv_handoff_jobs.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0009_booking_customer_location.sql
 
 # run platform API tests + typecheck
 corepack pnpm --filter @quickwerk/platform-api test
