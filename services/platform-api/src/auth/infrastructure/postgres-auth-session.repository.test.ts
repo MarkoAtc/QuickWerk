@@ -42,6 +42,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -77,6 +78,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -90,6 +92,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -99,5 +102,75 @@ describe('PostgresAuthSessionRepository', () => {
     await expect(repository.deleteSession(undefined)).resolves.toBe(false);
     await expect(repository.deleteSession('not-a-uuid')).resolves.toBe(false);
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it('registers a customer and returns a session token', async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: '22222222-2222-4222-8222-222222222222' }],
+      })
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            token: '11111111-1111-4111-8111-111111111111',
+            user_id: '22222222-2222-4222-8222-222222222222',
+            created_at: '2026-03-20T12:00:00.000Z',
+            expires_at: '2026-03-20T12:30:00.000Z',
+          },
+        ],
+      });
+
+    const repository = new PostgresAuthSessionRepository(
+      {
+        query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
+      } as unknown as PostgresClient,
+      postgresConfig,
+    );
+
+    const registration = await repository.registerCustomer({
+      name: 'Marta Meister',
+      email: 'MARTA@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    expect(registration).toMatchObject({
+      email: 'marta@quickwerk.local',
+      role: 'customer',
+      token: '11111111-1111-4111-8111-111111111111',
+      userId: '22222222-2222-4222-8222-222222222222',
+    });
+
+    const registrationQueryParams = query.mock.calls[0]?.[1] as unknown[] | undefined;
+    const storedPasswordHash = registrationQueryParams?.[3];
+    expect(typeof storedPasswordHash).toBe('string');
+    expect(storedPasswordHash).toMatch(/^scrypt\$/);
+    expect(storedPasswordHash).not.toBe('supersecure');
+  });
+
+  it('throws a duplicate-email error when registration email already exists', async () => {
+    const query = vi.fn().mockResolvedValueOnce({
+      rowCount: 0,
+      rows: [],
+    });
+
+    const repository = new PostgresAuthSessionRepository(
+      {
+        query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
+      } as unknown as PostgresClient,
+      postgresConfig,
+    );
+
+    await expect(
+      repository.registerCustomer({
+        name: 'Marta Meister',
+        email: 'marta@quickwerk.local',
+        password: 'supersecure',
+      }),
+    ).rejects.toThrow('already exists');
   });
 });

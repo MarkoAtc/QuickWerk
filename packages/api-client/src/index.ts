@@ -58,7 +58,14 @@ export type SessionRole = 'customer' | 'provider';
 
 export type SignInRequestBody = {
   email?: string;
+  password?: string;
   role?: SessionRole;
+};
+
+export type SignUpRequestBody = {
+  name?: string;
+  email?: string;
+  password?: string;
 };
 
 export type CreateBookingRequestBody = {
@@ -75,6 +82,12 @@ export const createSessionBootstrapRequest = (sessionToken?: string) => ({
 export const createSignInRequest = (body: SignInRequestBody) => ({
   method: 'POST',
   path: authApiRoutes.signIn,
+  body,
+}) as const;
+
+export const createSignUpRequest = (body: SignUpRequestBody) => ({
+  method: 'POST',
+  path: authApiRoutes.signUp,
   body,
 }) as const;
 

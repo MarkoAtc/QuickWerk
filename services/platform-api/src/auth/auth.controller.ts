@@ -9,6 +9,12 @@ type SignInRequestBody = {
   role?: string;
 };
 
+type SignUpRequestBody = {
+  name?: string;
+  email?: string;
+  password?: string;
+};
+
 type RequestLike = {
   method: string;
   path: string;
@@ -44,6 +50,26 @@ export class AuthController {
     response.setHeader(correlationIdHeaderName, correlationId);
 
     return this.authService.signIn(body, {
+      correlationId,
+    });
+  }
+
+  @Post('sign-up')
+  async signUp(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Body() body: SignUpRequestBody,
+  ) {
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    return this.authService.signUp(body, {
       correlationId,
     });
   }
