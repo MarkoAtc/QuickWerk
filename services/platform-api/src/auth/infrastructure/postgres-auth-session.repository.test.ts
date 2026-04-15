@@ -42,6 +42,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -77,6 +78,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -90,6 +92,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -123,6 +126,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
@@ -140,7 +144,7 @@ describe('PostgresAuthSessionRepository', () => {
       userId: '22222222-2222-4222-8222-222222222222',
     });
 
-    const registrationQueryParams = query.mock.calls[0]?.[2] as unknown[] | undefined;
+    const registrationQueryParams = query.mock.calls[0]?.[1] as unknown[] | undefined;
     const storedPasswordHash = registrationQueryParams?.[3];
     expect(typeof storedPasswordHash).toBe('string');
     expect(storedPasswordHash).toMatch(/^scrypt\$/);
@@ -156,6 +160,7 @@ describe('PostgresAuthSessionRepository', () => {
     const repository = new PostgresAuthSessionRepository(
       {
         query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
       } as unknown as PostgresClient,
       postgresConfig,
     );
