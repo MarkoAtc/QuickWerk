@@ -120,4 +120,28 @@ describe('declineBookingRequest', () => {
     expect(result.booking).toBeUndefined();
     expect(result.errorMessage).toContain('Network error');
   });
+
+  it('returns errorMessage when server returns non-declined status (regression test)', async () => {
+    const fetchMock: typeof fetch = async () =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          bookingId: 'booking-1',
+          requestedService: 'Tile repair',
+          status: 'accepted',
+          customerUserId: 'customer-1',
+        }),
+      }) as Response;
+
+    const result = await declineBookingRequest(
+      { sessionToken: 'provider-token', bookingId: 'booking-1' },
+      fetchMock,
+    );
+
+    expect(result.booking).toBeUndefined();
+    expect(result.errorMessage).toBeTruthy();
+    expect(result.errorMessage).toContain('declined');
+    expect(result.errorMessage).toContain('accepted');
+  });
 });

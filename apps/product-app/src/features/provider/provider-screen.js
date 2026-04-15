@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { declineBookingRequest } from '../booking/booking-screen-actions';
@@ -22,6 +22,8 @@ export function ProviderScreen() {
   const [mutationError, setMutationError] = useState(undefined);
   const [acceptedBooking, setAcceptedBooking] = useState(undefined);
   const [declinedBooking, setDeclinedBooking] = useState(undefined);
+
+  const pendingActionRef = useRef(false);
 
   useEffect(() => {
     if (session.status !== 'authenticated') {
@@ -78,8 +80,9 @@ export function ProviderScreen() {
   };
 
   const handleAccept = (bookingId) => {
-    if (acceptingId || decliningId) return;
+    if (pendingActionRef.current || acceptingId || decliningId) return;
 
+    pendingActionRef.current = true;
     clearMutationFeedback();
     setAcceptingId(bookingId);
 
@@ -88,6 +91,7 @@ export function ProviderScreen() {
     if (!sessionToken) {
       setMutationError('Your session has expired. Please sign in again.');
       setAcceptingId(undefined);
+      pendingActionRef.current = false;
       signOut();
       router.replace('/auth');
       return;
@@ -107,12 +111,14 @@ export function ProviderScreen() {
       })
       .finally(() => {
         setAcceptingId(undefined);
+        pendingActionRef.current = false;
       });
   };
 
   const handleDecline = (bookingId) => {
-    if (acceptingId || decliningId) return;
+    if (pendingActionRef.current || acceptingId || decliningId) return;
 
+    pendingActionRef.current = true;
     clearMutationFeedback();
     setDecliningId(bookingId);
 
@@ -122,6 +128,7 @@ export function ProviderScreen() {
     if (!sessionToken) {
       setMutationError('Your session has expired. Please sign in again.');
       setDecliningId(undefined);
+      pendingActionRef.current = false;
       signOut();
       router.replace('/auth');
       return;
@@ -150,6 +157,7 @@ export function ProviderScreen() {
       })
       .finally(() => {
         setDecliningId(undefined);
+        pendingActionRef.current = false;
       });
   };
 
@@ -305,7 +313,7 @@ export function ProviderScreen() {
               {bookings.map((booking) => {
                 const isAccepting = acceptingId === booking.bookingId;
                 const isDeclining = decliningId === booking.bookingId;
-                const isBusy = Boolean(acceptingId || decliningId);
+                const isBusy = Boolean(pendingActionRef.current || acceptingId || decliningId);
                 const declineReasonDraft = bookingDraftReasons[booking.bookingId] ?? '';
 
                 return (

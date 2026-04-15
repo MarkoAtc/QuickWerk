@@ -110,6 +110,10 @@ export async function declineBookingRequest(
       return { errorMessage: 'Decline response missing required fields.' };
     }
 
+    if (payload.status !== 'declined') {
+      return { errorMessage: `Expected status 'declined' but received '${payload.status}'.` };
+    }
+
     return {
       booking: {
         bookingId: payload.bookingId,
