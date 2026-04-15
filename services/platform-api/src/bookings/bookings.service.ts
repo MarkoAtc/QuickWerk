@@ -477,6 +477,12 @@ export class BookingsService {
         },
       };
 
+      if (!bookingToComplete.providerUserId) {
+        throw new Error(
+          `Cannot complete booking ${bookingId}: missing persisted providerUserId on replayed completion`,
+        );
+      }
+
       const replayedBookingCompletedEvent: BookingCompletedDomainEvent = {
         eventName: 'booking.completed',
         eventId: randomUUID(),
@@ -486,7 +492,7 @@ export class BookingsService {
         booking: {
           bookingId: bookingToComplete.bookingId,
           customerUserId: bookingToComplete.customerUserId,
-          providerUserId: bookingToComplete.providerUserId ?? session.userId,
+          providerUserId: bookingToComplete.providerUserId,
           requestedService: bookingToComplete.requestedService,
           status: 'completed',
         },
@@ -549,6 +555,10 @@ export class BookingsService {
     }
 
     // Capture payment only after validating transition eligibility
+    if (!bookingToComplete.providerUserId) {
+      throw new Error(`Cannot complete booking ${bookingId}: missing persisted providerUserId on booking record`);
+    }
+
     let payment: PaymentRecord;
     let paymentReplayed: boolean;
 
@@ -556,7 +566,7 @@ export class BookingsService {
       const captureResult = await this.paymentsService.capturePaymentForBooking({
         bookingId,
         customerUserId: bookingToComplete.customerUserId,
-        providerUserId: bookingToComplete.providerUserId ?? session.userId,
+        providerUserId: bookingToComplete.providerUserId,
         amountCents: this.estimatePaymentAmountCents(bookingToComplete.requestedService),
         currency: 'EUR',
         capturedAt: completedAt,
@@ -643,6 +653,10 @@ export class BookingsService {
       },
     };
 
+    if (!completed.booking.providerUserId) {
+      throw new Error(`Cannot complete booking ${bookingId}: missing persisted providerUserId after completion`);
+    }
+
     const bookingCompletedEvent: BookingCompletedDomainEvent = {
       eventName: 'booking.completed',
       eventId: randomUUID(),
@@ -652,7 +666,7 @@ export class BookingsService {
       booking: {
         bookingId: completed.booking.bookingId,
         customerUserId: completed.booking.customerUserId,
-        providerUserId: completed.booking.providerUserId ?? session.userId,
+        providerUserId: completed.booking.providerUserId,
         requestedService: completed.booking.requestedService,
         status: 'completed',
       },
