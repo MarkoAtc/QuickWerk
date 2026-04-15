@@ -56,6 +56,21 @@ export type BookingAcceptedDomainEvent = {
   };
 };
 
+export type BookingCreatedDomainEvent = {
+  eventName: 'booking.created';
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+  replayed: boolean;
+  booking: {
+    bookingId: string;
+    customerUserId: string;
+    requestedService: string;
+    customerLocation?: string;
+    status: 'submitted';
+  };
+};
+
 export type BookingDeclinedDomainEvent = {
   eventName: 'booking.declined';
   eventId: string;
@@ -70,6 +85,67 @@ export type BookingDeclinedDomainEvent = {
     status: 'declined';
     declineReason?: string;
   };
+};
+
+export type BookingCompletedDomainEvent = {
+  eventName: 'booking.completed';
+  eventId: string;
+  occurredAt: string;
+  correlationId: string;
+  replayed: boolean;
+  booking: {
+    bookingId: string;
+    customerUserId: string;
+    providerUserId: string;
+    requestedService: string;
+    status: 'completed';
+  };
+};
+
+export type BookingCreatedRetryBackoffMetadata = {
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+export type BookingCreatedDlqMarker = {
+  terminal: true;
+  queueName: 'booking.created.dlq';
+  reason: 'max-attempts-exhausted';
+  markedAt: string;
+};
+
+export type BookingCreatedWorkerEnvelope = {
+  eventName: 'booking.created';
+  correlationId: string;
+  event: BookingCreatedDomainEvent;
+  retry: BookingCreatedRetryBackoffMetadata;
+  dlq?: BookingCreatedDlqMarker;
+};
+
+export type BookingCompletedRetryBackoffMetadata = {
+  strategy: 'deterministic-exponential-v1';
+  attempt: number;
+  maxAttempts: number;
+  backoffMs: number;
+  nextAttemptAt: string;
+};
+
+export type BookingCompletedDlqMarker = {
+  terminal: true;
+  queueName: 'booking.completed.dlq';
+  reason: 'max-attempts-exhausted';
+  markedAt: string;
+};
+
+export type BookingCompletedWorkerEnvelope = {
+  eventName: 'booking.completed';
+  correlationId: string;
+  event: BookingCompletedDomainEvent;
+  retry: BookingCompletedRetryBackoffMetadata;
+  dlq?: BookingCompletedDlqMarker;
 };
 
 export type BookingAcceptedRetryBackoffMetadata = {
@@ -118,7 +194,27 @@ export type BookingDeclinedWorkerEnvelope = {
   dlq?: BookingDeclinedDlqMarker;
 };
 
+export type BookingCreatedNotificationPayload = {
+  channel: 'email' | 'push';
+  recipientUserId: string;
+  bookingId: string;
+  correlationId: string;
+  subject?: string;
+  body: string;
+  queuedAt: string;
+};
+
 export type BookingDeclinedNotificationPayload = {
+  channel: 'email' | 'push';
+  recipientUserId: string;
+  bookingId: string;
+  correlationId: string;
+  subject?: string;
+  body: string;
+  queuedAt: string;
+};
+
+export type BookingCompletedNotificationPayload = {
   channel: 'email' | 'push';
   recipientUserId: string;
   bookingId: string;

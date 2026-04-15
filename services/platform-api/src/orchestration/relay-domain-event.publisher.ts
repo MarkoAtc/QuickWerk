@@ -1,6 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent, PaymentCapturedDomainEvent } from '@quickwerk/domain';
-import { consumeBookingDeclinedAttempt, consumePaymentCapturedAttempt } from '@quickwerk/background-workers';
+import type {
+  BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
+  BookingDeclinedDomainEvent,
+  PaymentCapturedDomainEvent,
+} from '@quickwerk/domain';
+import {
+  consumeBookingCompletedAttempt,
+  consumeBookingCreatedAttempt,
+  consumeBookingDeclinedAttempt,
+  consumePaymentCapturedAttempt,
+} from '@quickwerk/background-workers';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { BookingDomainEventPublisher } from './domain-event.publisher';
@@ -44,6 +55,77 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
     @Inject(BOOKING_ACCEPTED_RELAY_ATTEMPT_EXECUTOR)
     private readonly relayAttemptExecutor: RelayAttemptExecutor,
   ) {}
+
+  async publishBookingCreated(event: BookingCreatedDomainEvent): Promise<void> {
+    await this.loggingPublisher.publishBookingCreated(event);
+
+    let finalWorkerResult = consumeBookingCreatedAttempt({
+      event,
+      attempt: 1,
+      maxAttempts: relayMaxAttempts,
+      baseBackoffMs: relayBaseBackoffMs,
+      shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+        event,
+        attempt: 1,
+        maxAttempts: relayMaxAttempts,
+      }),
+      now: this.relayClock.now(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'booking.created.domain-event.relay.attempt',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+
+    for (let attempt = 2; attempt <= relayMaxAttempts && finalWorkerResult.status === 'retry-scheduled'; attempt += 1) {
+      finalWorkerResult = consumeBookingCreatedAttempt({
+        event,
+        attempt,
+        maxAttempts: relayMaxAttempts,
+        baseBackoffMs: relayBaseBackoffMs,
+        shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+          event,
+          attempt,
+          maxAttempts: relayMaxAttempts,
+        }),
+        now: this.relayClock.now(),
+      });
+
+      logStructuredBreadcrumb({
+        event: 'booking.created.domain-event.relay.attempt',
+        correlationId: event.correlationId,
+        status: mapRelayAttemptStatus(finalWorkerResult.status),
+        details: {
+          eventId: event.eventId,
+          workerStatus: finalWorkerResult.status,
+          workerCorrelationId: finalWorkerResult.correlationId,
+          retry: finalWorkerResult.envelope.retry,
+          dlq: finalWorkerResult.envelope.dlq,
+        },
+      });
+    }
+
+    logStructuredBreadcrumb({
+      event: 'booking.created.domain-event.relay',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+  }
 
   async publishBookingAccepted(event: BookingAcceptedDomainEvent): Promise<void> {
     await this.loggingPublisher.publishBookingAccepted(event);
@@ -180,6 +262,77 @@ export class RelayBookingDomainEventPublisher implements BookingDomainEventPubli
 
     logStructuredBreadcrumb({
       event: 'booking.declined.domain-event.relay',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+  }
+
+  async publishBookingCompleted(event: BookingCompletedDomainEvent): Promise<void> {
+    await this.loggingPublisher.publishBookingCompleted(event);
+
+    let finalWorkerResult = consumeBookingCompletedAttempt({
+      event,
+      attempt: 1,
+      maxAttempts: relayMaxAttempts,
+      baseBackoffMs: relayBaseBackoffMs,
+      shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+        event,
+        attempt: 1,
+        maxAttempts: relayMaxAttempts,
+      }),
+      now: this.relayClock.now(),
+    });
+
+    logStructuredBreadcrumb({
+      event: 'booking.completed.domain-event.relay.attempt',
+      correlationId: event.correlationId,
+      status: mapRelayAttemptStatus(finalWorkerResult.status),
+      details: {
+        eventId: event.eventId,
+        workerStatus: finalWorkerResult.status,
+        workerCorrelationId: finalWorkerResult.correlationId,
+        retry: finalWorkerResult.envelope.retry,
+        dlq: finalWorkerResult.envelope.dlq,
+      },
+    });
+
+    for (let attempt = 2; attempt <= relayMaxAttempts && finalWorkerResult.status === 'retry-scheduled'; attempt += 1) {
+      finalWorkerResult = consumeBookingCompletedAttempt({
+        event,
+        attempt,
+        maxAttempts: relayMaxAttempts,
+        baseBackoffMs: relayBaseBackoffMs,
+        shouldFail: this.relayAttemptPolicy.shouldFailAttempt({
+          event,
+          attempt,
+          maxAttempts: relayMaxAttempts,
+        }),
+        now: this.relayClock.now(),
+      });
+
+      logStructuredBreadcrumb({
+        event: 'booking.completed.domain-event.relay.attempt',
+        correlationId: event.correlationId,
+        status: mapRelayAttemptStatus(finalWorkerResult.status),
+        details: {
+          eventId: event.eventId,
+          workerStatus: finalWorkerResult.status,
+          workerCorrelationId: finalWorkerResult.correlationId,
+          retry: finalWorkerResult.envelope.retry,
+          dlq: finalWorkerResult.envelope.dlq,
+        },
+      });
+    }
+
+    logStructuredBreadcrumb({
+      event: 'booking.completed.domain-event.relay',
       correlationId: event.correlationId,
       status: mapRelayAttemptStatus(finalWorkerResult.status),
       details: {

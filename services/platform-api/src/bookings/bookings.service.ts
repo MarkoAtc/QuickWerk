@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
   BookingDeclinedDomainEvent,
   PaymentCapturedDomainEvent,
   PaymentRecord,
@@ -138,6 +140,23 @@ export class BookingsService {
         actorUserId: session.userId,
       },
     });
+
+    const createdEvent: BookingCreatedDomainEvent = {
+      eventName: 'booking.created',
+      eventId: randomUUID(),
+      occurredAt: created.createdAt,
+      correlationId,
+      replayed: false,
+      booking: {
+        bookingId: created.bookingId,
+        customerUserId: created.customerUserId,
+        requestedService: created.requestedService,
+        customerLocation: created.customerLocation,
+        status: 'submitted',
+      },
+    };
+
+    await this.domainEvents.publishBookingCreated(createdEvent);
 
     return {
       ok: true,
@@ -458,6 +477,28 @@ export class BookingsService {
         },
       };
 
+      if (!bookingToComplete.providerUserId) {
+        throw new Error(
+          `Cannot complete booking ${bookingId}: missing persisted providerUserId on replayed completion`,
+        );
+      }
+
+      const replayedBookingCompletedEvent: BookingCompletedDomainEvent = {
+        eventName: 'booking.completed',
+        eventId: randomUUID(),
+        occurredAt: replayedPayment.capturedAt,
+        correlationId,
+        replayed: true,
+        booking: {
+          bookingId: bookingToComplete.bookingId,
+          customerUserId: bookingToComplete.customerUserId,
+          providerUserId: bookingToComplete.providerUserId,
+          requestedService: bookingToComplete.requestedService,
+          status: 'completed',
+        },
+      };
+
+      await this.domainEvents.publishBookingCompleted(replayedBookingCompletedEvent);
       await this.domainEvents.publishPaymentCaptured(replayedPaymentCapturedEvent);
 
       logStructuredBreadcrumb({
@@ -514,6 +555,10 @@ export class BookingsService {
     }
 
     // Capture payment only after validating transition eligibility
+    if (!bookingToComplete.providerUserId) {
+      throw new Error(`Cannot complete booking ${bookingId}: missing persisted providerUserId on booking record`);
+    }
+
     let payment: PaymentRecord;
     let paymentReplayed: boolean;
 
@@ -521,7 +566,7 @@ export class BookingsService {
       const captureResult = await this.paymentsService.capturePaymentForBooking({
         bookingId,
         customerUserId: bookingToComplete.customerUserId,
-        providerUserId: bookingToComplete.providerUserId ?? session.userId,
+        providerUserId: bookingToComplete.providerUserId,
         amountCents: this.estimatePaymentAmountCents(bookingToComplete.requestedService),
         currency: 'EUR',
         capturedAt: completedAt,
@@ -608,6 +653,26 @@ export class BookingsService {
       },
     };
 
+    if (!completed.booking.providerUserId) {
+      throw new Error(`Cannot complete booking ${bookingId}: missing persisted providerUserId after completion`);
+    }
+
+    const bookingCompletedEvent: BookingCompletedDomainEvent = {
+      eventName: 'booking.completed',
+      eventId: randomUUID(),
+      occurredAt: completedAt,
+      correlationId,
+      replayed: completed.replayed,
+      booking: {
+        bookingId: completed.booking.bookingId,
+        customerUserId: completed.booking.customerUserId,
+        providerUserId: completed.booking.providerUserId,
+        requestedService: completed.booking.requestedService,
+        status: 'completed',
+      },
+    };
+
+    await this.domainEvents.publishBookingCompleted(bookingCompletedEvent);
     await this.domainEvents.publishPaymentCaptured(paymentCapturedEvent);
 
     logStructuredBreadcrumb({

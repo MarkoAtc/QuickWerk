@@ -1,4 +1,9 @@
-import type { BookingAcceptedDomainEvent, BookingDeclinedDomainEvent } from '@quickwerk/domain';
+import type {
+  BookingAcceptedDomainEvent,
+  BookingCompletedDomainEvent,
+  BookingCreatedDomainEvent,
+  BookingDeclinedDomainEvent,
+} from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
 import { AuthSession } from '../auth/domain/auth-session.repository';
@@ -26,14 +31,22 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
 };
 
 const createService = () => {
+  const createdEvents: BookingCreatedDomainEvent[] = [];
   const emittedEvents: BookingAcceptedDomainEvent[] = [];
   const declinedEvents: BookingDeclinedDomainEvent[] = [];
+  const completedEvents: BookingCompletedDomainEvent[] = [];
   const eventPublisher: BookingDomainEventPublisher = {
+    async publishBookingCreated(event) {
+      createdEvents.push(event);
+    },
     async publishBookingAccepted(event) {
       emittedEvents.push(event);
     },
     async publishBookingDeclined(event) {
       declinedEvents.push(event);
+    },
+    async publishBookingCompleted(event) {
+      completedEvents.push(event);
     },
     async publishPaymentCaptured(_event) {},
   };
@@ -44,8 +57,10 @@ const createService = () => {
   );
 
   return {
+    createdEvents,
     emittedEvents,
     declinedEvents,
+    completedEvents,
     service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
   };
 };
@@ -119,12 +134,14 @@ describe('BookingsService', () => {
   });
 
   it('preserves customerLocation when creating a booking', async () => {
-    const { service } = createService();
+    const { service, createdEvents } = createService();
     const customer = createSession('customer', 'customer-1');
 
     const created = await service.createBooking(customer, {
       requestedService: 'Leak diagnosis',
       customerLocation: '  1010 Vienna, AT  ',
+    }, {
+      correlationId: 'corr-create-1',
     });
 
     expect(created.ok).toBe(true);
@@ -133,6 +150,9 @@ describe('BookingsService', () => {
     }
 
     expect(created.booking.customerLocation).toBe('1010 Vienna, AT');
+    expect(createdEvents).toHaveLength(1);
+    expect(createdEvents[0]?.correlationId).toBe('corr-create-1');
+    expect(createdEvents[0]?.booking.status).toBe('submitted');
   });
 
   it('handles near-simultaneous provider accept attempts deterministically', async () => {
