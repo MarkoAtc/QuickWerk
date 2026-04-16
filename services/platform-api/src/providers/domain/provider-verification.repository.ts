@@ -1,4 +1,4 @@
-export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'request-more-info';
 
 export type DocumentMetadata = {
   documentId: string;
@@ -49,7 +49,7 @@ export type ReviewVerificationInput = {
   verificationId: string;
   reviewedByUserId: string;
   reviewedByRole: VerificationActorRole;
-  decision: 'approved' | 'rejected';
+  decision: 'approved' | 'rejected' | 'request-more-info';
   reviewNote?: string;
   reviewedAt: string;
 };

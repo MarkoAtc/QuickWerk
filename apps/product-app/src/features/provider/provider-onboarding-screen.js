@@ -8,7 +8,10 @@ import {
   saveMyProviderProfile,
 } from './provider-screen-actions';
 import { loadOnboardingStatus, submitOnboarding } from './onboarding-screen-actions';
-import { resolveProviderOnboardingWorkspaceFlow } from './provider-onboarding-workspace-state';
+import {
+  resolveProviderBookingGateMessage,
+  resolveProviderOnboardingWorkspaceFlow,
+} from './provider-onboarding-workspace-state';
 import { productAppShell } from '../../shared/app-shell';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
@@ -129,6 +132,7 @@ export function ProviderOnboardingScreen() {
         if (
           onboardingResult.status === 'pending'
           || onboardingResult.status === 'approved'
+          || onboardingResult.status === 'request-more-info'
           || onboardingResult.status === 'rejected'
         ) {
           const record = onboardingResult.verification;
@@ -304,6 +308,7 @@ export function ProviderOnboardingScreen() {
     profileState: profileWorkspaceState,
     onboardingState: verificationState,
   });
+  const bookingGateMessage = resolveProviderBookingGateMessage(verificationState);
 
   return (
     <ProductScreenShell
@@ -331,6 +336,15 @@ export function ProviderOnboardingScreen() {
 
         {isRefreshing ? <Text style={{ color: '#64748B' }}>Loading onboarding workspace…</Text> : null}
         <Text style={{ color: '#475569' }}>Current flow: {workspaceFlow}</Text>
+        {bookingGateMessage ? (
+          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#92400E' }}>
+            {bookingGateMessage}
+          </Text>
+        ) : (
+          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#166534' }}>
+            Booking access is unlocked.
+          </Text>
+        )}
       </View>
 
       <View
@@ -469,6 +483,8 @@ export function ProviderOnboardingScreen() {
                 ? 'Pending review'
                 : verificationState.status === 'approved'
                   ? 'Approved'
+                  : verificationState.status === 'request-more-info'
+                    ? 'More info requested (update and resubmit)'
                   : verificationState.status === 'rejected'
                     ? 'Rejected (retry available)'
                     : 'Error'}
@@ -476,6 +492,7 @@ export function ProviderOnboardingScreen() {
 
         {(verificationState.status === 'pending'
           || verificationState.status === 'approved'
+          || verificationState.status === 'request-more-info'
           || verificationState.status === 'rejected') ? (
             <View
               style={{
@@ -501,7 +518,9 @@ export function ProviderOnboardingScreen() {
         {verificationError ? <Text style={{ marginTop: 8, color: '#B91C1C' }}>{verificationError}</Text> : null}
         {verificationMessage ? <Text style={{ marginTop: 8, color: '#166534' }}>{verificationMessage}</Text> : null}
 
-        {(verificationState.status === 'not-submitted' || verificationState.status === 'rejected') ? (
+        {(verificationState.status === 'not-submitted'
+          || verificationState.status === 'request-more-info'
+          || verificationState.status === 'rejected') ? (
           <>
             <TextInput
               value={verificationForm.businessName}

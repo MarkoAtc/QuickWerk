@@ -192,6 +192,27 @@ describe('ProvidersService.reviewVerification', () => {
     expect(reviewResult.verification.status).toBe('rejected');
   });
 
+  it('operator can request more info for a pending verification', async () => {
+    const { service } = makeService();
+    const providerSession = makeSession('provider', 'prov-1');
+    const operatorSession = makeSession('operator', 'op-1');
+
+    const submitResult = await service.submitVerification(providerSession, baseInput, { correlationId: 'corr-1' });
+    if (!submitResult.ok) throw new Error('Submission failed');
+
+    const reviewResult = await service.reviewVerification(
+      operatorSession,
+      submitResult.verification.verificationId,
+      { decision: 'request-more-info', reviewNote: 'Please provide a clearer insurance document.' },
+      { correlationId: 'corr-2' },
+    );
+
+    expect(reviewResult.ok).toBe(true);
+    if (!reviewResult.ok) return;
+    expect(reviewResult.verification.status).toBe('request-more-info');
+    expect(reviewResult.verification.reviewNote).toBe('Please provide a clearer insurance document.');
+  });
+
   it('provider cannot review verifications', async () => {
     const { service } = makeService();
     const providerSession = makeSession('provider', 'prov-1');
@@ -274,5 +295,26 @@ describe('ProvidersService.reviewVerification', () => {
     expect(statusResult.ok).toBe(true);
     if (!statusResult.ok) return;
     expect(statusResult.verification?.status).toBe('approved');
+  });
+
+  it('provider sees request-more-info status after operator review', async () => {
+    const { service } = makeService();
+    const providerSession = makeSession('provider', 'prov-1');
+    const operatorSession = makeSession('operator', 'op-1');
+
+    const submitResult = await service.submitVerification(providerSession, baseInput, { correlationId: 'corr-1' });
+    if (!submitResult.ok) throw new Error('Submission failed');
+
+    await service.reviewVerification(
+      operatorSession,
+      submitResult.verification.verificationId,
+      { decision: 'request-more-info', reviewNote: 'Need clearer trade certificate copy.' },
+      { correlationId: 'corr-2' },
+    );
+
+    const statusResult = await service.getMyVerificationStatus(providerSession, { correlationId: 'corr-3' });
+    expect(statusResult.ok).toBe(true);
+    if (!statusResult.ok) return;
+    expect(statusResult.verification?.status).toBe('request-more-info');
   });
 });

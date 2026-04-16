@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { VerificationRecord } from './onboarding-state';
 import { fetchVerificationStatus, loadOnboardingStatus, submitOnboarding, submitVerificationRequest } from './onboarding-screen-actions';
 
-const makeRecord = (status: 'pending' | 'approved' | 'rejected'): VerificationRecord => ({
+const makeRecord = (status: 'pending' | 'approved' | 'rejected' | 'request-more-info'): VerificationRecord => ({
   verificationId: 'ver-1',
   status,
   submittedAt: '2026-01-01T10:00:00.000Z',
@@ -101,6 +101,13 @@ describe('loadOnboardingStatus', () => {
     const state = await loadOnboardingStatus('tok-1', mockFetch);
 
     expect(state.status).toBe('approved');
+  });
+
+  it('returns request-more-info state for request-more-info record', async () => {
+    const mockFetch = makeMockFetch(200, makeRecord('request-more-info'));
+    const state = await loadOnboardingStatus('tok-1', mockFetch);
+
+    expect(state.status).toBe('request-more-info');
   });
 
   it('returns error state on fetch failure', async () => {

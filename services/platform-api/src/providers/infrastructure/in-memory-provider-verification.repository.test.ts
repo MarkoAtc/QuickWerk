@@ -120,6 +120,26 @@ describe('InMemoryProviderVerificationRepository', () => {
     expect(result.record.status).toBe('rejected');
   });
 
+  it('marks pending verification as request-more-info', async () => {
+    const repo = makeRepo();
+    const created = await repo.submitVerification(baseSubmit);
+
+    const result = await repo.reviewVerification({
+      verificationId: created.verificationId,
+      reviewedByUserId: 'op-1',
+      reviewedByRole: 'operator',
+      decision: 'request-more-info',
+      reviewNote: 'Please upload a clearer trade license image.',
+      reviewedAt: '2026-01-01T12:00:00.000Z',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.record.status).toBe('request-more-info');
+    expect(result.record.statusHistory[1]?.to).toBe('request-more-info');
+    expect(result.record.reviewNote).toBe('Please upload a clearer trade license image.');
+  });
+
   it('returns not-found when reviewing unknown verification', async () => {
     const repo = makeRepo();
     const result = await repo.reviewVerification({

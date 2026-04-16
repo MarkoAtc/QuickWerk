@@ -37,6 +37,7 @@ describe('ProvidersService.getPublicProviderById', () => {
       bio: 'Fast and reliable.',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     const result = await service.getPublicProviderById('prov-1');
 
@@ -79,6 +80,22 @@ describe('ProvidersService.getPublicProviderById', () => {
     expect(result.statusCode).toBe(404);
   });
 
+  it('returns 404 when provider is public but not approved', async () => {
+    const service = createService();
+
+    await service.upsertProfile(makeProviderSession('prov-pending'), {
+      displayName: 'Pending Public Provider',
+      tradeCategories: ['plumbing'],
+      isPublic: true,
+    });
+
+    const result = await service.getPublicProviderById('prov-pending');
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.statusCode).toBe(404);
+  });
+
   it('returns 404 for empty string id', async () => {
     const service = createService();
 
@@ -107,12 +124,14 @@ describe('ProvidersService.getPublicProviderById', () => {
       tradeCategories: ['plumbing'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Bob',
       tradeCategories: ['electrical'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-2');
 
     const result = await service.getPublicProviderById('prov-2');
 
@@ -122,3 +141,31 @@ describe('ProvidersService.getPublicProviderById', () => {
     expect(result.provider.displayName).toBe('Bob');
   });
 });
+
+const makeOperatorSession = (userId: string) => ({
+  createdAt: '2026-01-01T09:00:00.000Z',
+  expiresAt: '2026-01-02T09:00:00.000Z',
+  email: `${userId}@example.com`,
+  role: 'operator' as const,
+  token: `token-${userId}`,
+  userId,
+});
+
+async function approveProvider(service: ProvidersService, providerUserId: string) {
+  const submitted = await service.submitVerification(makeProviderSession(providerUserId), {
+    tradeCategories: ['plumbing'],
+    documents: [{ filename: 'license.pdf', mimeType: 'application/pdf' }],
+  });
+  if (!submitted.ok) {
+    throw new Error('verification submission failed');
+  }
+
+  const reviewed = await service.reviewVerification(
+    makeOperatorSession('op-1'),
+    submitted.verification.verificationId,
+    { decision: 'approved' },
+  );
+  if (!reviewed.ok) {
+    throw new Error('verification approval failed');
+  }
+}

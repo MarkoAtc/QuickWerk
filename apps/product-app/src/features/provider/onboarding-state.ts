@@ -1,4 +1,4 @@
-export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'request-more-info';
 
 export type OnboardingDocumentInput = {
   filename: string;
@@ -37,6 +37,7 @@ export type ProviderOnboardingState =
   | { status: 'submitting'; formData: OnboardingFormData }
   | { status: 'pending'; verification: VerificationRecord }
   | { status: 'approved'; verification: VerificationRecord }
+  | { status: 'request-more-info'; verification: VerificationRecord }
   | { status: 'rejected'; verification: VerificationRecord }
   | { status: 'error'; errorMessage: string };
 
@@ -64,6 +65,11 @@ export const createRejectedState = (verification: VerificationRecord): ProviderO
   verification,
 });
 
+export const createRequestMoreInfoState = (verification: VerificationRecord): ProviderOnboardingState => ({
+  status: 'request-more-info',
+  verification,
+});
+
 export const createErrorState = (errorMessage: string): ProviderOnboardingState => ({
   status: 'error',
   errorMessage,
@@ -81,6 +87,8 @@ export function resolveVerificationStateFromRecord(
       return createPendingState(record);
     case 'approved':
       return createApprovedState(record);
+    case 'request-more-info':
+      return createRequestMoreInfoState(record);
     case 'rejected':
       return createRejectedState(record);
     default:
