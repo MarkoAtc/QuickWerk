@@ -4,7 +4,7 @@
 - **Current delivery head:** `feature/tec-84-verification-review-parity`
 - **Open PR to merge first:** **#29** (`TEC-84` + `TEC-87`), clean/mergeable
 - **Where Marko should continue after merge:** the already-defined next slice from kickoff: **TEC-90** (provider payout visibility route in product app)
-- **Paperclip status:** Last documented kickoff created/assigned `TEC-90`; **current Paperclip API is unreachable on this machine**, so project pause/deactivate could not be executed right now.
+- **Paperclip status:** Last documented kickoff created/assigned `TEC-90`; project pause/deactivate is still pending because the local Paperclip API is currently unreachable on this machine.
 
 ---
 
@@ -23,7 +23,7 @@ References:
 
 ## 1.2 Repo/code progress (where we stand now)
 - Active branch locally: `feature/tec-84-verification-review-parity`
-- Branch relation: `feature/tec-84-verification-review-parity` is **3 commits ahead of `origin/main`** (`0 behind / 3 ahead`)
+- Branch relation: `feature/tec-84-verification-review-parity` is **4 commits ahead of `origin/main`** (`0 behind / 4 ahead`)
 - Open PR: `https://github.com/MarkoAtc/QuickWerk/pull/29`
   - Title: `feat(platform-api,product-app): enforce provider approval gates for discovery and booking (TEC-87)`
   - Includes combined work for `TEC-84` + `TEC-87`
@@ -67,33 +67,21 @@ Supporting refs:
 
 ## 4) Local state audit (for clean handover)
 
-## 4.1 Working tree (NOT clean)
-Current branch has local, uncommitted and untracked files.
-
-### Modified tracked files
-- `apps/admin-web/next-env.d.ts`
-- `apps/product-app/src/features/provider/provider-screen.js`
-- `apps/product-app/src/features/provider/provider-state.test.ts`
-- `apps/product-app/src/features/provider/provider-state.ts`
-
-### Untracked (not committed)
-- `.agent/artifacts/`
-- `.agent/plans/tec-55...tec-89 kickoff files`
-- `.agent/pr-body-phase3-slice1.md`
-- `.claire/`
-- `.claude/` (includes worktrees)
-- `apps/product-app/app/provider-payouts.js`
-- `apps/product-app/src/features/payouts/payout-route-state.ts`
-- `apps/product-app/src/features/payouts/payout-route-state.test.ts`
-- `apps/product-app/src/features/payouts/payout-screen.js`
+## 4.1 Working tree (clean)
+- Working tree is now clean (`git status` empty).
+- Handoff docs are committed and pushed to remote.
+- Pre-cleanup local WIP was preserved in stash for safety:
+  - `stash@{0}: handoff-cleanup-backup-2026-04-16`
 
 ## 4.2 Local branch hygiene
-- **25 local branches** have `[gone]` upstreams (stale local refs)
-- Remote branch set is compact (healthy): only `main`, current feature branch, and few active branches
+- stale local `[gone]` branches were pruned aggressively.
+- one stale branch remains because it is tied to an external worktree reference:
+  - `feature/phase3-slice3-reviews-api`
+- Remote branch set remains compact/healthy.
 
 ## 4.3 Important local-only risk
-- `.claude/worktrees/*` branches/worktrees exist and are local dev artifacts.
-- Before Marko continues locally, ensure no accidental dependency on those local paths.
+- Legacy external worktree-linked refs may still exist on machines that used Claude/Codex worktrees.
+- Before continuing, ensure no production-critical workflow depends on those local-only paths.
 
 ---
 
