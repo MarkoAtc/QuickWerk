@@ -186,7 +186,7 @@ export class ProvidersService {
   async reviewVerification(
     session: AuthSession,
     verificationId: string,
-    input: { decision: 'approved' | 'rejected'; reviewNote?: string },
+    input: { decision: 'approved' | 'rejected' | 'request-more-info'; reviewNote?: string },
     context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 403 | 404 | 409; error: string }

@@ -18,7 +18,7 @@ export const providerApiRoutes = {
   requestUploadUrl: `${apiRoutes.providers}/me/verification/upload-url`,
 } as const;
 
-export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'request-more-info';
 
 export type SubmitVerificationBody = {
   businessName?: string;
@@ -32,7 +32,7 @@ export type SubmitVerificationBody = {
 };
 
 export type ReviewVerificationBody = {
-  decision: 'approved' | 'rejected';
+  decision: 'approved' | 'rejected' | 'request-more-info';
   reviewNote?: string;
 };
 

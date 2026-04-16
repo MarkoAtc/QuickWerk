@@ -24,7 +24,7 @@ export function resolveProviderOnboardingWorkspaceFlow(input: {
     return 'pending-review';
   }
 
-  if (onboardingState.status === 'rejected') {
+  if (onboardingState.status === 'rejected' || onboardingState.status === 'request-more-info') {
     return 'rejection-retry';
   }
 

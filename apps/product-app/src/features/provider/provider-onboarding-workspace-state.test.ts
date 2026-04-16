@@ -43,6 +43,18 @@ describe('resolveProviderOnboardingWorkspaceFlow', () => {
     expect(flow).toBe('rejection-retry');
   });
 
+  it('returns rejection-retry when verification needs more info', () => {
+    const flow = resolveProviderOnboardingWorkspaceFlow({
+      profileState: 'ready',
+      onboardingState: {
+        status: 'request-more-info',
+        verification: { ...baseVerification, status: 'request-more-info' },
+      },
+    });
+
+    expect(flow).toBe('rejection-retry');
+  });
+
   it('returns profile-saved after profile save transition', () => {
     const flow = resolveProviderOnboardingWorkspaceFlow({
       profileState: 'saved',

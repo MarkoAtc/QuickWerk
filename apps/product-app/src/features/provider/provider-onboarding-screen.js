@@ -129,6 +129,7 @@ export function ProviderOnboardingScreen() {
         if (
           onboardingResult.status === 'pending'
           || onboardingResult.status === 'approved'
+          || onboardingResult.status === 'request-more-info'
           || onboardingResult.status === 'rejected'
         ) {
           const record = onboardingResult.verification;
@@ -469,6 +470,8 @@ export function ProviderOnboardingScreen() {
                 ? 'Pending review'
                 : verificationState.status === 'approved'
                   ? 'Approved'
+                  : verificationState.status === 'request-more-info'
+                    ? 'More info requested (update and resubmit)'
                   : verificationState.status === 'rejected'
                     ? 'Rejected (retry available)'
                     : 'Error'}
@@ -476,6 +479,7 @@ export function ProviderOnboardingScreen() {
 
         {(verificationState.status === 'pending'
           || verificationState.status === 'approved'
+          || verificationState.status === 'request-more-info'
           || verificationState.status === 'rejected') ? (
             <View
               style={{
@@ -501,7 +505,9 @@ export function ProviderOnboardingScreen() {
         {verificationError ? <Text style={{ marginTop: 8, color: '#B91C1C' }}>{verificationError}</Text> : null}
         {verificationMessage ? <Text style={{ marginTop: 8, color: '#166534' }}>{verificationMessage}</Text> : null}
 
-        {(verificationState.status === 'not-submitted' || verificationState.status === 'rejected') ? (
+        {(verificationState.status === 'not-submitted'
+          || verificationState.status === 'request-more-info'
+          || verificationState.status === 'rejected') ? (
           <>
             <TextInput
               value={verificationForm.businessName}

@@ -67,6 +67,16 @@ describe('verification-queue-state', () => {
       expect(next.reviewAction.decision).toBe('rejected');
     });
 
+    it('removes request-more-info verification', () => {
+      const state = createLoadedQueueState([makeSummary('v-1')]);
+      const next = applyReviewDecision(state, 'v-1', 'request-more-info');
+      if (next.status !== 'loaded') return;
+      expect(next.verifications).toHaveLength(0);
+      expect(next.reviewAction.status).toBe('done');
+      if (next.reviewAction.status !== 'done') return;
+      expect(next.reviewAction.decision).toBe('request-more-info');
+    });
+
     it('does not modify non-loaded states', () => {
       const loadingState = createLoadingQueueState();
       const result = applyReviewDecision(loadingState, 'v-1', 'approved');

@@ -28,7 +28,12 @@ function isVerificationRecord(value: unknown): value is VerificationRecord {
     return false;
   }
 
-  if (record['status'] !== 'pending' && record['status'] !== 'approved' && record['status'] !== 'rejected') {
+  if (
+    record['status'] !== 'pending'
+    && record['status'] !== 'approved'
+    && record['status'] !== 'rejected'
+    && record['status'] !== 'request-more-info'
+  ) {
     return false;
   }
 
