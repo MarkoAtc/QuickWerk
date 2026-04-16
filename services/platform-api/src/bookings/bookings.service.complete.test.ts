@@ -15,6 +15,7 @@ import { InMemoryPaymentRepository } from '../payments/infrastructure/in-memory-
 import { PaymentsService } from '../payments/payments.service';
 import { InMemoryPayoutRepository } from '../payouts/infrastructure/in-memory-payout.repository';
 import { PayoutsService } from '../payouts/payouts.service';
+import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
@@ -52,8 +53,11 @@ const createService = () => {
     new PayoutsService(new InMemoryPayoutRepository()),
     new InvoicesService(new InMemoryInvoiceRepository()),
   );
+  const providersService = ({
+    getProviderApprovalStatus: async () => 'approved',
+  }) as unknown as ProvidersService;
   return {
-    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
+    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService, providersService),
     paymentsService,
     createdEvents,
     completedEvents,

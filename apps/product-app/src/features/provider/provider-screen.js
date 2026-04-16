@@ -2,6 +2,11 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { loadOnboardingStatus } from './onboarding-screen-actions';
+import {
+  isProviderBookingAccessApproved,
+  resolveProviderBookingGateMessage,
+} from './provider-onboarding-workspace-state';
 import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
@@ -14,6 +19,8 @@ export function ProviderScreen() {
   const [bookings, setBookings] = useState(undefined);
   const [listError, setListError] = useState(undefined);
   const [isLoading, setIsLoading] = useState(false);
+  const [accessGateStatus, setAccessGateStatus] = useState('checking');
+  const [accessGateMessage, setAccessGateMessage] = useState(undefined);
 
   const [acceptingId, setAcceptingId] = useState(undefined);
   const [acceptError, setAcceptError] = useState(undefined);
@@ -30,6 +37,7 @@ export function ProviderScreen() {
   }
 
   const loadOpenBookings = () => {
+    if (accessGateStatus !== 'approved') return;
     if (isLoading) return;
 
     const sessionToken = resolveSessionToken(session);
@@ -59,9 +67,48 @@ export function ProviderScreen() {
       });
   };
 
-  // Load on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadOpenBookings(); }, []);
+  const checkBookingAccess = () => {
+    const sessionToken = resolveSessionToken(session);
+    if (!sessionToken) {
+      setListError('Your session has expired. Please sign in again.');
+      signOut();
+      router.replace('/auth');
+      return;
+    }
+
+    setAccessGateStatus('checking');
+    setAccessGateMessage(undefined);
+    setListError(undefined);
+
+    loadOnboardingStatus(sessionToken)
+      .then((onboardingState) => {
+        if (isProviderBookingAccessApproved(onboardingState)) {
+          setAccessGateStatus('approved');
+          return;
+        }
+
+        setAccessGateStatus('blocked');
+        setAccessGateMessage(resolveProviderBookingGateMessage(onboardingState) ?? 'Complete onboarding to unlock bookings.');
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'Unexpected verification status error.';
+        setAccessGateStatus('error');
+        setAccessGateMessage(message);
+        setListError(message);
+      });
+  };
+
+  useEffect(() => {
+    checkBookingAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (accessGateStatus === 'approved') {
+      loadOpenBookings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessGateStatus]);
 
   const handleAccept = (bookingId) => {
     if (acceptingId) return;
@@ -134,6 +181,39 @@ export function ProviderScreen() {
           Complete business profile, service area, and verification handoff.
         </Text>
       </Pressable>
+
+      {accessGateStatus !== 'approved' ? (
+        <View
+          testID="provider-booking-access-gated"
+          style={{
+            marginBottom: 10,
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderWidth: 1,
+            borderColor: '#FDE68A',
+            backgroundColor: '#FFFBEB',
+          }}
+        >
+          <Text style={{ color: '#92400E', fontWeight: '700' }}>
+            Booking access is blocked until provider approval.
+          </Text>
+          {accessGateMessage ? (
+            <Text style={{ color: '#92400E', marginTop: 4 }}>
+              {accessGateMessage}
+            </Text>
+          ) : null}
+          <Pressable
+            accessibilityLabel="Continue provider onboarding"
+            accessibilityRole="button"
+            onPress={() => router.push('/provider-onboarding')}
+            testID="provider-open-onboarding-gate"
+            style={{ marginTop: 8 }}
+          >
+            <Text style={{ color: '#B45309', fontWeight: '700' }}>Continue onboarding</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
         <Pressable
@@ -210,7 +290,12 @@ export function ProviderScreen() {
         </View>
       ) : (
         <View testID="provider-bookings-list">
-          {isLoading ? (
+          {accessGateStatus === 'checking' ? (
+            <View testID="provider-access-checking" style={{ alignItems: 'center', paddingVertical: 24 }}>
+              <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
+              <Text style={{ marginTop: 8, color: '#64748B' }}>Checking provider approval…</Text>
+            </View>
+          ) : accessGateStatus !== 'approved' ? null : isLoading ? (
             <View testID="provider-bookings-loading" style={{ alignItems: 'center', paddingVertical: 24 }}>
               <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
               <Text style={{ marginTop: 8, color: '#64748B' }}>Loading open bookings…</Text>

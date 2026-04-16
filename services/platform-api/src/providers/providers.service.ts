@@ -35,6 +35,8 @@ type UpsertProfileInput = {
   isPublic?: boolean;
 };
 
+export type ProviderApprovalStatus = 'not-submitted' | 'pending' | 'request-more-info' | 'rejected' | 'approved';
+
 @Injectable()
 export class ProvidersService {
   constructor(
@@ -371,6 +373,18 @@ export class ProvidersService {
       return { ok: false, statusCode: 404, error: 'Provider not found.' };
     }
 
+    const isApproved = await this.isProviderApproved(trimmedId);
+    if (!isApproved) {
+      logStructuredBreadcrumb({
+        event: 'provider.discovery.get-public',
+        correlationId,
+        status: 'failed',
+        details: { providerUserId: trimmedId, reason: 'not-approved' },
+      });
+
+      return { ok: false, statusCode: 404, error: 'Provider not found.' };
+    }
+
     logStructuredBreadcrumb({
       event: 'provider.discovery.get-public',
       correlationId,
@@ -388,19 +402,27 @@ export class ProvidersService {
     const correlationId = context?.correlationId ?? 'corr-missing';
 
     const profiles = await this.profiles.listPublicProfiles(filter);
+    const approvalResults = await Promise.all(
+      profiles.map(async (profile) => ({
+        profile,
+        approved: await this.isProviderApproved(profile.providerUserId),
+      })),
+    );
+    const approvedProfiles = approvalResults.filter((entry) => entry.approved).map((entry) => entry.profile);
 
     logStructuredBreadcrumb({
       event: 'provider.discovery.list-public',
       correlationId,
       status: 'succeeded',
       details: {
-        count: profiles.length,
+        count: approvedProfiles.length,
+        filteredUnapprovedCount: profiles.length - approvedProfiles.length,
         tradeCategory: filter?.tradeCategory ?? null,
         location: filter?.location ?? null,
       },
     });
 
-    return { ok: true, statusCode: 200, providers: profiles.map((p) => this.serializeProfile(p)) };
+    return { ok: true, statusCode: 200, providers: approvedProfiles.map((p) => this.serializeProfile(p)) };
   }
 
   async getMyProfile(
@@ -462,6 +484,19 @@ export class ProvidersService {
       reviewNote: record.reviewNote,
       statusHistory: record.statusHistory,
     } as const;
+  }
+
+  async getProviderApprovalStatus(providerUserId: string): Promise<ProviderApprovalStatus> {
+    const record = await this.verifications.getVerificationByProviderId(providerUserId);
+    if (!record) {
+      return 'not-submitted';
+    }
+    return record.status;
+  }
+
+  async isProviderApproved(providerUserId: string): Promise<boolean> {
+    const approvalStatus = await this.getProviderApprovalStatus(providerUserId);
+    return approvalStatus === 'approved';
   }
 
   async requestUploadUrl(

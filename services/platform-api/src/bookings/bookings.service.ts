@@ -17,6 +17,7 @@ import {
   BookingDomainEventPublisher,
 } from '../orchestration/domain-event.publisher';
 import { PaymentsService } from '../payments/payments.service';
+import { ProvidersService } from '../providers/providers.service';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class BookingsService {
     @Inject(BOOKING_DOMAIN_EVENT_PUBLISHER)
     private readonly domainEvents: BookingDomainEventPublisher,
     private readonly paymentsService: PaymentsService,
+    private readonly providersService: ProvidersService,
   ) {}
 
   getMarketplacePreview() {
@@ -192,6 +194,27 @@ export class BookingsService {
         ok: false,
         statusCode: 403,
         error: 'Only providers can accept bookings.',
+      };
+    }
+
+    const approvalStatus = await this.providersService.getProviderApprovalStatus(session.userId);
+    if (approvalStatus !== 'approved') {
+      logStructuredBreadcrumb({
+        event: 'booking.accept.write',
+        correlationId,
+        status: 'failed',
+        details: {
+          reason: 'provider-not-approved',
+          actorUserId: session.userId,
+          bookingId,
+          approvalStatus,
+        },
+      });
+
+      return {
+        ok: false,
+        statusCode: 403,
+        error: 'Provider approval is required before accepting bookings.',
       };
     }
 

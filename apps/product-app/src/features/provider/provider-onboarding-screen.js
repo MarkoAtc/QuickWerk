@@ -8,7 +8,10 @@ import {
   saveMyProviderProfile,
 } from './provider-screen-actions';
 import { loadOnboardingStatus, submitOnboarding } from './onboarding-screen-actions';
-import { resolveProviderOnboardingWorkspaceFlow } from './provider-onboarding-workspace-state';
+import {
+  resolveProviderBookingGateMessage,
+  resolveProviderOnboardingWorkspaceFlow,
+} from './provider-onboarding-workspace-state';
 import { productAppShell } from '../../shared/app-shell';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
@@ -305,6 +308,7 @@ export function ProviderOnboardingScreen() {
     profileState: profileWorkspaceState,
     onboardingState: verificationState,
   });
+  const bookingGateMessage = resolveProviderBookingGateMessage(verificationState);
 
   return (
     <ProductScreenShell
@@ -332,6 +336,15 @@ export function ProviderOnboardingScreen() {
 
         {isRefreshing ? <Text style={{ color: '#64748B' }}>Loading onboarding workspace…</Text> : null}
         <Text style={{ color: '#475569' }}>Current flow: {workspaceFlow}</Text>
+        {bookingGateMessage ? (
+          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#92400E' }}>
+            {bookingGateMessage}
+          </Text>
+        ) : (
+          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#166534' }}>
+            Booking access is unlocked.
+          </Text>
+        )}
       </View>
 
       <View
