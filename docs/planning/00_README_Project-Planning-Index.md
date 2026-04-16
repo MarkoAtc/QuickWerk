@@ -47,6 +47,8 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 4. `05_AI-Agent-Instructions-and-Automation-Workflows.md`
 5. `08_Implementation-Handoff-and-Docking-Guide.md`
 6. `09_Augment-Code-Handoff-2026-03-19.md`
+7. `11_Phase1-Completion-Handoff-2026-03-28.md`
+8. `12_QuickWerk-Handoff-to-Marko-2026-04-16.md`
 
 ### For AI assistants and automation owners
 
@@ -56,6 +58,8 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 4. `07_Risks-Assumptions-Issues-and-Plan-Corrections.md`
 5. `08_Implementation-Handoff-and-Docking-Guide.md`
 6. `09_Augment-Code-Handoff-2026-03-19.md`
+7. `11_Phase1-Completion-Handoff-2026-03-28.md`
+8. `12_QuickWerk-Handoff-to-Marko-2026-04-16.md`
 
 ## Document Map
 
@@ -125,6 +129,18 @@ Where the source plan is vague, optimistic, or logically incomplete, this planni
 - locks the backend persistence path (PostgreSQL/PostGIS-ready + Redis + object storage)
 - captures deployment compatibility for Vercel app surfaces with external data services
 - records ORM/query-layer direction and rationale for the Postgres transition
+
+### `11_Phase1-Completion-Handoff-2026-03-28.md`
+
+- confirms Phase-1 trust-layer exit criteria and delivered verification workflows
+- summarizes platform-api, product-app, and admin-web verification surfaces
+- captures smoke-test evidence and phase-forward scope boundaries
+
+### `12_QuickWerk-Handoff-to-Marko-2026-04-16.md`
+
+- operational handoff brief for project-responsibility transfer back to Marko
+- includes local/remote repo audit, exact re-entry join-point, and continuation sequence
+- records Paperclip pause/deactivate status and concrete follow-up actions
 
 ## Global Delivery Assumptions
 
