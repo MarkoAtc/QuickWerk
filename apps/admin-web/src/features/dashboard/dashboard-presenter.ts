@@ -35,7 +35,7 @@ export function describeVerificationQueue(state: VerificationQueueState): QueueS
         detail:
           state.reviewAction.status === 'error'
             ? state.reviewAction.errorMessage
-            : 'Approve or reject pending provider onboarding submissions.',
+            : 'Approve, reject, or request more info on pending provider submissions.',
       };
   }
 }

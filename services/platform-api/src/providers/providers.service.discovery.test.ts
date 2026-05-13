@@ -5,12 +5,16 @@ import { InMemoryProviderVerificationRepository } from './infrastructure/in-memo
 import { InMemoryUploadUrlRepository } from './infrastructure/in-memory-upload-url.repository';
 import { ProvidersService } from './providers.service';
 
-const createService = () =>
-  new ProvidersService(
-    new InMemoryProviderVerificationRepository(),
-    new InMemoryProviderProfileRepository(),
-    new InMemoryUploadUrlRepository(),
-  );
+const createService = () => {
+  const verifications = new InMemoryProviderVerificationRepository();
+  return {
+    service: new ProvidersService(
+      verifications,
+      new InMemoryProviderProfileRepository(),
+      new InMemoryUploadUrlRepository(),
+    ),
+  };
+};
 
 /**
  * Directly seeds profiles into the repository via the service's upsertProfile,
@@ -27,7 +31,7 @@ const makeProviderSession = (userId: string) => ({
 
 describe('ProvidersService.listPublicProviders', () => {
   it('returns an empty array when no profiles exist', async () => {
-    const service = createService();
+    const { service } = createService();
 
     const result = await service.listPublicProviders();
 
@@ -36,13 +40,14 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('returns only public profiles', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Alice the Plumber',
       tradeCategories: ['plumbing'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Bob Private',
@@ -58,19 +63,21 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('returns all public profiles when no filter is applied', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Alice the Plumber',
       tradeCategories: ['plumbing'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Charlie the Electrician',
       tradeCategories: ['electrical'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-2');
 
     const result = await service.listPublicProviders();
 
@@ -79,19 +86,21 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('filters public profiles by trade category (case-insensitive)', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Alice the Plumber',
       tradeCategories: ['plumbing'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Charlie the Electrician',
       tradeCategories: ['electrical'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-2');
 
     const result = await service.listPublicProviders({ tradeCategory: 'PLUMBING' });
 
@@ -101,13 +110,14 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('returns empty array when filter matches no public profiles', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Alice the Plumber',
       tradeCategories: ['plumbing'],
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     const result = await service.listPublicProviders({ tradeCategory: 'carpentry' });
 
@@ -116,7 +126,7 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('does not return a private profile even if it matches the trade category filter', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Private Plumber',
@@ -131,7 +141,7 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('filters public profiles by bounded location match (case-insensitive substring)', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Vienna Plumber',
@@ -139,6 +149,7 @@ describe('ProvidersService.listPublicProviders', () => {
       serviceArea: 'Vienna 10',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Graz Electrician',
@@ -146,6 +157,7 @@ describe('ProvidersService.listPublicProviders', () => {
       serviceArea: 'Graz',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-2');
 
     const result = await service.listPublicProviders({ location: 'vienna' });
 
@@ -155,7 +167,7 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('applies combined tradeCategory + location filters', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Vienna Plumber',
@@ -163,6 +175,7 @@ describe('ProvidersService.listPublicProviders', () => {
       serviceArea: 'Vienna 10',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     await service.upsertProfile(makeProviderSession('prov-2'), {
       displayName: 'Vienna Electrician',
@@ -170,6 +183,7 @@ describe('ProvidersService.listPublicProviders', () => {
       serviceArea: 'Vienna 10',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-2');
 
     const result = await service.listPublicProviders({
       tradeCategory: 'plumbing',
@@ -182,7 +196,7 @@ describe('ProvidersService.listPublicProviders', () => {
   });
 
   it('serializes profile fields correctly for consumer use', async () => {
-    const service = createService();
+    const { service } = createService();
 
     await service.upsertProfile(makeProviderSession('prov-1'), {
       displayName: 'Diana the Carpenter',
@@ -191,6 +205,7 @@ describe('ProvidersService.listPublicProviders', () => {
       serviceArea: 'Graz',
       isPublic: true,
     });
+    await approveProvider(service, 'prov-1');
 
     const result = await service.listPublicProviders();
 
@@ -207,4 +222,51 @@ describe('ProvidersService.listPublicProviders', () => {
     expect(typeof p?.createdAt).toBe('string');
     expect(typeof p?.updatedAt).toBe('string');
   });
+
+  it('excludes public providers that are not approved', async () => {
+    const { service } = createService();
+
+    await service.upsertProfile(makeProviderSession('prov-1'), {
+      displayName: 'Pending Provider',
+      tradeCategories: ['plumbing'],
+      isPublic: true,
+    });
+    await service.submitVerification(makeProviderSession('prov-1'), {
+      tradeCategories: ['plumbing'],
+      documents: [{ filename: 'license.pdf', mimeType: 'application/pdf' }],
+    });
+
+    const result = await service.listPublicProviders();
+
+    expect(result.ok).toBe(true);
+    expect(result.providers).toEqual([]);
+  });
 });
+
+const makeOperatorSession = (userId: string) => ({
+  createdAt: '2026-01-01T09:00:00.000Z',
+  expiresAt: '2026-01-02T09:00:00.000Z',
+  email: `${userId}@example.com`,
+  role: 'operator' as const,
+  token: `token-${userId}`,
+  userId,
+});
+
+async function approveProvider(service: ProvidersService, providerUserId: string) {
+  const submitted = await service.submitVerification(makeProviderSession(providerUserId), {
+    tradeCategories: ['plumbing'],
+    documents: [{ filename: 'license.pdf', mimeType: 'application/pdf' }],
+  });
+  if (!submitted.ok) {
+    throw new Error('verification submission failed');
+  }
+
+  const reviewed = await service.reviewVerification(
+    makeOperatorSession('op-1'),
+    submitted.verification.verificationId,
+    { decision: 'approved' },
+  );
+  if (!reviewed.ok) {
+    throw new Error('verification approval failed');
+  }
+}

@@ -91,6 +91,33 @@ describe('ProvidersController GET /:providerUserId', () => {
       },
     );
 
+    const operatorSignInResult = await authService.signIn({
+      email: 'detail-test-operator@quickwerk.local',
+      role: 'operator',
+    });
+    const { token: operatorToken } = extractProviderCredentials(operatorSignInResult);
+
+    const submittedVerification = await controller.submitVerification(
+      createRequest({ method: 'POST', path: '/api/v1/providers/me/verification' }),
+      createResponse(),
+      `Bearer ${providerToken}`,
+      {
+        tradeCategories: ['plumbing'],
+        documents: [{ filename: 'license.pdf', mimeType: 'application/pdf' }],
+      },
+    );
+
+    await controller.reviewVerification(
+      createRequest({
+        method: 'POST',
+        path: `/api/v1/providers/verifications/${submittedVerification.verificationId}/review`,
+      }),
+      createResponse(),
+      `Bearer ${operatorToken}`,
+      submittedVerification.verificationId,
+      { decision: 'approved' },
+    );
+
     // Fetch single provider — public, no auth required
     const response = createResponse();
     const result = await controller.getPublicProvider(

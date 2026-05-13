@@ -7,12 +7,13 @@ import {
   createErrorState,
   createNotSubmittedState,
   createPendingState,
+  createRequestMoreInfoState,
   createRejectedState,
   createSubmittingState,
   resolveVerificationStateFromRecord,
 } from './onboarding-state';
 
-const makeRecord = (status: 'pending' | 'approved' | 'rejected'): VerificationRecord => ({
+const makeRecord = (status: 'pending' | 'approved' | 'rejected' | 'request-more-info'): VerificationRecord => ({
   verificationId: 'ver-1',
   status,
   submittedAt: '2026-01-01T10:00:00.000Z',
@@ -61,6 +62,11 @@ describe('onboarding-state', () => {
     expect(state.status).toBe('rejected');
   });
 
+  it('createRequestMoreInfoState', () => {
+    const state = createRequestMoreInfoState(makeRecord('request-more-info'));
+    expect(state.status).toBe('request-more-info');
+  });
+
   it('createErrorState stores message', () => {
     const state = createErrorState('Something went wrong');
     expect(state.status).toBe('error');
@@ -83,6 +89,10 @@ describe('onboarding-state', () => {
 
     it('returns rejected for rejected record', () => {
       expect(resolveVerificationStateFromRecord(makeRecord('rejected')).status).toBe('rejected');
+    });
+
+    it('returns request-more-info for request-more-info record', () => {
+      expect(resolveVerificationStateFromRecord(makeRecord('request-more-info')).status).toBe('request-more-info');
     });
   });
 });

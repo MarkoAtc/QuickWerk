@@ -1,4 +1,4 @@
-export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'request-more-info';
 
 export type VerificationSummary = {
   verificationId: string;
@@ -24,7 +24,7 @@ export type VerificationSummary = {
 export type ReviewAction =
   | { status: 'idle' }
   | { status: 'reviewing'; verificationId: string }
-  | { status: 'done'; verificationId: string; decision: 'approved' | 'rejected' }
+  | { status: 'done'; verificationId: string; decision: 'approved' | 'rejected' | 'request-more-info' }
   | { status: 'error'; verificationId: string; errorMessage: string };
 
 export type VerificationQueueState =
@@ -51,7 +51,7 @@ export const createQueueErrorState = (errorMessage: string): VerificationQueueSt
 export const applyReviewDecision = (
   state: VerificationQueueState,
   verificationId: string,
-  decision: 'approved' | 'rejected',
+  decision: 'approved' | 'rejected' | 'request-more-info',
 ): VerificationQueueState => {
   if (state.status !== 'loaded') return state;
 

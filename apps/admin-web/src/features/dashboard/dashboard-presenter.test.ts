@@ -80,7 +80,7 @@ describe('dashboard-presenter', () => {
     expect(describeVerificationQueue(createLoadedQueueState([verification]))).toEqual({
       badge: '1 pending',
       headline: 'Provider verification queue is live.',
-      detail: 'Approve or reject pending provider onboarding submissions.',
+      detail: 'Approve, reject, or request more info on pending provider submissions.',
     });
   });
 

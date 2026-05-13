@@ -31,7 +31,10 @@ const isVerificationSummary = (value: unknown): value is VerificationSummary => 
     typeof record['providerEmail'] === 'string' &&
     Array.isArray(record['tradeCategories']) &&
     Array.isArray(record['documents']) &&
-    (record['status'] === 'pending' || record['status'] === 'approved' || record['status'] === 'rejected') &&
+    (record['status'] === 'pending'
+      || record['status'] === 'approved'
+      || record['status'] === 'rejected'
+      || record['status'] === 'request-more-info') &&
     typeof record['submittedAt'] === 'string'
   );
 };
@@ -76,7 +79,7 @@ type ReviewResult =
 export async function reviewVerification(
   sessionToken: string,
   verificationId: string,
-  decision: 'approved' | 'rejected',
+  decision: 'approved' | 'rejected' | 'request-more-info',
   reviewNote?: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<ReviewResult> {
@@ -133,7 +136,7 @@ export async function submitReviewDecision(
   currentState: VerificationQueueState,
   sessionToken: string,
   verificationId: string,
-  decision: 'approved' | 'rejected',
+  decision: 'approved' | 'rejected' | 'request-more-info',
   reviewNote?: string,
   fetchImpl?: typeof fetch,
 ): Promise<VerificationQueueState> {

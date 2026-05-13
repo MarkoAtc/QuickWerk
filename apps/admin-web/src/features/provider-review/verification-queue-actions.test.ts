@@ -62,6 +62,44 @@ describe('verification-queue-actions', () => {
     });
   });
 
+  it('supports request-more-info decision and removes item from queue', async () => {
+    const state = createLoadedQueueState([makeSummary('v-1'), makeSummary('v-2')]);
+
+    const fetchImpl = async (url: string, init?: RequestInit) => {
+      expect(url).toBe('http://127.0.0.1:3101/api/v1/providers/verifications/v-1/review');
+      expect(init?.method).toBe('POST');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...makeSummary('v-1'),
+          status: 'request-more-info',
+          reviewedAt: '2026-01-01T11:00:00.000Z',
+          reviewedByUserId: 'operator-1',
+          reviewNote: 'Please upload clearer documents.',
+        }),
+      } as Response;
+    };
+
+    const next = await submitReviewDecision(
+      state,
+      'token',
+      'v-1',
+      'request-more-info',
+      'Please upload clearer documents.',
+      fetchImpl as typeof fetch,
+    );
+
+    expect(next.status).toBe('loaded');
+    if (next.status !== 'loaded') return;
+    expect(next.verifications.map((v) => v.verificationId)).toEqual(['v-2']);
+    expect(next.reviewAction).toEqual({
+      status: 'done',
+      verificationId: 'v-1',
+      decision: 'request-more-info',
+    });
+  });
+
   it('removes stale queue item on 409 review conflict', async () => {
     const state = createLoadedQueueState([makeSummary('v-1'), makeSummary('v-2')]);
 

@@ -34,17 +34,25 @@ async function reviewVerificationAction(formData) {
     return { ok: false, error: `Failed to load verification queue: ${currentState.status === 'error' ? currentState.errorMessage : 'Queue state not loaded'}` };
   }
 
-  if (decision !== 'approved' && decision !== 'rejected') {
-    return { ok: false, error: `Invalid decision: "${decision}". Must be "approved" or "rejected"` };
+  if (decision !== 'approved' && decision !== 'rejected' && decision !== 'request-more-info') {
+    return { ok: false, error: `Invalid decision: "${decision}". Must be "approved", "rejected", or "request-more-info"` };
   }
 
-  await submitReviewDecision(
+  const nextState = await submitReviewDecision(
     currentState,
     sessionResult.sessionToken,
     verificationId,
     decision,
     reviewNote || undefined,
   );
+
+  if (nextState.status === 'error') {
+    return { ok: false, error: nextState.errorMessage };
+  }
+
+  if (nextState.status === 'loaded' && nextState.reviewAction.status === 'error') {
+    return { ok: false, error: nextState.reviewAction.errorMessage };
+  }
 
   revalidatePath('/');
   return { ok: true };
@@ -204,7 +212,7 @@ function VerificationQueueSection({ state }) {
                   <textarea
                     name="reviewNote"
                     rows={3}
-                    placeholder="Optional operator note for approval/rejection"
+                    placeholder="Optional operator note (recommended for rejection or request-more-info)"
                     style={{ borderRadius: 10, border: '1px solid #cbd5e1', padding: 10, font: 'inherit' }}
                   />
                 </label>
@@ -216,6 +224,14 @@ function VerificationQueueSection({ state }) {
                     style={{ border: 0, borderRadius: 10, padding: '10px 14px', background: '#2563eb', color: '#fff' }}
                   >
                     Approve provider
+                  </button>
+                  <button
+                    type="submit"
+                    name="decision"
+                    value="request-more-info"
+                    style={{ border: 0, borderRadius: 10, padding: '10px 14px', background: '#ea580c', color: '#fff' }}
+                  >
+                    Request more info
                   </button>
                   <button
                     type="submit"

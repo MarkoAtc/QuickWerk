@@ -14,6 +14,7 @@ import { InMemoryPaymentRepository } from '../payments/infrastructure/in-memory-
 import { PaymentsService } from '../payments/payments.service';
 import { InMemoryPayoutRepository } from '../payouts/infrastructure/in-memory-payout.repository';
 import { PayoutsService } from '../payouts/payouts.service';
+import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
 
@@ -55,15 +56,23 @@ const createService = () => {
     new PayoutsService(new InMemoryPayoutRepository()),
     new InvoicesService(new InMemoryInvoiceRepository()),
   );
+  const providersService = createProvidersServiceStub('approved');
 
   return {
     createdEvents,
     emittedEvents,
     declinedEvents,
     completedEvents,
-    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService),
+    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService, providersService),
   };
 };
+
+const createProvidersServiceStub = (
+  approvalStatus: 'approved' | 'pending' | 'not-submitted' | 'request-more-info' | 'rejected',
+): ProvidersService =>
+  ({
+    getProviderApprovalStatus: async () => approvalStatus,
+  }) as unknown as ProvidersService;
 
 describe('BookingsService', () => {
   it('enforces role auth for create and accept flows', async () => {
@@ -202,6 +211,44 @@ describe('BookingsService', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.statusCode).toBe(404);
+    }
+  });
+
+  it('blocks accept for provider accounts that are not approved', async () => {
+    const createdEvents: BookingCreatedDomainEvent[] = [];
+    const eventPublisher: BookingDomainEventPublisher = {
+      async publishBookingCreated(event) {
+        createdEvents.push(event);
+      },
+      async publishBookingAccepted(_event) {},
+      async publishBookingDeclined(_event) {},
+      async publishBookingCompleted(_event) {},
+      async publishPaymentCaptured(_event) {},
+    };
+    const paymentsService = new PaymentsService(
+      new InMemoryPaymentRepository(),
+      new PayoutsService(new InMemoryPayoutRepository()),
+      new InvoicesService(new InMemoryInvoiceRepository()),
+    );
+    const service = new BookingsService(
+      new InMemoryBookingRepository(),
+      eventPublisher,
+      paymentsService,
+      createProvidersServiceStub('pending'),
+    );
+
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Plumbing' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const accepted = await service.acceptBooking(provider, created.booking.bookingId);
+    expect(accepted.ok).toBe(false);
+    if (!accepted.ok) {
+      expect(accepted.statusCode).toBe(403);
+      expect(accepted.error).toContain('approval');
     }
   });
 

@@ -10,6 +10,33 @@ export type ProviderOnboardingWorkspaceFlow =
   | 'approved'
   | 'active';
 
+export function isProviderBookingAccessApproved(onboardingState: ProviderOnboardingState): boolean {
+  return onboardingState.status === 'approved';
+}
+
+export function resolveProviderBookingGateMessage(onboardingState: ProviderOnboardingState): string | null {
+  switch (onboardingState.status) {
+    case 'approved':
+      return null;
+    case 'not-submitted':
+      return 'Booking access is blocked until you submit verification.';
+    case 'pending':
+      return 'Booking access is blocked while verification is under review.';
+    case 'request-more-info':
+      return 'Booking access is blocked until requested verification updates are resubmitted.';
+    case 'rejected':
+      return 'Booking access is blocked until verification is resubmitted and approved.';
+    case 'checking':
+      return 'Checking verification status before opening booking access.';
+    case 'submitting':
+      return 'Booking access stays blocked while verification submission is in progress.';
+    case 'error':
+      return onboardingState.errorMessage;
+    default:
+      return 'Booking access is currently unavailable.';
+  }
+}
+
 export function resolveProviderOnboardingWorkspaceFlow(input: {
   onboardingState: ProviderOnboardingState;
   profileState: ProviderProfileWorkspaceState;
@@ -24,7 +51,7 @@ export function resolveProviderOnboardingWorkspaceFlow(input: {
     return 'pending-review';
   }
 
-  if (onboardingState.status === 'rejected') {
+  if (onboardingState.status === 'rejected' || onboardingState.status === 'request-more-info') {
     return 'rejection-retry';
   }
 

@@ -13,6 +13,7 @@ import {
   type BookingAcceptedRelayAttemptPolicy,
 } from '../orchestration/relay-attempt-policy';
 import { BookingsController } from './bookings.controller';
+import { ProvidersController } from '../providers/providers.controller';
 
 type RequestLike = {
   method: string;
@@ -139,6 +140,7 @@ async function runAcceptBookingFlow(input: RunAcceptBookingFlowInput = {}) {
 
     const authService = app.get(AuthService);
     const bookingsController = app.get(BookingsController);
+    const providersController = app.get(ProvidersController);
 
     const customerSession = await authService.signIn({
       email: 'customer@quickwerk.local',
@@ -148,6 +150,33 @@ async function runAcceptBookingFlow(input: RunAcceptBookingFlowInput = {}) {
       email: 'provider@quickwerk.local',
       role: 'provider',
     });
+    const operatorSession = await authService.signIn({
+      email: 'operator@quickwerk.local',
+      role: 'operator',
+    });
+
+    const submittedVerification = await providersController.submitVerification(
+      createRequest({
+        method: 'POST',
+        path: '/api/v1/providers/me/verification',
+      }),
+      createResponse(),
+      `Bearer ${providerSession.token}`,
+      {
+        tradeCategories: ['plumbing'],
+        documents: [{ filename: 'license.pdf', mimeType: 'application/pdf' }],
+      },
+    );
+    await providersController.reviewVerification(
+      createRequest({
+        method: 'POST',
+        path: `/api/v1/providers/verifications/${submittedVerification.verificationId}/review`,
+      }),
+      createResponse(),
+      `Bearer ${operatorSession.token}`,
+      submittedVerification.verificationId,
+      { decision: 'approved' },
+    );
 
     const createBookingResponse = createResponse();
     const createdBooking = await bookingsController.createBooking(

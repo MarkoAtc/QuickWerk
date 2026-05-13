@@ -228,7 +228,7 @@ export class ProvidersController {
 
   /**
    * POST /api/v1/providers/verifications/:verificationId/review
-   * Operator approves or rejects a provider verification.
+   * Operator approves, rejects, or requests more info for a provider verification.
    */
   @Post('verifications/:verificationId/review')
   @HttpCode(200)
@@ -256,8 +256,8 @@ export class ProvidersController {
     }
 
     const decision = body.decision?.trim().toLowerCase();
-    if (decision !== 'approved' && decision !== 'rejected') {
-      throw new HttpException('Decision must be "approved" or "rejected".', 400);
+    if (decision !== 'approved' && decision !== 'rejected' && decision !== 'request-more-info') {
+      throw new HttpException('Decision must be "approved", "rejected", or "request-more-info".', 400);
     }
 
     const result = await this.providersService.reviewVerification(
