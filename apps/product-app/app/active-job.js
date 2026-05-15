@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-import { ActiveJob } from '../src/features/booking/active-job-screen';
+import { ActiveJobScreen } from '../src/features/booking/active-job-screen';
 import { resolveActiveJobRouteState, resolveBookingIdParam } from '../src/features/booking/active-job-route-state';
 import { productAppShell } from '../src/shared/app-shell';
 import { ProductScreenShell } from '../src/shared/product-screen-shell';
@@ -103,13 +103,18 @@ export default function ActiveJobRoute() {
   }
 
   return (
-    <ActiveJob
-      viewModel={screenState.viewModel}
-      onChat={() => {
-        // TODO: open in-app chat once chat integration is ready.
-      }}
-      onCall={() => {
-        // TODO: initiate call once call integration is ready.
+    <ActiveJobScreen
+      model={screenState.viewModel}
+      onMessageCounterpart={() => {
+        router.push({
+          pathname: '/messenger',
+          params: {
+            bookingId: screenState.viewModel.bookingId,
+            counterpartLabel: screenState.viewModel.counterpartLabel,
+            counterpartValue: screenState.viewModel.counterpartValue,
+            headline: screenState.viewModel.headline,
+          },
+        });
       }}
       onRefresh={load}
     />

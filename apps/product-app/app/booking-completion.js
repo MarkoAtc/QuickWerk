@@ -242,6 +242,12 @@ export default function BookingCompletionRoute() {
       onReviewCommentChange={setReviewComment}
       onReviewRatingChange={setReviewRating}
       onSubmitReview={handleSubmitReview}
+      onOpenDedicatedReview={() =>
+        router.push({
+          pathname: '/review',
+          params: { bookingId },
+        })
+      }
       disputeCategory={disputeCategory}
       disputeDescription={disputeDescription}
       onDisputeCategoryChange={setDisputeCategory}
