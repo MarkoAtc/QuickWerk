@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcf8f9;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdcc4",
+                        "primary-fixed": "#dfe2f3",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#c3c6d7",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#2f1500",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#dcd9da",
+                        "inverse-on-surface": "#f3f0f1",
+                        "on-tertiary-fixed-variant": "#6f3900",
+                        "on-primary-fixed": "#171b28",
+                        "primary-fixed-dim": "#c3c6d7",
+                        "on-tertiary-container": "#c96b00",
+                        "tertiary-fixed-dim": "#ffb77f",
+                        "surface-container": "#f0edee",
+                        "outline": "#76767c",
+                        "inverse-surface": "#313031",
+                        "on-secondary-fixed-variant": "#003fa4",
+                        "error": "#ba1a1a",
+                        "on-background": "#1c1b1c",
+                        "surface": "#fcf8f9",
+                        "surface-container-high": "#ebe7e8",
+                        "primary-container": "#171b28",
+                        "secondary-container": "#0266ff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1c1b1c",
+                        "tertiary": "#000000",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary": "#0050cc",
+                        "primary": "#000000",
+                        "on-secondary-fixed": "#001849",
+                        "surface-tint": "#5a5e6d",
+                        "surface-container-highest": "#e5e2e3",
+                        "on-surface-variant": "#46464c",
+                        "outline-variant": "#c7c6cc",
+                        "secondary-fixed": "#dae1ff",
+                        "surface-container-low": "#f6f3f4",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "background": "#fcf8f9",
+                        "on-primary-fixed-variant": "#434654",
+                        "surface-variant": "#e5e2e3",
+                        "on-secondary-container": "#f9f7ff",
+                        "on-primary-container": "#808393",
+                        "surface-bright": "#fcf8f9",
+                        "secondary-fixed-dim": "#b3c5ff"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "container-padding": "20px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "unit": "4px",
+                        "xs": "4px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface">
+<!-- Booking Progress Bar -->
+<div class="fixed top-0 left-0 w-full h-1 bg-surface-variant z-[60]">
+<div class="bg-secondary h-full w-2/3 transition-all duration-500"></div>
+</div>
+<!-- Top App Bar -->
+<header class="bg-surface/80 backdrop-blur-2xl fixed top-0 w-full z-50 border-b border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-md">
+<button class="active:scale-95 transition-transform duration-150 text-primary">
+<span class="material-symbols-outlined">close</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm font-semibold text-primary">New Request</h1>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlRBtmf2p07nxgS2Jw3OPQIcMqK64LHA5N4HjCflyfm558U6UZ25U__HTL76_eQ4r5PVQKyZAPXGgtGCz3VY6ahPtvZrpT4tLbu0SXZhDW_VmX22OcvEeRt6E8jh7ciHXRrlAGk-sGGtvejVqGswrToPd4vD-6ytFPB8qB30bmt1EhDinAXcfnZ5CauXIoZyv1kssa0J56zoJo3168tlL_2Lu_KWNgW_Fe_F9jOr8Jl1vjZDyD3RAuKPmJvQqwa7k19jhjWMM_yIc9"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 px-container-padding max-w-2xl mx-auto space-y-xl">
+<!-- Section 1: Describe Issue -->
+<section class="space-y-md">
+<div class="flex items-center gap-sm">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-md">1</span>
+<h2 class="font-headline-sm text-headline-sm">Describe the issue</h2>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md shadow-sm">
+<textarea class="w-full min-h-[120px] bg-transparent border-none focus:ring-0 text-body-md placeholder:text-on-surface-variant/50 resize-none" placeholder="E.g. Kitchen sink is leaking from the main pipe. Need urgent repair before tonight."></textarea>
+<div class="mt-md flex flex-wrap gap-sm">
+<button class="flex items-center gap-xs px-md py-sm rounded-lg border border-outline-variant hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add_a_photo</span>
+<span class="font-label-md text-on-surface-variant">Add Photos</span>
+</button>
+<!-- Photo Preview Placeholder -->
+<div class="relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A close-up photograph of a metallic kitchen faucet with water droplets, captured with high-fidelity detail and soft bokeh background. The lighting is clean and bright, emphasizing a modern home interior style. The image aesthetic is professional and high-end, using a neutral color palette of chrome and white marble." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqxBG6Z8RKY2ZJDqA0OND-zHMJkV79y9EeeexWUJ8zgyTRC8C9473Dsj1sPKIeRu8H8UYakuBRRvGi4NJ58KqwcCgQyi6-CUIx58ksxnMzUEiJXkpOLx-MHT_TR0GSef6jvauIWFhqpQ8trEu1DAXFWAG1S_hGXdUPAu9mKXj-gcKADL7KjFKQxzltAkvBuFSjPd-Pcrl6h7MjUcikIpZrmn_ra5jIwVwzo55gj8SuAiRhm2CCBEvZwZzMRG99PteSEGz-q4REJqje"/>
+<button class="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5">
+<span class="material-symbols-outlined text-[12px]">close</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Urgency Selection -->
+<section class="space-y-md">
+<div class="flex items-center gap-sm">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-md">2</span>
+<h2 class="font-headline-sm text-headline-sm">Select Urgency</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Urgent Card -->
+<label class="relative cursor-pointer group">
+<input checked="" class="peer sr-only" name="urgency" type="radio"/>
+<div class="h-full border border-outline-variant rounded-xl p-lg bg-surface-container-lowest transition-all peer-checked:border-secondary peer-checked:ring-1 peer-checked:ring-secondary group-hover:bg-surface-container-low">
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<div class="w-5 h-5 rounded-full border border-outline-variant flex items-center justify-center peer-checked:bg-secondary">
+<div class="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100"></div>
+</div>
+</div>
+<h3 class="font-headline-sm text-primary">Urgent</h3>
+<p class="text-on-surface-variant text-body-sm mt-xs">Provider arrives within 60 mins. Premium rate applies.</p>
+<div class="mt-md">
+<span class="px-sm py-xs bg-[#FF8A00]/10 text-[#FF8A00] rounded-full font-label-md">Urgent Priority</span>
+</div>
+</div>
+</label>
+<!-- Scheduled Card -->
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="urgency" type="radio"/>
+<div class="h-full border border-outline-variant rounded-xl p-lg bg-surface-container-lowest transition-all peer-checked:border-secondary peer-checked:ring-1 peer-checked:ring-secondary group-hover:bg-surface-container-low">
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-on-surface-variant">calendar_today</span>
+</div>
+<h3 class="font-headline-sm text-primary">Scheduled</h3>
+<p class="text-on-surface-variant text-body-sm mt-xs">Pick a specific time that works for your schedule.</p>
+<div class="mt-md flex items-center gap-xs text-secondary font-label-md">
+<span>Select Time</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</div>
+</div>
+</label>
+</div>
+</section>
+<!-- Section 3: Payment Method -->
+<section class="space-y-md">
+<div class="flex items-center gap-sm">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-md">3</span>
+<h2 class="font-headline-sm text-headline-sm">Payment Method</h2>
+</div>
+<div class="space-y-sm">
+<!-- Apple Pay -->
+<div class="flex items-center justify-between p-md bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-secondary transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 flex items-center justify-center bg-black rounded-lg">
+<span class="text-white font-bold text-lg"></span>
+</div>
+<div>
+<p class="font-label-md text-primary">Apple Pay</p>
+<p class="text-on-surface-variant text-body-sm">Fast &amp; Secure</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">radio_button_unchecked</span>
+</div>
+<!-- Credit Card -->
+<div class="flex items-center justify-between p-md bg-surface-container-lowest border border-secondary rounded-xl cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 flex items-center justify-center bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+</div>
+<div>
+<p class="font-label-md text-primary">Visa ending in 4242</p>
+<p class="text-on-surface-variant text-body-sm">Expires 12/26</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+</section>
+<!-- Summary Info Card -->
+<div class="bg-primary-container p-lg rounded-xl text-on-primary-container">
+<div class="flex justify-between items-center border-b border-on-primary-container/10 pb-md mb-md">
+<span class="text-body-md">Service Fee</span>
+<span class="font-headline-sm">$45.00</span>
+</div>
+<div class="flex items-start gap-sm">
+<span class="material-symbols-outlined text-[20px]">info</span>
+<p class="text-body-sm">Final price may vary based on materials and actual labor time required by the professional.</p>
+</div>
+</div>
+</main>
+<!-- Fixed Footer Action -->
+<footer class="fixed bottom-0 left-0 w-full bg-surface/80 backdrop-blur-2xl border-t border-outline-variant/30 z-50">
+<div class="max-w-2xl mx-auto px-container-padding py-lg pb-10">
+<button class="w-full h-14 bg-[#FF8A00] hover:bg-[#E67C00] text-white rounded-[16px] font-headline-sm flex items-center justify-center gap-sm shadow-lg active:scale-[0.98] transition-all">
+<span>Confirm Booking</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center text-label-sm text-on-surface-variant mt-md">By confirming, you agree to our Service Terms</p>
+</div>
+</footer>
+<!-- Bottom Navigation (Filtered for focused task flow - actually suppressed as per rules for sub-page, but included invisible anchor if needed) -->
+</body></html>

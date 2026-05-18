@@ -1,664 +1,347 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, Switch, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import {
-  loadMyProviderProfile,
-  requestVerificationUploadUrl,
-  saveMyProviderProfile,
-} from './provider-screen-actions';
-import { loadOnboardingStatus, submitOnboarding } from './onboarding-screen-actions';
-import {
-  resolveProviderBookingGateMessage,
-  resolveProviderOnboardingWorkspaceFlow,
-} from './provider-onboarding-workspace-state';
-import { productAppShell } from '../../shared/app-shell';
-import { ProductScreenShell } from '../../shared/product-screen-shell';
-import { resolveSessionToken, useSession } from '../../shared/session-provider';
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-const emptyProfileForm = {
-  displayName: '',
-  bio: '',
-  serviceArea: '',
-  tradeCategoriesInput: '',
-  isPublic: false,
-};
-
-const emptyVerificationForm = {
-  businessName: '',
-  tradeCategoriesInput: '',
-  serviceArea: '',
-  documentFilename: '',
-  documentMimeType: 'application/pdf',
-  documentDescription: '',
-};
-
-function parseTradeCategories(input) {
-  return input
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-export function ProviderOnboardingScreen() {
-  const router = useRouter();
-  const { session, signOut } = useSession();
-
-  const [isRefreshing, setIsRefreshing] = useState(true);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
-  const [isPreparingUpload, setIsPreparingUpload] = useState(false);
-
-  const [profileForm, setProfileForm] = useState(emptyProfileForm);
-  const [profileWorkspaceState, setProfileWorkspaceState] = useState('loading');
-  const [profileError, setProfileError] = useState(undefined);
-  const [profileSavedMessage, setProfileSavedMessage] = useState(undefined);
-
-  const [verificationState, setVerificationState] = useState({ status: 'checking' });
-  const [verificationForm, setVerificationForm] = useState(emptyVerificationForm);
-  const [verificationError, setVerificationError] = useState(undefined);
-  const [verificationMessage, setVerificationMessage] = useState(undefined);
-  const [preparedDocuments, setPreparedDocuments] = useState([]);
-
-  useEffect(() => {
-    if (session.status !== 'authenticated') {
-      router.replace('/auth');
-      return;
-    }
-
-    if (session.role !== 'provider') {
-      router.replace('/');
-    }
-  }, [router, session.role, session.status]);
-
-  const sessionToken = useMemo(() => resolveSessionToken(session), [session]);
-
-  const ensureProviderToken = () => {
-    if (session.status !== 'authenticated' || !sessionToken || session.role !== 'provider') {
-      signOut();
-      router.replace('/auth');
-      return null;
-    }
-
-    return sessionToken;
-  };
-
-  const loadWorkspace = () => {
-    const token = ensureProviderToken();
-    if (!token) {
-      return;
-    }
-
-    setIsRefreshing(true);
-    setProfileWorkspaceState('loading');
-    setProfileError(undefined);
-    setVerificationError(undefined);
-    setVerificationMessage(undefined);
-    setProfileSavedMessage(undefined);
-
-    Promise.all([loadMyProviderProfile(token), loadOnboardingStatus(token)])
-      .then(([profileResult, onboardingResult]) => {
-        if (profileResult.errorMessage) {
-          setProfileWorkspaceState('error');
-          setProfileError(profileResult.errorMessage);
-        } else if (profileResult.profile) {
-          const profile = profileResult.profile;
-          setProfileWorkspaceState('ready');
-          setProfileForm({
-            displayName: profile.displayName,
-            bio: profile.bio ?? '',
-            serviceArea: profile.serviceArea ?? '',
-            tradeCategoriesInput: profile.tradeCategories.join(', '),
-            isPublic: profile.isPublic,
-          });
-          setVerificationForm((previous) => ({
-            ...previous,
-            businessName: previous.businessName || profile.displayName,
-            serviceArea: previous.serviceArea || (profile.serviceArea ?? ''),
-            tradeCategoriesInput: previous.tradeCategoriesInput || profile.tradeCategories.join(', '),
-          }));
-        } else {
-          setProfileWorkspaceState('not-set');
-          setProfileForm(emptyProfileForm);
-        }
-
-        setVerificationState(onboardingResult);
-
-        if (onboardingResult.status === 'error') {
-          setVerificationError(onboardingResult.errorMessage);
-          return;
-        }
-
-        if (
-          onboardingResult.status === 'pending'
-          || onboardingResult.status === 'approved'
-          || onboardingResult.status === 'request-more-info'
-          || onboardingResult.status === 'rejected'
-        ) {
-          const record = onboardingResult.verification;
-          setPreparedDocuments(
-            record.documents.map((document) => ({
-              documentId: document.documentId,
-              filename: document.filename,
-              mimeType: document.mimeType,
-              description: document.description ?? '',
-              uploadedAt: document.uploadedAt,
-              source: 'record',
-            })),
-          );
-          setVerificationForm((previous) => ({
-            ...previous,
-            businessName: record.businessName ?? previous.businessName,
-            serviceArea: record.serviceArea ?? previous.serviceArea,
-            tradeCategoriesInput:
-              record.tradeCategories.length > 0
-                ? record.tradeCategories.join(', ')
-                : previous.tradeCategoriesInput,
-          }));
-        } else {
-          setPreparedDocuments([]);
-        }
-      })
-      .finally(() => {
-        setIsRefreshing(false);
-      });
-  };
-
-  useEffect(() => {
-    if (session.status !== 'authenticated' || session.role !== 'provider') {
-      return;
-    }
-    loadWorkspace();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.status, session.role, sessionToken]);
-
-  if (session.status !== 'authenticated' || session.role !== 'provider') {
-    return null;
-  }
-
-  const handleSaveProfile = () => {
-    const token = ensureProviderToken();
-    if (!token) {
-      return;
-    }
-
-    setIsSavingProfile(true);
-    setProfileWorkspaceState('saving');
-    setProfileError(undefined);
-    setProfileSavedMessage(undefined);
-
-    saveMyProviderProfile(token, {
-      displayName: profileForm.displayName.trim(),
-      bio: profileForm.bio.trim() || undefined,
-      serviceArea: profileForm.serviceArea.trim() || undefined,
-      tradeCategories: parseTradeCategories(profileForm.tradeCategoriesInput),
-      isPublic: profileForm.isPublic,
-    })
-      .then((result) => {
-        if (result.errorMessage) {
-          setProfileWorkspaceState('error');
-          setProfileError(result.errorMessage);
-          return;
-        }
-
-        setProfileSavedMessage('Profile saved.');
-        setProfileWorkspaceState('saved');
-        if (result.profile) {
-          setProfileForm({
-            displayName: result.profile.displayName,
-            bio: result.profile.bio ?? '',
-            serviceArea: result.profile.serviceArea ?? '',
-            tradeCategoriesInput: result.profile.tradeCategories.join(', '),
-            isPublic: result.profile.isPublic,
-          });
-        }
-      })
-      .finally(() => {
-        setIsSavingProfile(false);
-      });
-  };
-
-  const handlePrepareUpload = () => {
-    const token = ensureProviderToken();
-    if (!token) {
-      return;
-    }
-
-    const filename = verificationForm.documentFilename.trim();
-    const mimeType = verificationForm.documentMimeType.trim();
-
-    if (!filename || !mimeType) {
-      setVerificationError('Document filename and mime type are required.');
-      return;
-    }
-
-    setIsPreparingUpload(true);
-    setVerificationError(undefined);
-    setVerificationMessage(undefined);
-
-    requestVerificationUploadUrl(token, { filename, mimeType })
-      .then((result) => {
-        if (result.errorMessage) {
-          setVerificationError(result.errorMessage);
-          return;
-        }
-
-        const nextDocument = {
-          documentId: result.uploadUrl.uploadId,
-          filename: result.uploadUrl.filename || filename,
-          mimeType: result.uploadUrl.mimeType || mimeType,
-          description: verificationForm.documentDescription.trim(),
-          uploadedAt: new Date().toISOString(),
-          expiresAt: result.uploadUrl.expiresAt,
-          source: 'upload-url',
-        };
-
-        setPreparedDocuments((previous) => {
-          const filtered = previous.filter((item) => item.filename !== nextDocument.filename);
-          return [...filtered, nextDocument];
-        });
-        setVerificationMessage(`Upload URL prepared for ${nextDocument.filename}.`);
-      })
-      .finally(() => {
-        setIsPreparingUpload(false);
-      });
-  };
-
-  const handleSubmitVerification = () => {
-    const token = ensureProviderToken();
-    if (!token) {
-      return;
-    }
-
-    setIsSubmittingVerification(true);
-    setVerificationError(undefined);
-    setVerificationMessage(undefined);
-
-    submitOnboarding(token, {
-      businessName: verificationForm.businessName.trim(),
-      tradeCategories: parseTradeCategories(verificationForm.tradeCategoriesInput),
-      serviceArea: verificationForm.serviceArea.trim(),
-      documents: preparedDocuments.map((document) => ({
-        filename: document.filename,
-        mimeType: document.mimeType,
-        description: document.description || undefined,
-      })),
-    })
-      .then((state) => {
-        setVerificationState(state);
-        if (state.status === 'error') {
-          setVerificationError(state.errorMessage);
-          return;
-        }
-        setVerificationMessage('Verification submission sent.');
-      })
-      .finally(() => {
-        setIsSubmittingVerification(false);
-      });
-  };
-
-  const canSubmitVerification = !isSubmittingVerification
-    && !isPreparingUpload
-    && verificationForm.businessName.trim().length > 0
-    && parseTradeCategories(verificationForm.tradeCategoriesInput).length > 0
-    && verificationForm.serviceArea.trim().length > 0
-    && preparedDocuments.length > 0;
-
-  const workspaceFlow = resolveProviderOnboardingWorkspaceFlow({
-    profileState: profileWorkspaceState,
-    onboardingState: verificationState,
-  });
-  const bookingGateMessage = resolveProviderBookingGateMessage(verificationState);
-
+function StepPill({ index, label, active }) {
   return (
-    <ProductScreenShell
-      title="Provider onboarding workspace"
-      subtitle="Complete and maintain your business profile, service area, and verification handoff in one place."
-      testID="provider-onboarding-screen"
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: active ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+        borderWidth: 1,
+        borderColor: active ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)',
+      }}
     >
-      <View style={{ gap: 12 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to provider bookings"
-          onPress={() => router.push('/provider')}
-          testID="provider-onboarding-back"
-          style={{
-            alignSelf: 'flex-start',
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-          }}
-        >
-          <Text style={{ color: '#475569', fontWeight: '600' }}>Back to provider home</Text>
-        </Pressable>
-
-        {isRefreshing ? <Text style={{ color: '#64748B' }}>Loading onboarding workspace…</Text> : null}
-        <Text style={{ color: '#475569' }}>Current flow: {workspaceFlow}</Text>
-        {bookingGateMessage ? (
-          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#92400E' }}>
-            {bookingGateMessage}
-          </Text>
-        ) : (
-          <Text testID="provider-onboarding-booking-gate-message" style={{ color: '#166534' }}>
-            Booking access is unlocked.
-          </Text>
-        )}
-      </View>
-
       <View
         style={{
-          marginTop: 14,
-          borderWidth: 1,
-          borderColor: '#D7DFEA',
-          borderRadius: 12,
-          padding: 14,
-          backgroundColor: '#FFFFFF',
+          width: 28,
+          height: 28,
+          borderRadius: radius.full,
+          backgroundColor: active ? colors.secondaryBright : 'rgba(255,255,255,0.10)',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '700', fontSize: 16 }}>
-          Business profile
-        </Text>
-        <Text style={{ marginTop: 6, color: '#475569' }}>
-          Keep provider card details and service coverage current for discovery and onboarding review.
-        </Text>
-
-        {profileError ? <Text style={{ marginTop: 8, color: '#B91C1C' }}>{profileError}</Text> : null}
-        {profileSavedMessage ? <Text style={{ marginTop: 8, color: '#166534' }}>{profileSavedMessage}</Text> : null}
-
-        <TextInput
-          value={profileForm.displayName}
-          onChangeText={(value) => setProfileForm((previous) => ({ ...previous, displayName: value }))}
-          placeholder="Business display name"
-          testID="provider-profile-display-name"
-          style={{
-            marginTop: 12,
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-          }}
-        />
-
-        <TextInput
-          value={profileForm.bio}
-          onChangeText={(value) => setProfileForm((previous) => ({ ...previous, bio: value }))}
-          placeholder="Business bio"
-          multiline
-          testID="provider-profile-bio"
-          style={{
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-            minHeight: 72,
-            textAlignVertical: 'top',
-          }}
-        />
-
-        <TextInput
-          value={profileForm.serviceArea}
-          onChangeText={(value) => setProfileForm((previous) => ({ ...previous, serviceArea: value }))}
-          placeholder="Service area (city/region)"
-          testID="provider-profile-service-area"
-          style={{
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-          }}
-        />
-
-        <TextInput
-          value={profileForm.tradeCategoriesInput}
-          onChangeText={(value) => setProfileForm((previous) => ({ ...previous, tradeCategoriesInput: value }))}
-          placeholder="Trades (comma-separated)"
-          testID="provider-profile-trades"
-          style={{
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 8,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-          }}
-        />
-
-        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#334155', fontWeight: '600' }}>Public in provider discovery</Text>
-          <Switch
-            value={profileForm.isPublic}
-            onValueChange={(value) => setProfileForm((previous) => ({ ...previous, isPublic: value }))}
-            testID="provider-profile-is-public"
-          />
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Save provider profile"
-          onPress={handleSaveProfile}
-          testID="provider-profile-save"
-          disabled={isSavingProfile}
-          style={{
-            marginTop: 12,
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            backgroundColor: isSavingProfile ? '#94A3B8' : productAppShell.theme.color.primary,
-          }}
-        >
-          <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
-            {isSavingProfile ? 'Saving profile…' : 'Save profile'}
-          </Text>
-        </Pressable>
+        <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>{index}</Text>
       </View>
-
-      <View
-        style={{
-          marginTop: 14,
-          borderWidth: 1,
-          borderColor: '#D7DFEA',
-          borderRadius: 12,
-          padding: 14,
-          backgroundColor: '#FFFFFF',
-        }}
-      >
-        <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '700', fontSize: 16 }}>
-          Verification handoff
-        </Text>
-
-        <Text style={{ marginTop: 6, color: '#475569' }}>
-          Status:{' '}
-          {verificationState.status === 'checking'
-            ? 'Checking'
-            : verificationState.status === 'not-submitted'
-              ? 'Not submitted'
-              : verificationState.status === 'pending'
-                ? 'Pending review'
-                : verificationState.status === 'approved'
-                  ? 'Approved'
-                  : verificationState.status === 'request-more-info'
-                    ? 'More info requested (update and resubmit)'
-                  : verificationState.status === 'rejected'
-                    ? 'Rejected (retry available)'
-                    : 'Error'}
-        </Text>
-
-        {(verificationState.status === 'pending'
-          || verificationState.status === 'approved'
-          || verificationState.status === 'request-more-info'
-          || verificationState.status === 'rejected') ? (
-            <View
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: '#E2E8F0',
-                borderRadius: 8,
-                padding: 10,
-                backgroundColor: '#F8FAFC',
-              }}
-            >
-              <Text style={{ color: '#334155' }}>
-                Last submission: {verificationState.verification.submittedAt}
-              </Text>
-              {verificationState.verification.reviewNote ? (
-                <Text style={{ marginTop: 4, color: '#7F1D1D' }}>
-                  Review note: {verificationState.verification.reviewNote}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-
-        {verificationError ? <Text style={{ marginTop: 8, color: '#B91C1C' }}>{verificationError}</Text> : null}
-        {verificationMessage ? <Text style={{ marginTop: 8, color: '#166534' }}>{verificationMessage}</Text> : null}
-
-        {(verificationState.status === 'not-submitted'
-          || verificationState.status === 'request-more-info'
-          || verificationState.status === 'rejected') ? (
-          <>
-            <TextInput
-              value={verificationForm.businessName}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, businessName: value }))}
-              placeholder="Legal/business name"
-              testID="provider-verification-business-name"
-              style={{
-                marginTop: 12,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-            <TextInput
-              value={verificationForm.tradeCategoriesInput}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, tradeCategoriesInput: value }))}
-              placeholder="Trades for verification (comma-separated)"
-              testID="provider-verification-trades"
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-            <TextInput
-              value={verificationForm.serviceArea}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, serviceArea: value }))}
-              placeholder="Service area for verification"
-              testID="provider-verification-service-area"
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-
-            <Text style={{ marginTop: 12, color: '#334155', fontWeight: '600' }}>Verification document metadata</Text>
-            <TextInput
-              value={verificationForm.documentFilename}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, documentFilename: value }))}
-              placeholder="Filename (e.g. business-license.pdf)"
-              testID="provider-verification-document-filename"
-              style={{
-                marginTop: 8,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-            <TextInput
-              value={verificationForm.documentMimeType}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, documentMimeType: value }))}
-              placeholder="Mime type"
-              testID="provider-verification-document-mime"
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-            <TextInput
-              value={verificationForm.documentDescription}
-              onChangeText={(value) => setVerificationForm((previous) => ({ ...previous, documentDescription: value }))}
-              placeholder="Description (optional)"
-              testID="provider-verification-document-description"
-              style={{
-                marginTop: 10,
-                borderWidth: 1,
-                borderColor: '#CBD5E1',
-                borderRadius: 8,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-              }}
-            />
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Prepare verification upload url"
-              onPress={handlePrepareUpload}
-              disabled={isPreparingUpload}
-              testID="provider-verification-prepare-upload"
-              style={{
-                marginTop: 12,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderWidth: 1,
-                borderColor: '#0284C7',
-                backgroundColor: isPreparingUpload ? '#E2E8F0' : '#E0F2FE',
-              }}
-            >
-              <Text style={{ color: '#075985', fontWeight: '700' }}>
-                {isPreparingUpload ? 'Preparing upload URL…' : 'Prepare upload URL'}
-              </Text>
-            </Pressable>
-
-            <View style={{ marginTop: 10, gap: 6 }} testID="provider-verification-documents">
-              {preparedDocuments.map((document) => (
-                <Text key={`${document.filename}-${document.documentId}`} style={{ color: '#334155' }}>
-                  {document.filename} ({document.mimeType}) [{document.source}]
-                </Text>
-              ))}
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Submit verification handoff"
-              onPress={handleSubmitVerification}
-              disabled={!canSubmitVerification}
-              testID="provider-verification-submit"
-              style={{
-                marginTop: 12,
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: canSubmitVerification ? productAppShell.theme.color.primary : '#94A3B8',
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
-                {isSubmittingVerification ? 'Submitting verification…' : 'Submit verification'}
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
-      </View>
-    </ProductScreenShell>
+      <Text style={{ color: active ? '#FFFFFF' : colors.onPrimaryContainer, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
+        {label}
+      </Text>
+    </View>
   );
 }
+
+function ShowcaseField({ label, value, onChangeText, placeholder, multiline = false, testID }) {
+  return (
+    <View style={{ marginBottom: spacing.lg }}>
+      <Text
+        style={{
+          marginBottom: spacing.sm,
+          color: colors.textMuted,
+          fontSize: typography.fontSize.labelMd,
+          fontWeight: typography.fontWeight.semibold,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+        }}
+      >
+        {label}
+      </Text>
+      <TextInput
+        multiline={multiline}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        style={[
+          {
+            minHeight: multiline ? 140 : 60,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: colors.outlineVariant,
+            backgroundColor: '#FFFFFF',
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.md,
+            color: colors.text,
+            fontSize: typography.fontSize.bodyMd,
+            textAlignVertical: multiline ? 'top' : 'center',
+          },
+        ]}
+        testID={testID}
+        value={value}
+      />
+    </View>
+  );
+}
+
+function ChecklistCard({ checklist, verificationState }) {
+  return (
+    <View
+      style={{
+        borderRadius: 32,
+        padding: spacing.xl,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        ...shadow.card,
+      }}
+    >
+      <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+        Verification readiness
+      </Text>
+      <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+        This block makes the onboarding feel concrete. It shows what is already strong and what still needs work before review.
+      </Text>
+
+      <View style={{ marginTop: spacing.lg, gap: spacing.md }}>
+        {checklist.map((item) => (
+          <View
+            key={item.label}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.md,
+              borderRadius: 20,
+              padding: spacing.md,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1,
+              borderColor: colors.outlineVariant,
+            }}
+          >
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: radius.full,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: item.done ? colors.success : colors.surfaceContainerHigh,
+              }}
+            >
+              <Text style={{ color: item.done ? '#FFFFFF' : colors.textMuted, fontSize: 12, fontWeight: typography.fontWeight.bold }}>
+                {item.done ? '✓' : '•'}
+              </Text>
+            </View>
+            <Text style={{ flex: 1, color: colors.text, fontSize: typography.fontSize.bodyMd }}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View
+        style={{
+          marginTop: spacing.lg,
+          borderRadius: 20,
+          padding: spacing.md,
+          backgroundColor: verificationState === 'submitted' ? '#ECFDF5' : '#FFFFFF',
+          borderWidth: 1,
+          borderColor: verificationState === 'submitted' ? '#BBF7D0' : colors.outlineVariant,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
+          Current review state: {verificationState}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+export function ProviderOnboardingScreen({
+  initialProfile = {},
+  onSaveProfile,
+  onSubmitVerification,
+  verificationState = 'draft',
+  isSaving = false,
+  isSubmitting = false,
+}) {
+  const [businessName, setBusinessName] = useState(initialProfile.businessName ?? '');
+  const [serviceArea, setServiceArea] = useState(initialProfile.serviceArea ?? '');
+  const [tradeCategories, setTradeCategories] = useState((initialProfile.tradeCategories ?? []).join(', '));
+  const [bio, setBio] = useState(initialProfile.bio ?? '');
+
+  const checklist = useMemo(
+    () => [
+      { label: 'Business name is clearly defined', done: businessName.trim().length > 1 },
+      { label: 'Service area is documented', done: serviceArea.trim().length > 1 },
+      { label: 'Core trade categories are listed', done: tradeCategories.trim().length > 1 },
+      { label: 'Provider story feels trustworthy', done: bio.trim().length > 10 },
+    ],
+    [bio, businessName, serviceArea, tradeCategories],
+  );
+
+  const completedSteps = checklist.filter((item) => item.done).length;
+  const completionRatio = `${Math.min(100, Math.round((completedSteps / checklist.length) * 100))}%`;
+
+  const handleSave = () => {
+    onSaveProfile?.({
+      businessName,
+      serviceArea,
+      tradeCategories: tradeCategories
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+      bio,
+    });
+  };
+
+  const handleSubmit = () => {
+    onSubmitVerification?.();
+  };
+
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: spacing.container,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+        gap: spacing.xl,
+      }}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      testID="provider-onboarding-screen"
+    >
+      <View
+        style={{
+          borderRadius: 36,
+          padding: spacing.xl,
+          backgroundColor: colors.primaryContainer,
+          ...shadow.elevated,
+        }}
+      >
+        <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, letterSpacing: 1, textTransform: 'uppercase' }}>
+          Provider application flow
+        </Text>
+        <Text
+          style={{
+            marginTop: spacing.md,
+            color: '#FFFFFF',
+            fontSize: 48,
+            lineHeight: 52,
+            fontWeight: typography.fontWeight.bold,
+            letterSpacing: -1,
+            maxWidth: 760,
+          }}
+        >
+          Build a provider profile that looks credible before anyone reviews it.
+        </Text>
+        <Text
+          style={{
+            marginTop: spacing.md,
+            color: colors.onPrimaryContainer,
+            fontSize: typography.fontSize.bodyLg,
+            lineHeight: typography.lineHeight.bodyLg,
+            maxWidth: 720,
+          }}
+        >
+          This screen should feel like a premium onboarding experience, not an internal admin form. The provider needs a clear sense of progress, quality, and trust.
+        </Text>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xl }}>
+          <StepPill active index="1" label="Business profile" />
+          <StepPill active={completedSteps >= 2} index="2" label="Service footprint" />
+          <StepPill active={completedSteps >= 4} index="3" label="Verification" />
+        </View>
+
+        <View style={{ marginTop: spacing.xl }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              Completion
+            </Text>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>{completionRatio}</Text>
+          </View>
+          <View
+            style={{
+              marginTop: spacing.sm,
+              height: 6,
+              borderRadius: radius.full,
+              overflow: 'hidden',
+              backgroundColor: 'rgba(255,255,255,0.10)',
+            }}
+          >
+            <View style={{ width: completionRatio, height: '100%', backgroundColor: colors.secondaryBright }} />
+          </View>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' }}>
+        <View style={{ flex: 1.2 }}>
+          <View
+            style={{
+              borderRadius: 32,
+              padding: spacing.xl,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.outlineVariant,
+              ...shadow.card,
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+              Company profile
+            </Text>
+            <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+              Shape the presentation so customers immediately understand who the provider is, where they operate, and why they should be trusted.
+            </Text>
+
+            <View style={{ marginTop: spacing.xl }}>
+              <ShowcaseField
+                label="Business name"
+                onChangeText={setBusinessName}
+                placeholder="QuickWerk Electrical GmbH"
+                testID="provider-onboarding-business-name"
+                value={businessName}
+              />
+              <ShowcaseField
+                label="Service area"
+                onChangeText={setServiceArea}
+                placeholder="Vienna, Lower Austria"
+                testID="provider-onboarding-service-area"
+                value={serviceArea}
+              />
+              <ShowcaseField
+                label="Trade categories"
+                onChangeText={setTradeCategories}
+                placeholder="Electrical, Emergency repair, Industrial maintenance"
+                testID="provider-onboarding-trade-categories"
+                value={tradeCategories}
+              />
+              <ShowcaseField
+                label="Business bio"
+                multiline
+                onChangeText={setBio}
+                placeholder="Describe what the provider specializes in, what quality signal exists, and why customers should trust the service."
+                testID="provider-onboarding-bio"
+                value={bio}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={{ flex: 0.85 }}>
+          <ChecklistCard checklist={checklist} verificationState={verificationState} />
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+        <Pressable accessibilityRole="button" disabled={isSaving} onPress={handleSave} testID="provider-onboarding-save-profile" style={{ flex: 1 }}>
+          <View style={{ ...componentStyles.button.dark, minHeight: 60, opacity: isSaving ? 0.7 : 1 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              {isSaving ? 'Saving…' : 'Save profile draft'}
+            </Text>
+          </View>
+        </Pressable>
+
+        <Pressable accessibilityRole="button" disabled={isSubmitting} onPress={handleSubmit} testID="provider-onboarding-submit-verification" style={{ flex: 1 }}>
+          <View style={{ ...componentStyles.button.primary, minHeight: 60, opacity: isSubmitting ? 0.7 : 1 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              {isSubmitting ? 'Submitting…' : 'Submit for verification'}
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
+export default ProviderOnboardingScreen;

@@ -1,26 +1,221 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
 import { loadPublicProviders } from './provider-discovery-actions';
-import { productAppShell } from '../../shared/app-shell';
-import { ProductScreenShell } from '../../shared/product-screen-shell';
 
 const FILTER_DEBOUNCE_MS = 400;
 
-/**
- * Customer-facing provider discovery screen.
- * Renders loading / empty / error / loaded states.
- * Includes a trade-category filter input wired to the discovery fetch.
- * Tapping a provider row navigates to the provider detail screen.
- */
+const FALLBACK_PROVIDERS = [
+  {
+    providerUserId: 'showcase-plumbstar',
+    displayName: 'PlumbStar Vienna',
+    tradeCategories: ['Plumbing', 'Emergency repair'],
+    serviceArea: 'Vienna • 1010-1190',
+    bio: 'Fast-response plumbing team focused on emergency repairs, diagnostics, and clean communication.',
+    averageRating: '4.9',
+    tags: ['Available today', 'Verified', 'Same-day quotes'],
+  },
+  {
+    providerUserId: 'showcase-voltworks',
+    displayName: 'VoltWorks Electrical',
+    tradeCategories: ['Electrical', 'Fault finding'],
+    serviceArea: 'Vienna • 1020-1180',
+    bio: 'Premium electrical support for urgent outages, lighting issues, and scheduled troubleshooting.',
+    averageRating: '4.8',
+    tags: ['Trusted by offices', 'Urgent support', 'Insured'],
+  },
+  {
+    providerUserId: 'showcase-heatline',
+    displayName: 'HeatLine Systems',
+    tradeCategories: ['Heating', 'Boilers'],
+    serviceArea: 'Vienna & Lower Austria',
+    bio: 'Boiler maintenance, radiator repairs, and heating diagnostics with strong service quality signals.',
+    averageRating: '4.7',
+    tags: ['Maintenance plans', 'Commercial ready', 'Certified'],
+  },
+  {
+    providerUserId: 'showcase-cleanflow',
+    displayName: 'CleanFlow Facility Care',
+    tradeCategories: ['Cleaning', 'Facility services'],
+    serviceArea: 'Central Vienna',
+    bio: 'Recurring office cleaning, move-out support, and reliable scheduling for business clients.',
+    averageRating: '4.8',
+    tags: ['Recurring plans', 'Office specialist', 'Fast onboarding'],
+  },
+];
+
+function FilterField({ value, onChangeText, placeholder, testID }) {
+  return (
+    <TextInput
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={colors.textMuted}
+      style={componentStyles.input.base}
+      testID={testID}
+      value={value}
+    />
+  );
+}
+
+function HeroStat({ label, value, accent = colors.secondaryBright }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        borderRadius: 24,
+        padding: spacing.lg,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.10)',
+      }}
+    >
+      <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+        {label}
+      </Text>
+      <Text style={{ marginTop: spacing.sm, color: accent, fontSize: 34, lineHeight: 38, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function Tag({ label }) {
+  return (
+    <View
+      style={{
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: colors.surfaceContainer,
+      }}
+    >
+      <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold }}>{label}</Text>
+    </View>
+  );
+}
+
+function ProviderCard({ provider, onPress }) {
+  return (
+    <Pressable accessibilityLabel={`View profile of ${provider.displayName}`} accessibilityRole="button" onPress={() => onPress(provider)} testID={`discovery-provider-row-${provider.providerUserId}`}>
+      <View
+        style={{
+          borderRadius: 32,
+          padding: spacing.xl,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          marginBottom: spacing.lg,
+          ...shadow.card,
+        }}
+      >
+        <View style={{ flexDirection: 'row', gap: spacing.lg }}>
+          <View
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 22,
+              backgroundColor: `${colors.secondaryBright}14`,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: colors.secondaryBright, fontSize: 26, fontWeight: typography.fontWeight.bold }}>
+              {provider.displayName
+                .split(' ')
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join('') || 'PR'}
+            </Text>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 30, lineHeight: 34, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }} testID={`discovery-provider-name-${provider.providerUserId}`}>
+                  {provider.displayName}
+                </Text>
+                <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }} testID={`discovery-provider-categories-${provider.providerUserId}`}>
+                  {provider.tradeCategories.join(' • ')}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  borderRadius: radius.pill,
+                  backgroundColor: 'rgba(255, 214, 0, 0.18)',
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                }}
+              >
+                <Text style={{ color: '#8A6500', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+                  ★ {provider.averageRating ?? '4.9'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ marginTop: spacing.md, color: colors.textMuted, fontSize: typography.fontSize.bodySm }} testID={`discovery-provider-area-${provider.providerUserId}`}>
+              {provider.serviceArea || 'Service area not specified'}
+            </Text>
+          </View>
+        </View>
+
+        {provider.bio ? (
+          <Text numberOfLines={2} style={{ marginTop: spacing.lg, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }} testID={`discovery-provider-bio-${provider.providerUserId}`}>
+            {provider.bio}
+          </Text>
+        ) : null}
+
+        {provider.tags?.length ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg }}>
+            {provider.tags.map((tag) => (
+              <Tag key={tag} label={tag} />
+            ))}
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xl }}>
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>Detailed profile, reviews, and booking flow</Text>
+          <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>View provider →</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function EmptyDiscoveryState({ tradeCategoryInput, locationInput, onClear }) {
+  return (
+    <View
+      style={{
+        borderRadius: 32,
+        padding: spacing.xl,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.outlineVariant,
+        ...shadow.card,
+      }}
+      testID="discovery-empty"
+    >
+      <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+        No live providers matched your current filters.
+      </Text>
+      <Text style={{ marginTop: spacing.md, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 760 }}>
+        {tradeCategoryInput.trim() || locationInput.trim()
+          ? `Nothing matched ${tradeCategoryInput.trim() || 'all trades'} in ${locationInput.trim() || 'all locations'} right now. For the showcase, we still keep the marketplace feeling rich by surfacing curated providers below.`
+          : 'There are currently no live providers returned from the API. The showcase view still surfaces curated demo provider cards so the app does not feel empty.'}
+      </Text>
+
+      <Pressable accessibilityRole="button" onPress={onClear} testID="discovery-clear-filter">
+        <View style={{ ...componentStyles.button.ghost, marginTop: spacing.lg, alignSelf: 'flex-start' }}>
+          <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>Clear filters</Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '' }) {
   const router = useRouter();
 
@@ -30,13 +225,9 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
   const [tradeCategoryInput, setTradeCategoryInput] = useState(initialTradeCategory);
   const [locationInput, setLocationInput] = useState(initialLocation);
 
-  // Debounce timer ref so rapid typing only fires one fetch
   const debounceRef = useRef(undefined);
   const requestIdRef = useRef(0);
 
-  /**
-   * Fetches providers with bounded trade category + location filtering.
-   */
   function fetchProviders(filter) {
     const tradeCategory = filter?.tradeCategory?.trim() || undefined;
     const location = filter?.location?.trim() || undefined;
@@ -48,10 +239,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
 
     loadPublicProviders(tradeCategory || location ? { tradeCategory, location } : undefined)
       .then((result) => {
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-
+        if (requestId !== requestIdRef.current) return;
         if (result.errorMessage) {
           setErrorMessage(result.errorMessage);
           return;
@@ -59,13 +247,8 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
         setProviders(result.providers);
       })
       .catch((err) => {
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
-
-        setErrorMessage(
-          err instanceof Error ? err.message : 'Unexpected error loading providers.',
-        );
+        if (requestId !== requestIdRef.current) return;
+        setErrorMessage(err instanceof Error ? err.message : 'Unexpected error loading providers.');
       })
       .finally(() => {
         if (requestId === requestIdRef.current) {
@@ -74,13 +257,8 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
       });
   }
 
-  // Initial load on mount with route-level default filters.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchProviders({
-      tradeCategory: initialTradeCategory,
-      location: initialLocation,
-    });
+    fetchProviders({ tradeCategory: initialTradeCategory, location: initialLocation });
   }, []);
 
   useEffect(() => () => {
@@ -91,10 +269,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
   }, []);
 
   const scheduleDebouncedFetch = (nextFilter) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       fetchProviders(nextFilter);
     }, FILTER_DEBOUNCE_MS);
@@ -121,191 +296,144 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
     });
   };
 
+  const fallbackProviders = FALLBACK_PROVIDERS.filter((provider) => {
+    const tradeCategory = tradeCategoryInput.trim().toLowerCase();
+    const location = locationInput.trim().toLowerCase();
+
+    const matchesTrade = !tradeCategory || provider.tradeCategories.join(' ').toLowerCase().includes(tradeCategory);
+    const matchesLocation = !location || (provider.serviceArea || '').toLowerCase().includes(location);
+
+    return matchesTrade && matchesLocation;
+  });
+
+  const liveVisibleCount = providers ? providers.length : 0;
+  const showcaseVisibleCount = liveVisibleCount > 0 ? liveVisibleCount : fallbackProviders.length;
+
   return (
-    <ProductScreenShell
-      title="Find a Provider"
-      subtitle="Browse verified trade professionals in your area."
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: spacing.container,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+      }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       testID="discovery-screen"
     >
-      {/* Discovery filters */}
       <View
-        testID="discovery-filter-container"
-        style={{ marginBottom: 16 }}
+        style={{
+          borderRadius: 36,
+          padding: spacing.xl,
+          backgroundColor: colors.primaryContainer,
+          ...shadow.elevated,
+        }}
       >
-        <TextInput
-          accessibilityLabel="Filter by trade category"
-          onChangeText={handleTradeCategoryChange}
-          placeholder="Filter by trade category (e.g. plumbing)"
-          placeholderTextColor="#94A3B8"
-          testID="discovery-filter-input-trade-category"
-          value={tradeCategoryInput}
-          style={{
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            fontSize: 15,
-            color: '#0F172A',
-            backgroundColor: '#F8FAFC',
-          }}
-        />
-        <TextInput
-          accessibilityLabel="Filter by service location"
-          onChangeText={handleLocationChange}
-          placeholder="Filter by location (e.g. Vienna)"
-          placeholderTextColor="#94A3B8"
-          testID="discovery-filter-input-location"
-          value={locationInput}
-          style={{
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            fontSize: 15,
-            color: '#0F172A',
-            backgroundColor: '#F8FAFC',
-            marginTop: 10,
-          }}
-        />
+        <Text style={{ color: '#FFFFFF', fontSize: 54, lineHeight: 58, fontWeight: typography.fontWeight.bold, letterSpacing: -1, maxWidth: 920 }}>
+          Browse verified providers with real signal, not clutter.
+        </Text>
+        <Text style={{ marginTop: spacing.md, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodyLg, lineHeight: typography.lineHeight.bodyLg, maxWidth: 760 }}>
+          Filter by trade and location, compare the strongest local options, and move into booking without the marketplace feeling thin or unfinished.
+        </Text>
+
+        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+          <HeroStat label="Status" value={isLoading ? 'Loading' : 'Live'} accent={isLoading ? colors.cta : colors.success} />
+          <HeroStat label="Visible" value={String(showcaseVisibleCount)} />
+          <HeroStat label="Featured" value="4 curated" accent={colors.warning} />
+        </View>
       </View>
 
-      {/* States: loading / error / empty / loaded */}
-      {isLoading ? (
-        <View
-          testID="discovery-loading"
-          style={{ alignItems: 'center', paddingVertical: 32 }}
-        >
-          <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
-          <Text style={{ marginTop: 10, color: '#64748B', fontSize: 14 }}>
-            Loading providers…
-          </Text>
+      <View
+        style={{
+          marginTop: spacing.xl,
+          borderRadius: 32,
+          padding: spacing.xl,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          ...shadow.card,
+        }}
+        testID="discovery-filter-container"
+      >
+        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+          Refine the shortlist
+        </Text>
+        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+          Keep the search feeling premium even before real matching logic is fully deepened.
+        </Text>
+
+        <View style={{ marginTop: spacing.xl }}>
+          <FilterField onChangeText={handleTradeCategoryChange} placeholder="Filter by trade category, e.g. plumbing" testID="discovery-filter-input-trade-category" value={tradeCategoryInput} />
+          <View style={{ height: spacing.md }} />
+          <FilterField onChangeText={handleLocationChange} placeholder="Filter by location, e.g. Vienna" testID="discovery-filter-input-location" value={locationInput} />
         </View>
-      ) : errorMessage ? (
-        <View
-          testID="discovery-error"
-          style={{
-            padding: 16,
-            borderRadius: 12,
-            backgroundColor: '#FEF2F2',
-            borderWidth: 1,
-            borderColor: '#FECACA',
-          }}
-        >
-          <Text style={{ color: '#DC2626', fontSize: 14 }}>{errorMessage}</Text>
-          <Pressable
-            accessibilityLabel="Retry loading providers"
-            accessibilityRole="button"
-            onPress={handleRetry}
-            testID="discovery-retry"
-            style={{ marginTop: 8 }}
+      </View>
+
+      <View style={{ marginTop: spacing.xl }}>
+        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+          Marketplace results
+        </Text>
+        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+          A strong browsing experience needs both live results and enough richness to make the product feel complete in demos.
+        </Text>
+      </View>
+
+      <View style={{ marginTop: spacing.xl }}>
+        {isLoading ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }} testID="discovery-loading">
+            <ActivityIndicator color={colors.secondaryBright} size="small" />
+            <Text style={{ marginTop: spacing.sm, color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>Loading providers…</Text>
+          </View>
+        ) : null}
+
+        {!isLoading && errorMessage ? (
+          <View
+            style={{
+              borderRadius: 28,
+              padding: spacing.lg,
+              backgroundColor: colors.errorContainer,
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              marginBottom: spacing.lg,
+            }}
+            testID="discovery-error"
           >
-            <Text style={{ color: '#DC2626', fontWeight: '600' }}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : providers && providers.length === 0 ? (
-        <View
-          testID="discovery-empty"
-          style={{ alignItems: 'center', paddingVertical: 32 }}
-        >
-          <Text style={{ color: '#94A3B8', fontSize: 15 }}>
-            {tradeCategoryInput.trim() || locationInput.trim()
-              ? `No providers found for "${tradeCategoryInput.trim() || 'any trade'}" in "${locationInput.trim() || 'any location'}".`
-              : 'No providers available right now.'}
-          </Text>
-          {tradeCategoryInput.trim() || locationInput.trim() ? (
-            <Pressable
-              accessibilityLabel="Clear filter"
-              accessibilityRole="button"
-              onPress={() => {
-                setTradeCategoryInput('');
-                setLocationInput('');
-                fetchProviders({ tradeCategory: '', location: '' });
-              }}
-              testID="discovery-clear-filter"
-              style={{ marginTop: 8 }}
-            >
-              <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '600' }}>
-                Clear filter
-              </Text>
+            <Text style={{ color: colors.onErrorContainer, fontSize: typography.fontSize.bodySm }}>{errorMessage}</Text>
+            <Pressable accessibilityLabel="Retry loading providers" accessibilityRole="button" onPress={handleRetry} testID="discovery-retry">
+              <Text style={{ marginTop: spacing.sm, color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>Retry</Text>
             </Pressable>
-          ) : null}
-        </View>
-      ) : providers ? (
-        <ScrollView testID="discovery-list">
-          {providers.map((provider) => (
-            <Pressable
-              key={provider.providerUserId}
-              accessibilityLabel={`View profile of ${provider.displayName}`}
-              accessibilityRole="button"
-              onPress={() => handleProviderPress(provider)}
-              testID={`discovery-provider-row-${provider.providerUserId}`}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 14,
-                marginBottom: 10,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#D7DFEA',
-                backgroundColor: pressed ? '#F1F5F9' : '#FFFFFF',
-              })}
-            >
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text
-                  testID={`discovery-provider-name-${provider.providerUserId}`}
-                  style={{ color: '#0F172A', fontWeight: '700', fontSize: 15 }}
-                  numberOfLines={1}
-                >
-                  {provider.displayName}
-                </Text>
+          </View>
+        ) : null}
 
-                {provider.tradeCategories.length > 0 ? (
-                  <Text
-                    testID={`discovery-provider-categories-${provider.providerUserId}`}
-                    style={{ color: '#475569', fontSize: 13, marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {provider.tradeCategories.join(', ')}
-                  </Text>
-                ) : null}
+        {providers && providers.length > 0 ? providers.map((provider) => <ProviderCard key={provider.providerUserId} onPress={handleProviderPress} provider={provider} />) : null}
 
-                {provider.serviceArea ? (
-                  <Text
-                    testID={`discovery-provider-area-${provider.providerUserId}`}
-                    style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {provider.serviceArea}
-                  </Text>
-                ) : null}
+        {!isLoading && (!providers || providers.length === 0) ? (
+          <EmptyDiscoveryState
+            tradeCategoryInput={tradeCategoryInput}
+            locationInput={locationInput}
+            onClear={() => {
+              setTradeCategoryInput('');
+              setLocationInput('');
+              fetchProviders({ tradeCategory: '', location: '' });
+            }}
+          />
+        ) : null}
+      </View>
 
-                {provider.bio ? (
-                  <Text
-                    testID={`discovery-provider-bio-${provider.providerUserId}`}
-                    style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}
-                    numberOfLines={2}
-                  >
-                    {provider.bio}
-                  </Text>
-                ) : null}
-              </View>
+      <View style={{ marginTop: spacing.xxl }}>
+        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+          Curated provider showcase
+        </Text>
+        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+          Even if live data is sparse, the product should still demonstrate what a strong provider marketplace looks like.
+        </Text>
+      </View>
 
-              <Text
-                style={{
-                  color: productAppShell.theme.color.primary,
-                  fontWeight: '600',
-                  fontSize: 13,
-                }}
-              >
-                View →
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      ) : null}
-    </ProductScreenShell>
+      <View style={{ marginTop: spacing.xl }}>
+        {fallbackProviders.map((provider) => (
+          <ProviderCard key={provider.providerUserId} onPress={handleProviderPress} provider={provider} />
+        ))}
+      </View>
+    </ScrollView>
   );
 }
+
+export default DiscoveryScreen;

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chat - Handwerker OnDemand</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "tertiary-fixed": "#ffdcc4",
+                  "primary-fixed": "#dfe2f3",
+                  "on-error": "#ffffff",
+                  "inverse-primary": "#c3c6d7",
+                  "on-primary": "#ffffff",
+                  "on-error-container": "#93000a",
+                  "tertiary-container": "#2f1500",
+                  "on-secondary": "#ffffff",
+                  "surface-dim": "#dcd9da",
+                  "inverse-on-surface": "#f3f0f1",
+                  "on-tertiary-fixed-variant": "#6f3900",
+                  "on-primary-fixed": "#171b28",
+                  "primary-fixed-dim": "#c3c6d7",
+                  "on-tertiary-container": "#c96b00",
+                  "tertiary-fixed-dim": "#ffb77f",
+                  "surface-container": "#f0edee",
+                  "outline": "#76767c",
+                  "inverse-surface": "#313031",
+                  "on-secondary-fixed-variant": "#003fa4",
+                  "error": "#ba1a1a",
+                  "on-background": "#1c1b1c",
+                  "surface": "#fcf8f9",
+                  "surface-container-high": "#ebe7e8",
+                  "primary-container": "#171b28",
+                  "secondary-container": "#0266ff",
+                  "on-tertiary": "#ffffff",
+                  "on-surface": "#1c1b1c",
+                  "tertiary": "#000000",
+                  "on-tertiary-fixed": "#2f1500",
+                  "secondary": "#0050cc",
+                  "primary": "#000000",
+                  "on-secondary-fixed": "#001849",
+                  "surface-tint": "#5a5e6d",
+                  "surface-container-highest": "#e5e2e3",
+                  "on-surface-variant": "#46464c",
+                  "outline-variant": "#c7c6cc",
+                  "secondary-fixed": "#dae1ff",
+                  "surface-container-low": "#f6f3f4",
+                  "surface-container-lowest": "#ffffff",
+                  "error-container": "#ffdad6",
+                  "background": "#fcf8f9",
+                  "on-primary-fixed-variant": "#434654",
+                  "surface-variant": "#e5e2e3",
+                  "on-secondary-container": "#f9f7ff",
+                  "on-primary-container": "#808393",
+                  "surface-bright": "#fcf8f9",
+                  "secondary-fixed-dim": "#b3c5ff"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "gutter": "16px",
+                  "sm": "8px",
+                  "container-padding": "20px",
+                  "xl": "32px",
+                  "md": "16px",
+                  "unit": "4px",
+                  "xs": "4px",
+                  "lg": "24px"
+          },
+          "fontFamily": {
+                  "label-md": ["Inter"],
+                  "body-md": ["Inter"],
+                  "body-lg": ["Inter"],
+                  "headline-sm": ["Inter"],
+                  "headline-md": ["Inter"],
+                  "headline-lg": ["Inter"],
+                  "body-sm": ["Inter"],
+                  "label-sm": ["Inter"],
+                  "display-lg": ["Inter"]
+          },
+          "fontSize": {
+                  "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                  "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                  "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                  "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                  "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                  "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                  "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                  "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #fcf8f9; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .message-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .glass-input { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased flex flex-col min-h-screen">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-2xl border-b border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-sm">
+<button class="active:scale-95 transition-transform p-sm hover:bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<div class="relative">
+<img alt="Provider Avatar" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30" data-alt="A professional headshot of a middle-aged male contractor with a friendly expression. He is wearing a clean charcoal work shirt and standing in a well-lit, modern architectural office space. The lighting is crisp and natural, following a high-end professional photography style with soft bokeh in the background. The aesthetic is clean and corporate." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4e7MmWr4OHkONMXgYCSMMwG3pONyMuk42r0yCtJ3Bih8A6e1FaGx0uZOsLSHveimNoQRVUrRA-uChvCzVHvWQ1drtcGkEVlIUDa-mokTKikRaCXJrhGUlcOXjfCw2LHRWRmrMJLz2xz5un-vSuQCWx8urnJjOFPAp18rKWK_qTrQmXyld2hY4sStCZCCG3RkrkpBi4Abfzn8VmEuAVZe2M_bhFt1suJfJiM1aGbCu2YSd8EhwP969d_hlfQmGhaBHvaGIMevQYBnz"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></div>
+</div>
+<div class="flex flex-col">
+<h1 class="font-headline-sm text-headline-sm font-semibold tracking-tight">Markus Schmidt</h1>
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-widest">Plumbing Expert • Online</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="active:scale-95 transition-transform p-md bg-secondary-container text-on-secondary-container rounded-full hover:opacity-90">
+<span class="material-symbols-outlined">call</span>
+</button>
+<button class="active:scale-95 transition-transform p-md hover:bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Message Canvas -->
+<main class="flex-grow pt-[88px] pb-[100px] px-container-padding max-w-2xl mx-auto w-full flex flex-col gap-lg">
+<!-- Date Separator -->
+<div class="flex justify-center items-center py-sm">
+<span class="bg-surface-container px-md py-xs rounded-full font-label-sm text-on-surface-variant/70">TODAY, 14:20</span>
+</div>
+<!-- Provider Message Bubble -->
+<div class="flex flex-col items-start gap-xs max-w-[85%]">
+<div class="bg-surface-container-high text-on-surface py-md px-lg rounded-t-2xl rounded-br-2xl rounded-bl-sm message-shadow">
+<p class="font-body-md text-body-md">Hello! I've received your request about the kitchen sink leakage. Could you please send me a photo of the pipes underneath?</p>
+</div>
+<span class="font-label-sm text-on-surface-variant px-sm">14:22</span>
+</div>
+<!-- User Message Bubble (Dark Navy/Linear Vibe) -->
+<div class="flex flex-col items-end gap-xs self-end max-w-[85%]">
+<div class="bg-primary-container text-on-primary py-md px-lg rounded-t-2xl rounded-bl-2xl rounded-br-sm message-shadow">
+<p class="font-body-md text-body-md text-on-secondary-container">Sure thing, Markus. Give me a second, I'll take a quick shot of the current setup.</p>
+</div>
+<span class="font-label-sm text-on-surface-variant px-sm">14:24</span>
+</div>
+<!-- User Attachment -->
+<div class="flex flex-col items-end gap-sm self-end max-w-[85%]">
+<div class="grid grid-cols-2 gap-xs overflow-hidden rounded-2xl border border-outline-variant/30 message-shadow">
+<img alt="Pipe Leak 1" class="w-full aspect-square object-cover" data-alt="A detailed, close-up photograph of a metallic U-bend pipe under a kitchen sink showing water droplets and corrosion. The lighting is natural but moody, emphasizing the textures of the chrome and the damp wooden cabinet. High-fidelity photography style with a focus on technical repair details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjQDxx-Aj2dfl20Di2hPPZuVeQM_hO0G6504fxKDdt1Ex31dmhT1JGKJnfxx8RRCj6gAsaLvKUvNnw10er-H9HPe7KRf-K7BuMe_iFOSZEdCTXU6OzFO9QelQEGbiTwNGOyFM-pQ6cVCFTby5UN_3Tdw_MAsuUlEUt4vE9QIzcsN9lPAzxFVpf1wNPWgOo7IFACZ4FLXFYprnM0wDb-GMOyJ3fdsPWzkIQKKYDPTb89wdPHDgCArISHLabuI4QvTaXhLgr-aQ3J2e7"/>
+<img alt="Pipe Leak 2" class="w-full aspect-square object-cover" data-alt="A wide-angle macro shot from underneath a kitchen counter showing the entire plumbing assembly. The scene is brightened by a flashlight beam, creating strong contrasts and sharp shadows. The aesthetic is clean and professional, documenting a household maintenance issue for professional review." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOVmW30BbMLhx5XzJIjvLXsuAr51SUAvhgbNFZBqOKxInvgadAskTfBUiZR3dkMqQcasv-_2WO0Pb7YQUxHsAcsnSUNBpWIBoGbw8kwUbYw5RoMMUWjt_AUxPzZYVnok324kX--pMK7_7DzlldM34TfRJKLRfwePaKb8x4XjQoi8asCM17BU2xkPK6wEFXAFgdbwHzCdt_GqWpTnCWSdxkzLSMtZTi_OZmjqI2clCXqbbVTDSz5CAx_wONyjOIPEIoUenfgl0x8jYg"/>
+</div>
+<div class="bg-primary-container text-on-primary py-md px-lg rounded-b-2xl rounded-tl-2xl rounded-tr-sm message-shadow">
+<p class="font-body-md text-body-md text-on-secondary-container">It seems to be dripping from the main joint here. Does that look like something you can fix today?</p>
+</div>
+<span class="font-label-sm text-on-surface-variant px-sm">14:26</span>
+</div>
+<!-- Provider Message Bubble -->
+<div class="flex flex-col items-start gap-xs max-w-[85%]">
+<div class="bg-surface-container-high text-on-surface py-md px-lg rounded-t-2xl rounded-br-2xl rounded-bl-sm message-shadow">
+<p class="font-body-md text-body-md">Thanks for the photos. Yes, that's a standard washer failure. I have the parts in my van. I can be there in 30 minutes if you're ready!</p>
+</div>
+<span class="font-label-sm text-on-surface-variant px-sm">14:27</span>
+</div>
+<!-- User Message Bubble -->
+<div class="flex flex-col items-end gap-xs self-end max-w-[85%]">
+<div class="bg-primary-container text-on-primary py-md px-lg rounded-t-2xl rounded-bl-2xl rounded-br-sm message-shadow flex items-center gap-sm">
+<p class="font-body-md text-body-md text-on-secondary-container">Perfect! I'll see you then.</p>
+<span class="material-symbols-outlined text-secondary-fixed text-sm" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+<span class="font-label-sm text-on-surface-variant px-sm">14:28</span>
+</div>
+</main>
+<!-- Glassmorphism Input Bar -->
+<div class="fixed bottom-0 w-full z-50 glass-input border-t border-outline-variant/20 pb-container-padding pt-md px-container-padding">
+<div class="max-w-7xl mx-auto flex items-center gap-sm">
+<button class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-highest/50 text-on-surface-variant hover:bg-surface-container-high active:scale-95 transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+<div class="flex-grow relative flex items-center">
+<input class="w-full h-12 bg-surface-container-low border border-outline-variant/40 rounded-full px-lg py-sm focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all font-body-md placeholder:text-outline" placeholder="Type a message..." type="text"/>
+<button class="absolute right-2 w-8 h-8 flex items-center justify-center rounded-full bg-secondary text-on-secondary active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+<button class="w-12 h-12 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+</div>
+</div>
+<!-- Optional Bottom FAB for Urgent Action (Booking Confirmation) -->
+<div class="fixed bottom-24 right-container-padding z-40">
+<button class="bg-[#FF8A00] text-white flex items-center gap-sm px-lg py-md rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-label-md uppercase tracking-wider">Confirm Booking</span>
+</button>
+</div>
+</body></html>

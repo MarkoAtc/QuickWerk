@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Handwerker OnDemand - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#ffdcc4",
+                    "primary-fixed": "#dfe2f3",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#c3c6d7",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "tertiary-container": "#2f1500",
+                    "on-secondary": "#ffffff",
+                    "surface-dim": "#dcd9da",
+                    "inverse-on-surface": "#f3f0f1",
+                    "on-tertiary-fixed-variant": "#6f3900",
+                    "on-primary-fixed": "#171b28",
+                    "primary-fixed-dim": "#c3c6d7",
+                    "on-tertiary-container": "#c96b00",
+                    "tertiary-fixed-dim": "#ffb77f",
+                    "surface-container": "#f0edee",
+                    "outline": "#76767c",
+                    "inverse-surface": "#313031",
+                    "on-secondary-fixed-variant": "#003fa4",
+                    "error": "#ba1a1a",
+                    "on-background": "#1c1b1c",
+                    "surface": "#fcf8f9",
+                    "surface-container-high": "#ebe7e8",
+                    "primary-container": "#171b28",
+                    "secondary-container": "#0266ff",
+                    "on-tertiary": "#ffffff",
+                    "on-surface": "#1c1b1c",
+                    "tertiary": "#000000",
+                    "on-tertiary-fixed": "#2f1500",
+                    "secondary": "#0050cc",
+                    "primary": "#000000",
+                    "on-secondary-fixed": "#001849",
+                    "surface-tint": "#5a5e6d",
+                    "surface-container-highest": "#e5e2e3",
+                    "on-surface-variant": "#46464c",
+                    "outline-variant": "#c7c6cc",
+                    "secondary-fixed": "#dae1ff",
+                    "surface-container-low": "#f6f3f4",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "background": "#fcf8f9",
+                    "on-primary-fixed-variant": "#434654",
+                    "surface-variant": "#e5e2e3",
+                    "on-secondary-container": "#f9f7ff",
+                    "on-primary-container": "#808393",
+                    "surface-bright": "#fcf8f9",
+                    "secondary-fixed-dim": "#b3c5ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "sm": "8px",
+                    "container-padding": "20px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .map-marker-bounce {
+            animation: marker-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes marker-pulse {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="bg-surface/80 dark:bg-surface-container/80 backdrop-blur-2xl fixed top-0 w-full z-50 border-b border-outline-variant/20 dark:border-outline/20 shadow-sm">
+<div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+<h1 class="font-display-lg text-display-lg font-bold tracking-tight text-primary dark:text-on-primary-fixed">Handwerker</h1>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary p-xs hover:bg-surface-container-high transition-colors rounded-full">menu</button>
+<div class="w-10 h-10 rounded-full border-2 border-secondary overflow-hidden">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a friendly-looking man in his early 30s with a clean-shaven face and neatly styled hair. He is wearing a minimalist dark navy blue t-shirt against a clean, light grey studio background. The lighting is soft and high-key, reflecting a modern, approachable, and high-fidelity professional digital environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN_sW7rN9zgGPGj6pm9ur4cRc3nkA8mOON4IfAn7FiK4ZjiIXvi1qyKl-RklmcMJdnDZ8ZKzxBYJu23QdkxDx02SUJqiZ7GwJ60NP2sps6RYl3gG-QrXzqk_gwSk6AUuhOPVtUuU6LgX9DGslr6v9oDTp46Tv0p2Us1GXuHxdOCozETu9smuEALQXUTxoloR5gqkVTDZ1jd99o8pdtIWSRoB9TBl5pZjArwjYiyFr25A85NWcCQzILZTzQXmOP_qlBeOH9lJ0j4BaT"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Map Background Section -->
+<main class="relative h-screen w-full pt-[80px]">
+<!-- Map Placeholder -->
+<div class="absolute inset-0 z-0 bg-[#E5E7EB]" data-location="Berlin, Germany" style="">
+<img alt="City Map" class="w-full h-full object-cover opacity-60" data-alt="A high-angle, detailed satellite map view of a clean modern city layout with crisp streets and architectural blocks. The visual style is inspired by premium digital cartography with a light, cool-toned aesthetic featuring muted greys, soft blues, and clean white lines. The lighting is bright and even, creating a sophisticated and professional navigational interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6pYHdBW_C6S2sfHdptmq9A_nxMayV9y1m523d4AkOGm4c0cjXb6UIvCF5rg5SJ9qfqCBCNpzLUogfj_Ncw-3-f-DiUN1OSMQnxhM7h8OeJ18Ke9qLnEcOhZI-sOd3DplxyfRKPI_r9I2Ff23runzl-BC_4atSEwcpV9iJGt0gSJ4OGzNSaAWxQhzsxI1OsKtm02q54BmlRUFU6cxNPaadLupT8FiKbIAeTUdzl_bfhlpyekvCVNFumZGX_5JXzbixslq7qwFroKJP"/>
+<!-- Animated Map Markers -->
+<div class="absolute top-[35%] left-[40%] group">
+<div class="flex flex-col items-center">
+<div class="bg-secondary text-white p-unit px-sm rounded-lg shadow-lg font-label-md text-label-md mb-unit whitespace-nowrap">Plumber $85/hr</div>
+<span class="material-symbols-outlined text-secondary scale-150 map-marker-bounce" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<div class="absolute top-[50%] left-[65%] group">
+<div class="flex flex-col items-center">
+<div class="bg-secondary text-white p-unit px-sm rounded-lg shadow-lg font-label-md text-label-md mb-unit whitespace-nowrap">Electrician $90/hr</div>
+<span class="material-symbols-outlined text-secondary scale-150 map-marker-bounce" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<div class="absolute top-[25%] left-[20%] group">
+<div class="flex flex-col items-center">
+<div class="bg-secondary text-white p-unit px-sm rounded-lg shadow-lg font-label-md text-label-md mb-unit whitespace-nowrap">Carpenter $75/hr</div>
+<span class="material-symbols-outlined text-secondary scale-150 map-marker-bounce" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+</div>
+<!-- Floating UI: Search & Categories -->
+<div class="relative z-10 px-container-padding flex flex-col gap-md pt-md max-w-2xl mx-auto">
+<!-- Glassmorphism Search Bar -->
+<div class="bg-surface/70 backdrop-blur-xl border border-outline-variant/30 rounded-xl shadow-lg p-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant ml-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-body-md placeholder:text-on-surface-variant/60" placeholder="Search for professionals..." type="text"/>
+<button class="bg-primary text-on-primary p-sm rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+<!-- Category Chips -->
+<div class="flex gap-sm overflow-x-auto no-scrollbar pb-sm">
+<button class="flex items-center gap-xs bg-secondary text-white px-md py-sm rounded-full whitespace-nowrap shadow-md">
+<span class="material-symbols-outlined text-[18px]">plumbing</span>
+<span class="font-label-md text-label-md">Plumber</span>
+</button>
+<button class="flex items-center gap-xs bg-surface/90 backdrop-blur-md text-on-surface-variant px-md py-sm rounded-full whitespace-nowrap border border-outline-variant/30">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+<span class="font-label-md text-label-md">Electrician</span>
+</button>
+<button class="flex items-center gap-xs bg-surface/90 backdrop-blur-md text-on-surface-variant px-md py-sm rounded-full whitespace-nowrap border border-outline-variant/30">
+<span class="material-symbols-outlined text-[18px]">carpenter</span>
+<span class="font-label-md text-label-md">Carpenter</span>
+</button>
+<button class="flex items-center gap-xs bg-surface/90 backdrop-blur-md text-on-surface-variant px-md py-sm rounded-full whitespace-nowrap border border-outline-variant/30">
+<span class="material-symbols-outlined text-[18px]">format_paint</span>
+<span class="font-label-md text-label-md">Painter</span>
+</button>
+</div>
+</div>
+<!-- Emergency SOS Button (Floating Right) -->
+<div class="fixed right-container-padding top-[50%] -translate-y-1/2 z-20">
+<button class="w-16 h-16 rounded-full bg-[#FF8A00] text-white shadow-[0_8px_24px_rgba(255,138,0,0.4)] flex flex-col items-center justify-center border-4 border-white active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest">SOS</span>
+</button>
+</div>
+<!-- Bottom Peekable List / Swipeable Cards -->
+<div class="absolute bottom-[90px] left-0 w-full z-20">
+<div class="flex gap-md overflow-x-auto no-scrollbar px-container-padding pb-lg snap-x">
+<!-- Card 1 -->
+<div class="min-w-[280px] bg-surface rounded-2xl p-md shadow-lg border border-outline-variant/10 snap-center">
+<div class="flex gap-md">
+<img alt="Provider Photo" class="w-16 h-16 rounded-xl object-cover" data-alt="A detailed professional portrait of a skilled electrician in his mid-40s wearing a high-quality grey work polo with a subtle logo. He is smiling warmly in a bright, modern workshop setting with soft, natural light coming from the side. The overall aesthetic is clean, professional, and reliable, featuring a sophisticated color palette of whites and soft neutrals." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4REdbqHc0yYug0q9QjKWzGXgiznBnXXH_Csc57vr2liq9buhiIsU5hLWt1I6q2p38O2EwCgs-QP5iol1BntXmEkGt8VDUgOCGWuMmgkBodWogKRwGltemlC4rov3qL8H510sJpUsJel1ohBoTdmYj72o0pop7PN6Q4-ze2UBSM1DuLiizUIawFpPywh4qKXvtEW6VqZ0WCMPE_TDbDldPioCiwAvqqVJHXqNkZ96N9cnF4nQHZhhy5U8wWfAWrON9IVt_zPQtM6TB"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-sm text-headline-sm text-primary">Marcus Weber</h3>
+<div class="bg-tertiary-fixed text-on-tertiary-fixed px-unit py-[2px] rounded-md flex items-center gap-[2px]">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">4.9</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-sm">Master Electrician</p>
+<div class="mt-sm flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="font-label-md text-label-md">2.4km</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-secondary">$90/hr</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-md bg-secondary text-white font-label-md py-sm rounded-xl hover:bg-secondary/90 transition-colors">Book Instantly</button>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[280px] bg-surface rounded-2xl p-md shadow-lg border border-outline-variant/10 snap-center">
+<div class="flex gap-md">
+<img alt="Provider Photo" class="w-16 h-16 rounded-xl object-cover" data-alt="A professional close-up of a female plumber in her 30s wearing a professional dark green jumpsuit, holding a clean wrench. She has a confident and friendly expression, set against a blurred background of a high-end, modern minimalist bathroom. The lighting is crisp and bright, reinforcing a premium, expert service brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqczIPNT851PFWevesMfTroxLkLay1RE9qkJMq0i_aFpPZ1WXVvohM-bjheO6l64zV4ad56P4o9Zr_TnU2VVc52skgL7FkjnMWYQuwzHccO1y0fKRItMC-M_abyZPcFkTILy1Jwq4HlltFx5tIDqqdfVvS7UevcHd_RuORNYrpraZDdYjzLn096E_OM9zzP-UnxZjtji_Qn5If667lsmL5h67tfi03VDLp5y1uGNRqWD97Yca7mzeLnKmUr4OG6Gz48qbhHEz1KZ-x"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-sm text-headline-sm text-primary">Sarah Chen</h3>
+<div class="bg-tertiary-fixed text-on-tertiary-fixed px-unit py-[2px] rounded-md flex items-center gap-[2px]">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">4.8</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-sm">Licensed Plumber</p>
+<div class="mt-sm flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="font-label-md text-label-md">1.2km</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-secondary">$85/hr</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-md bg-secondary text-white font-label-md py-sm rounded-xl hover:bg-secondary/90 transition-colors">Book Instantly</button>
+</div>
+<!-- Card 3 -->
+<div class="min-w-[280px] bg-surface rounded-2xl p-md shadow-lg border border-outline-variant/10 snap-center">
+<div class="flex gap-md">
+<img alt="Provider Photo" class="w-16 h-16 rounded-xl object-cover" data-alt="A professional portrait of a senior carpenter in his 50s, smiling with kind eyes. He is wearing a durable denim shirt in a sun-drenched wood workshop. The environment is clean with soft golden hour lighting that creates a feeling of warmth, expertise, and long-standing reliability. The visual aesthetic is modern yet grounded in traditional craftsmanship." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDw7DXac_C6_I_M_zMa1rXkTcIQFXP268JqyOGrDbE_QGnfDM63kTmWIPX3P0jAQPlNK4m9NazJcGB3yWNOt99WP6otXEiyjJPDpR4Ug_39_3cFwsc3Hi3uQ5TbhCjQhYLJ55RxvCk3U-wF0NanZunTT6nQJlx8kwT-QkyEDFJHrRtp3ufAQFKfyUQLRn9hG3k1EyfDoYbDjPzNpSkLQVipWryoLtR12khw7PoGB1JvtmQhrP6q7W5VNcj5AWP6wbUbCycx8iY4kIrx"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-sm text-headline-sm text-primary">Tom Jenkins</h3>
+<div class="bg-tertiary-fixed text-on-tertiary-fixed px-unit py-[2px] rounded-md flex items-center gap-[2px]">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md">5.0</span>
+</div>
+</div>
+<p class="text-on-surface-variant font-body-sm">Expert Carpenter</p>
+<div class="mt-sm flex justify-between items-center">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="font-label-md text-label-md">3.8km</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-secondary">$75/hr</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-md bg-secondary text-white font-label-md py-sm rounded-xl hover:bg-secondary/90 transition-colors">Book Instantly</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="bg-surface/80 dark:bg-surface-container/80 backdrop-blur-2xl fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant/30 dark:border-outline/30 shadow-[0_-4px_12px_rgba(10,14,26,0.05)]">
+<div class="flex justify-around items-center px-gutter py-sm pb-8 w-full max-w-7xl mx-auto">
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed font-semibold scale-105 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md mt-unit">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-label-md text-label-md mt-unit">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">work</span>
+<span class="font-label-md text-label-md mt-unit">Jobs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-70 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md mt-unit">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

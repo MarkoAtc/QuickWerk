@@ -1,109 +1,79 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-function Avatar({ name }) {
-  const initials = name
-    ? name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : 'AK';
-
+function ProfileHero({ provider }) {
   return (
     <View
       style={{
-        width: 96,
-        height: 96,
-        borderRadius: radius.pill,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...shadow.soft,
+        borderRadius: 32,
+        padding: spacing.xl,
+        backgroundColor: colors.primaryContainer,
+        ...shadow.elevated,
       }}
     >
-      <Text
-        style={{
-          color: colors.surface,
-          fontSize: typography.fontSize.xxl,
-          fontWeight: typography.fontWeight.bold,
-        }}
-      >
-        {initials}
+      <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+        <View
+          style={{
+            width: 76,
+            height: 76,
+            borderRadius: radius.xl,
+            backgroundColor: 'rgba(255,255,255,0.10)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: typography.fontWeight.bold }}>
+            {provider.initials || 'PR'}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 42, lineHeight: 46, fontWeight: typography.fontWeight.bold, letterSpacing: -0.8 }}>
+            {provider.name}
+          </Text>
+          <Text style={{ marginTop: spacing.xs, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodyMd }}>
+            {provider.title}
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
+            <View style={{ borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: 'rgba(255,214,0,0.14)' }}>
+              <Text style={{ color: '#D8A200', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+                ★ {provider.rating}
+              </Text>
+            </View>
+            <View style={{ borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: 'rgba(16,185,129,0.12)' }}>
+              <Text style={{ color: '#047857', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+                Verified
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <Text style={{ marginTop: spacing.lg, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+        {provider.summary}
       </Text>
     </View>
   );
 }
 
-function VerificationBadge() {
+function DetailCard({ title, children }) {
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: '#E8F5EE',
-        borderRadius: radius.pill,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        borderRadius: 28,
+        padding: spacing.xl,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: colors.primary,
-        alignSelf: 'center',
-        marginTop: spacing.sm,
+        borderColor: colors.outlineVariant,
+        ...shadow.card,
       }}
     >
-      <Text
-        style={{
-          color: colors.primary,
-          fontSize: typography.fontSize.xs,
-          fontWeight: typography.fontWeight.semibold,
-        }}
-      >
-        ✓ Verified
+      <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+        {title}
       </Text>
+      <View style={{ marginTop: spacing.md }}>{children}</View>
     </View>
-  );
-}
-
-function StatColumn({ value, label }) {
-  return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text
-        style={{
-          color: colors.text,
-          fontSize: typography.fontSize.xl,
-          fontWeight: typography.fontWeight.bold,
-        }}
-      >
-        {value}
-      </Text>
-      <Text
-        style={{
-          color: colors.muted,
-          fontSize: typography.fontSize.xs,
-          letterSpacing: 1,
-          marginTop: 2,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
-  );
-}
-
-function StatDivider() {
-  return (
-    <View
-      style={{
-        width: 1,
-        height: 32,
-        backgroundColor: colors.muted,
-        opacity: 0.3,
-        alignSelf: 'center',
-      }}
-    />
   );
 }
 
@@ -111,266 +81,83 @@ function ReviewCard({ review }) {
   return (
     <View
       style={{
-        backgroundColor: colors.background,
-        borderRadius: radius.card,
-        padding: spacing.lg,
-        ...shadow.soft,
+        borderRadius: radius.xl,
+        padding: spacing.md,
+        backgroundColor: colors.surfaceContainerLow,
+        marginBottom: spacing.md,
       }}
     >
-      {/* Stars */}
-      <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Text key={i} style={{ color: '#F59E0B', fontSize: 16 }}>
-            ★
-          </Text>
-        ))}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
+          {review.author}
+        </Text>
+        <Text style={{ color: '#8A6500', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>
+          ★ {review.rating}
+        </Text>
       </View>
-
-      {/* Quotation mark */}
-      <Text
-        style={{
-          color: colors.accent,
-          fontSize: 40,
-          lineHeight: 32,
-          fontWeight: typography.fontWeight.bold,
-          marginBottom: spacing.xs,
-        }}
-      >
-        "
-      </Text>
-
-      {/* Review text */}
-      <Text
-        style={{
-          color: colors.text,
-          fontSize: typography.fontSize.sm,
-          lineHeight: 22,
-          marginBottom: spacing.sm,
-          fontStyle: 'italic',
-        }}
-      >
-        {review.text}
-      </Text>
-
-      {/* Reviewer name */}
-      <Text
-        style={{
-          color: colors.muted,
-          fontSize: typography.fontSize.xs,
-          fontWeight: typography.fontWeight.medium,
-        }}
-      >
-        — {review.reviewer}
+      <Text style={{ marginTop: spacing.sm, color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+        {review.comment}
       </Text>
     </View>
   );
 }
 
-const createResolvedProvider = (provider) => ({
-  name: provider?.name?.trim() || 'Provider',
-  title: provider?.title?.trim() || 'Profile details are loading from platform data.',
-  etaMin: Number.isFinite(provider?.etaMin) ? provider.etaMin : null,
-  rating: Number.isFinite(provider?.rating) ? provider.rating : null,
-  jobCount: Number.isFinite(provider?.jobCount) ? provider.jobCount : null,
-  bio:
-    provider?.bio?.trim() ||
-    'Provider biography is currently unavailable from the API. Please continue with discovery or retry later.',
-  review:
-    provider?.review &&
-    typeof provider.review.text === 'string' &&
-    provider.review.text.trim() &&
-    typeof provider.review.reviewer === 'string' &&
-    provider.review.reviewer.trim()
-      ? provider.review
-      : null,
-});
-
-export function ProviderProfile({ provider, onRequest, onClose }) {
-  const p = createResolvedProvider(provider);
-
+export function ProviderProfileScreen({ provider, onStartBooking }) {
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.lg,
-          paddingBottom: 100,
-        }}
-        testID="provider-profile-screen"
-      >
-        {/* Header row: close button + title */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: spacing.xl,
-          }}
-        >
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={onClose ?? (() => {})}
-            testID="provider-profile-close"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: radius.pill,
-              backgroundColor: colors.background,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: colors.muted,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 16 }}>✕</Text>
-          </TouchableOpacity>
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: spacing.container,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+      }}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      testID="provider-profile-screen"
+    >
+      <ProfileHero provider={provider} />
 
-          <Text
-            style={{
-              color: colors.text,
-              fontSize: typography.fontSize.md,
-              fontWeight: typography.fontWeight.semibold,
-            }}
-          >
-            Provider Profile
+      <View style={{ marginTop: spacing.xl, gap: spacing.xl }}>
+        <DetailCard title="Services">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {provider.services.map((service) => (
+              <View
+                key={service}
+                style={{
+                  borderRadius: radius.pill,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  backgroundColor: colors.surfaceContainer,
+                }}
+              >
+                <Text style={{ color: colors.text, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
+                  {service}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </DetailCard>
+
+        <DetailCard title="About">
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+            {provider.description}
           </Text>
+        </DetailCard>
 
-          {/* Spacer to center title */}
-          <View style={{ width: 36 }} />
-        </View>
-
-        {/* Avatar + verification */}
-        <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-          <Avatar name={p.name} />
-          <VerificationBadge />
-        </View>
-
-        {/* Name + title */}
-        <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-          <Text
-            style={{
-              color: colors.text,
-              fontSize: typography.fontSize.xxl,
-              fontWeight: typography.fontWeight.bold,
-            }}
-          >
-            {p.name}
-          </Text>
-          <Text
-            style={{
-              color: colors.muted,
-              fontSize: typography.fontSize.sm,
-              marginTop: spacing.xs,
-            }}
-          >
-            {p.title}
-          </Text>
-        </View>
-
-        {/* Stats row */}
-        <View
-          style={{
-            flexDirection: 'row',
-            backgroundColor: colors.background,
-            borderRadius: radius.card,
-            padding: spacing.lg,
-            marginBottom: spacing.xl,
-            ...shadow.soft,
-          }}
-        >
-          <StatColumn value={p.etaMin == null ? 'N/A' : `${p.etaMin} min`} label="ETA" />
-          <StatDivider />
-          <StatColumn value={p.rating == null ? 'N/A' : `${p.rating} ★`} label="RATING" />
-          <StatDivider />
-          <StatColumn value={p.jobCount == null ? 'N/A' : String(p.jobCount)} label="JOBS" />
-        </View>
-
-        {/* About section */}
-        <Text
-          style={{
-            color: colors.text,
-            fontSize: typography.fontSize.lg,
-            fontWeight: typography.fontWeight.semibold,
-            marginBottom: spacing.sm,
-          }}
-        >
-          About {p.name.split(' ')[0]}
-        </Text>
-        <Text
-          style={{
-            color: colors.text,
-            fontSize: typography.fontSize.sm,
-            lineHeight: 22,
-            marginBottom: spacing.xl,
-          }}
-        >
-          {p.bio}
-        </Text>
-
-        {p.review ? (
-          <>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.fontSize.lg,
-                fontWeight: typography.fontWeight.semibold,
-                marginBottom: spacing.md,
-              }}
-            >
-              Recent Review
-            </Text>
-            <ReviewCard review={p.review} />
-          </>
-        ) : null}
-      </ScrollView>
-
-      {/* Fixed bottom CTA */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.lg,
-          backgroundColor: colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: colors.background,
-        }}
-      >
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Request immediate help"
-          onPress={onRequest ?? (() => {})}
-          testID="provider-profile-request"
-          activeOpacity={0.85}
-          style={{
-            backgroundColor: colors.text,
-            borderRadius: radius.pill,
-            height: 56,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'row',
-            gap: spacing.sm,
-            ...shadow.soft,
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>⚡</Text>
-          <Text
-            style={{
-              color: colors.surface,
-              fontSize: typography.fontSize.md,
-              fontWeight: typography.fontWeight.bold,
-            }}
-          >
-            Request Immediate Help
-          </Text>
-        </TouchableOpacity>
+        <DetailCard title="Recent reviews">
+          {provider.reviews.map((review) => (
+            <ReviewCard key={`${review.author}-${review.comment}`} review={review} />
+          ))}
+        </DetailCard>
       </View>
-    </View>
+
+      <Pressable accessibilityRole="button" onPress={onStartBooking} testID="provider-profile-start-booking">
+        <View style={{ ...componentStyles.button.primary, marginTop: spacing.xl }}>
+          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+            Start booking
+          </Text>
+        </View>
+      </Pressable>
+    </ScrollView>
   );
 }
 
-export default ProviderProfile;
+export default ProviderProfileScreen;

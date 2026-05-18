@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="light" lang="de"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#ffdcc4",
+                    "primary-fixed": "#dfe2f3",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#c3c6d7",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "tertiary-container": "#2f1500",
+                    "on-secondary": "#ffffff",
+                    "surface-dim": "#dcd9da",
+                    "inverse-on-surface": "#f3f0f1",
+                    "on-tertiary-fixed-variant": "#6f3900",
+                    "on-primary-fixed": "#171b28",
+                    "primary-fixed-dim": "#c3c6d7",
+                    "on-tertiary-container": "#c96b00",
+                    "tertiary-fixed-dim": "#ffb77f",
+                    "surface-container": "#f0edee",
+                    "outline": "#76767c",
+                    "inverse-surface": "#313031",
+                    "on-secondary-fixed-variant": "#003fa4",
+                    "error": "#ba1a1a",
+                    "on-background": "#1c1b1c",
+                    "surface": "#fcf8f9",
+                    "surface-container-high": "#ebe7e8",
+                    "primary-container": "#171b28",
+                    "secondary-container": "#0266ff",
+                    "on-tertiary": "#ffffff",
+                    "on-surface": "#1c1b1c",
+                    "tertiary": "#000000",
+                    "on-tertiary-fixed": "#2f1500",
+                    "secondary": "#0050cc",
+                    "primary": "#000000",
+                    "on-secondary-fixed": "#001849",
+                    "surface-tint": "#5a5e6d",
+                    "surface-container-highest": "#e5e2e3",
+                    "on-surface-variant": "#46464c",
+                    "outline-variant": "#c7c6cc",
+                    "secondary-fixed": "#dae1ff",
+                    "surface-container-low": "#f6f3f4",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "background": "#fcf8f9",
+                    "on-primary-fixed-variant": "#434654",
+                    "surface-variant": "#e5e2e3",
+                    "on-secondary-container": "#f9f7ff",
+                    "on-primary-container": "#808393",
+                    "surface-bright": "#fcf8f9",
+                    "secondary-fixed-dim": "#b3c5ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "sm": "8px",
+                    "container-padding": "20px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .map-gradient-overlay {
+            background: linear-gradient(to bottom, rgba(252, 248, 249, 0.8) 0%, rgba(252, 248, 249, 0) 20%, rgba(252, 248, 249, 0) 80%, rgba(252, 248, 249, 1) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden">
+<!-- Progress Bar (Contextual) -->
+<div class="fixed top-0 left-0 w-full h-1 bg-outline-variant/20 z-[60]">
+<div class="h-full bg-secondary-container w-2/3"></div>
+</div>
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-2xl border-b border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-md">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-headline-sm font-bold tracking-tight text-primary">Handwerker</h1>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-sm py-xs bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-md rounded-lg">LIVE</span>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDug8WJFVhwcLYDMc3gAgfEonY6ELwk6vZUzIfK2SH3gzrZKqPQ0pyZEhU-3SmXR0mpNuOVKV7f203xHqXitPMJb81-f7q1T9TG2OHHBHa1t8ELPDLQoq2zhUybTS-2dQe993en6TIyxebGoSFipdRmup_vWoRDdTtr-tQ7ly-a-5Avxbhf5gac-CjocCtfPfmDPlPHPNEZChabGC4j8cyBFz50H0Q_hv2YW0ZI7ByX7FmJddQIWzwc1ctnxtYKyzP8v6aQk63nwQ6f"/>
+</div>
+</div>
+</header>
+<!-- Main Map Canvas -->
+<main class="relative h-screen w-full pt-16">
+<div class="absolute inset-0 z-0">
+<!-- Map Simulation -->
+<div class="w-full h-full bg-surface-container-low" data-location="Berlin, Germany" style="">
+<img alt="Map background" class="w-full h-full object-cover opacity-60 grayscale" data-alt="A high-fidelity minimalist map of a modern European city with clean street grids and soft pastel tones. The aesthetic is clean and professional, using a light-mode color palette of soft whites and greys. Thin geometric lines represent transit routes, and the overall mood is serene and technically precise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuASrgPs1vBNEs-Btrmb6x1_Mxqe0a92HY74IQD-YairpPiI_t23LrakHJgDSpjhczCQUKBbcSKQcuFo8jvwvXFy0y-5GIhysRQUyaMtnrju3lWlisV7VdC9BZxJ9a8OV8ClUuw3u4ETw3oKTTNRB-9JOoeKUL6ieQDaSBN3u3X1AkEzGRnG6e8Kf0W9Z1p7vPicj-o8GaVonUnmAu9TRKsI_NVrDaljTSa-1emWCtRbfpp9iBBhuVEWw8fOytaEHSSlKf3ls7iWWBY5"/>
+<div class="map-gradient-overlay absolute inset-0"></div>
+<!-- Live Route SVG Path -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" viewbox="0 0 1000 1000">
+<path d="M 200,800 Q 400,750 500,500 T 800,200" fill="none" opacity="0.6" stroke="#0066FF" stroke-dasharray="8 8" stroke-width="4"></path>
+</svg>
+<!-- Customer Marker -->
+<div class="absolute top-[20%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="bg-primary text-white p-2 rounded-xl shadow-lg border-2 border-white mb-2">
+<span class="material-symbols-outlined text-[20px]">home</span>
+</div>
+<div class="w-4 h-4 bg-primary/20 rounded-full animate-ping"></div>
+</div>
+<!-- Provider Marker (Moving) -->
+<div class="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10">
+<div class="relative">
+<div class="w-16 h-16 rounded-full border-4 border-white shadow-xl overflow-hidden ring-4 ring-secondary-container/20">
+<img alt="Handyman" class="w-full h-full object-cover" data-alt="Close up portrait of a professional electrician wearing a clean dark navy uniform with a subtle brand logo. He has a confident, friendly expression and is standing in a brightly lit, modern workshop. The lighting is crisp and cinematic, emphasizing professionalism and expertise within a high-end digital interface context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDMJd1m_JaiYLF1WvVmg8l3o2ivnlLLqgrX1yTHMZpzrG6ZDWVI-WtS9abk-oby9U_VP4Pek8ZUPRGwCqBCOcMSkpdN8gsTscNBlODZOf4zBhEWOh-mD4AFSKFaL5og--iUy37WmdhrNvKKxZEymMmkqCKge27_vOQ29W06WWk9JbrCfFN01RGva54Ul3x6GsUmzofw8pQEcN9pQ1fZaJ5XrvHn741hJUlnwm2gYo0fuOeEJZqI2CyEjeRcvQ1I21ngiZpTrplUeJo"/>
+</div>
+<div class="absolute -bottom-1 -right-1 bg-secondary-container text-white p-1 rounded-full border-2 border-white">
+<span class="material-symbols-outlined text-[16px]">electric_bolt</span>
+</div>
+</div>
+<div class="mt-2 px-3 py-1 bg-surface/90 backdrop-blur-md rounded-full shadow-sm border border-outline-variant/30">
+<p class="font-label-md text-primary">Marcus H.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Controls -->
+<div class="absolute top-24 right-container-padding flex flex-col gap-sm z-20">
+<button class="w-12 h-12 bg-surface rounded-xl shadow-lg flex items-center justify-center border border-outline-variant/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-primary">my_location</span>
+</button>
+<button class="w-12 h-12 bg-surface rounded-xl shadow-lg flex items-center justify-center border border-outline-variant/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-primary">layers</span>
+</button>
+</div>
+<!-- Live Status Drawer -->
+<div class="fixed bottom-0 left-0 w-full z-40">
+<div class="max-w-xl mx-auto bg-surface/80 backdrop-blur-2xl rounded-t-[24px] shadow-[0_-12px_32px_rgba(10,14,26,0.12)] border-t border-outline-variant/20 p-container-padding pb-xl">
+<!-- Handle -->
+<div class="w-12 h-1.5 bg-outline-variant/40 rounded-full mx-auto mb-lg"></div>
+<!-- ETA & Status Header -->
+<div class="flex justify-between items-end mb-xl">
+<div>
+<p class="font-label-md text-secondary-container uppercase tracking-widest mb-xs">Live Status</p>
+<h2 class="font-headline-lg text-primary leading-tight">Arriving in <span class="text-secondary">12 mins</span></h2>
+<div class="flex items-center gap-sm mt-sm">
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary-container"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary-container"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-outline-variant animate-pulse"></div>
+</div>
+<span class="font-body-sm text-on-surface-variant italic">On the way to your location</span>
+</div>
+</div>
+<div class="text-right">
+<span class="block font-label-sm text-on-surface-variant">Distance</span>
+<span class="font-headline-sm text-primary">3.2 km</span>
+</div>
+</div>
+<!-- Service Details Card -->
+<div class="bg-white border border-outline-variant/30 rounded-2xl p-md flex items-center gap-md mb-xl shadow-sm">
+<div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[32px]">construction</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline-sm text-primary">Electrical Repair</h3>
+<p class="font-body-sm text-on-surface-variant">Booking ID: #HW-88291</p>
+</div>
+<div class="text-right">
+<div class="flex items-center justify-end gap-xs bg-tertiary-fixed px-2 py-1 rounded-lg">
+<span class="material-symbols-outlined text-[14px] text-on-tertiary-fixed-variant" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-on-tertiary-fixed-variant">4.9</span>
+</div>
+</div>
+</div>
+<!-- Provider Profile Section -->
+<div class="flex items-center gap-lg mb-xl">
+<div class="relative">
+<img alt="Marcus Hoffman" class="w-16 h-16 rounded-2xl object-cover ring-1 ring-outline-variant/30" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATb5jb-L8pr8pTLylqANne3NCyOuUJEuQSIHWTNU6WrXAfCGsk6PzUCkn7wZnZdD_MyV_WtDKL7ugD8bLvTFvkrR5n7FKyDsZqcodf8zTR5uiPT71kZXpVeDW5IpDyCsixL9NJfMXRaBjYkEt-7Qgj5hpnZxGt9Nub7oOPBvOnBLWHgwp-dUJ_zU7r3zgMIZ8rawElhmgsgljtquydRT9Wm8gIjDnGq5DeKcmoBvaxn_6NyHw1SspS_CWsv7JWOkrUSPLInhZzdSos"/>
+<div class="absolute -top-2 -left-2 w-6 h-6 bg-secondary-container rounded-full flex items-center justify-center text-white border-2 border-white">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="flex-1">
+<h4 class="font-headline-sm text-primary">Marcus Hoffman</h4>
+<div class="flex items-center gap-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">local_shipping</span>
+<span class="font-body-sm">White VW Transporter • B-HW-2024</span>
+</div>
+</div>
+</div>
+<!-- Actions Grid -->
+<div class="grid grid-cols-2 gap-md">
+<button class="flex items-center justify-center gap-sm bg-surface-container-highest text-primary font-label-md py-4 rounded-2xl border border-outline-variant/10 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">chat_bubble</span>
+                        Message
+                    </button>
+<button class="flex items-center justify-center gap-sm bg-primary text-white font-label-md py-4 rounded-2xl active:scale-95 transition-transform">
+<span class="material-symbols-outlined">call</span>
+                        Call Provider
+                    </button>
+</div>
+<button class="w-full mt-lg text-center font-label-md text-error/70 py-2">
+                    Cancel Booking
+                </button>
+</div>
+</div>
+</main>
+<!-- Shared Navigation (Suppressed for transactional journey, but included if needed as per rules) -->
+<!-- Not visible as per Relevance Check: "Task-Focused: Any sub-page featuring a 'Back' action" -->
+</body></html>

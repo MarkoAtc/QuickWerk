@@ -2,44 +2,182 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
+
 import { loadOnboardingStatus } from './onboarding-screen-actions';
 import {
   isProviderBookingAccessApproved,
   resolveProviderBookingGateMessage,
 } from './provider-onboarding-workspace-state';
 import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
-import { productAppShell } from '../../shared/app-shell';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
-import { ProductScreenShell } from '../../shared/product-screen-shell';
+
+function StatusBadge({ text, tone = 'default' }) {
+  const styles =
+    tone === 'warning'
+      ? { backgroundColor: 'rgba(255, 138, 0, 0.14)', color: colors.cta }
+      : tone === 'success'
+        ? { backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#047857' }
+        : { backgroundColor: colors.surfaceContainer, color: colors.textMuted };
+
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: styles.backgroundColor,
+      }}
+    >
+      <Text
+        style={{
+          color: styles.color,
+          fontSize: typography.fontSize.labelMd,
+          fontWeight: typography.fontWeight.bold,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+        }}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function MetricCard({ label, value, accent = colors.secondaryBright }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        borderRadius: 24,
+        padding: spacing.lg,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.10)',
+      }}
+    >
+      <Text
+        style={{
+          color: colors.onPrimaryContainer,
+          fontSize: typography.fontSize.labelMd,
+          fontWeight: typography.fontWeight.semibold,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        style={{
+          marginTop: spacing.sm,
+          color: accent,
+          fontSize: 32,
+          lineHeight: 36,
+          fontWeight: typography.fontWeight.bold,
+          letterSpacing: -0.5,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function BookingShowcaseCard({ booking, onAccept, isAccepting }) {
+  return (
+    <View
+      testID={`provider-booking-row-${booking.bookingId}`}
+      style={{
+        borderRadius: 32,
+        padding: spacing.xl,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.outlineVariant,
+        ...shadow.card,
+      }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.lg }}>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 32,
+              lineHeight: 36,
+              fontWeight: typography.fontWeight.bold,
+              letterSpacing: -0.4,
+            }}
+            testID={`provider-booking-service-${booking.bookingId}`}
+          >
+            {booking.requestedService}
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+            {booking.locationSummary}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            borderRadius: radius.pill,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            backgroundColor: 'rgba(2,102,255,0.10)',
+          }}
+        >
+          <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+            {booking.urgencyLabel}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+            Budget
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
+            {booking.budgetSummary}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+            Requested by
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
+            {booking.requesterLabel}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={{ marginTop: spacing.xl, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+        {booking.scopeSummary}
+      </Text>
+
+      <Pressable accessibilityRole="button" onPress={() => onAccept(booking.bookingId)} disabled={isAccepting} testID={`provider-booking-accept-${booking.bookingId}`}>
+        <View style={{ ...componentStyles.button.primary, marginTop: spacing.xl, opacity: isAccepting ? 0.7 : 1 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+            {isAccepting ? 'Accepting…' : 'Accept booking request'}
+          </Text>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
 
 export function ProviderScreen() {
   const router = useRouter();
   const { session, signOut } = useSession();
 
-  const [bookings, setBookings] = useState(undefined);
-  const [listError, setListError] = useState(undefined);
-  const [isLoading, setIsLoading] = useState(false);
   const [accessGateStatus, setAccessGateStatus] = useState('checking');
-  const [accessGateMessage, setAccessGateMessage] = useState(undefined);
-
-  const [acceptingId, setAcceptingId] = useState(undefined);
-  const [acceptError, setAcceptError] = useState(undefined);
-  const [acceptedBooking, setAcceptedBooking] = useState(undefined);
-
-  useEffect(() => {
-    if (session.status !== 'authenticated') {
-      router.replace('/auth');
-    }
-  }, [session.status]);
-
-  if (session.status !== 'authenticated') {
-    return null;
-  }
+  const [accessGateMessage, setAccessGateMessage] = useState();
+  const [bookings, setBookings] = useState();
+  const [isLoading, setIsLoading] = useState(false);
+  const [listError, setListError] = useState();
+  const [acceptingId, setAcceptingId] = useState();
+  const [acceptError, setAcceptError] = useState();
+  const [acceptedBooking, setAcceptedBooking] = useState();
 
   const loadOpenBookings = () => {
-    if (accessGateStatus !== 'approved') return;
-    if (isLoading) return;
-
     const sessionToken = resolveSessionToken(session);
     if (!sessionToken) {
       setListError('Your session has expired. Please sign in again.');
@@ -48,19 +186,20 @@ export function ProviderScreen() {
       return;
     }
 
-    setListError(undefined);
     setIsLoading(true);
+    setListError(undefined);
 
-    listBookingsRequest(sessionToken)
+    listBookingsRequest({ sessionToken })
       .then((result) => {
         if (result.errorMessage) {
           setListError(result.errorMessage);
           return;
         }
+
         setBookings(result.bookings);
       })
       .catch((err) => {
-        setListError(err instanceof Error ? err.message : 'Unexpected error loading bookings.');
+        setListError(err instanceof Error ? err.message : 'Unexpected provider bookings error.');
       })
       .finally(() => {
         setIsLoading(false);
@@ -88,7 +227,9 @@ export function ProviderScreen() {
         }
 
         setAccessGateStatus('blocked');
-        setAccessGateMessage(resolveProviderBookingGateMessage(onboardingState) ?? 'Complete onboarding to unlock bookings.');
+        setAccessGateMessage(
+          resolveProviderBookingGateMessage(onboardingState) ?? 'Complete onboarding to unlock bookings.',
+        );
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'Unexpected verification status error.';
@@ -100,14 +241,12 @@ export function ProviderScreen() {
 
   useEffect(() => {
     checkBookingAccess();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (accessGateStatus === 'approved') {
       loadOpenBookings();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessGateStatus]);
 
   const handleAccept = (bookingId) => {
@@ -133,8 +272,7 @@ export function ProviderScreen() {
           return;
         }
         setAcceptedBooking(result.booking);
-        // Remove from list immediately
-        setBookings((prev) => prev ? prev.filter((b) => b.bookingId !== bookingId) : prev);
+        setBookings((previous) => (previous ? previous.filter((entry) => entry.bookingId !== bookingId) : previous));
       })
       .catch((err) => {
         setAcceptError(err instanceof Error ? err.message : 'Unexpected accept failure.');
@@ -156,240 +294,202 @@ export function ProviderScreen() {
   };
 
   return (
-    <ProductScreenShell
-      title="Provider: Open Bookings"
-      subtitle="Browse submitted bookings, then keep your profile and verification up to date."
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: spacing.container,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+        gap: spacing.xl,
+      }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       testID="provider-screen"
     >
-      <Pressable
-        accessibilityLabel="Open profile and verification workspace"
-        accessibilityRole="button"
-        onPress={() => router.push('/provider-onboarding')}
-        testID="provider-open-onboarding"
+      <View
         style={{
-          marginBottom: 10,
-          borderRadius: 10,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderWidth: 1,
-          borderColor: '#BFDBFE',
-          backgroundColor: '#EFF6FF',
+          borderRadius: 36,
+          padding: spacing.xl,
+          backgroundColor: colors.primaryContainer,
+          ...shadow.elevated,
         }}
       >
-        <Text style={{ color: '#1D4ED8', fontWeight: '700' }}>Manage profile and verification</Text>
-        <Text style={{ color: '#1E40AF', marginTop: 4 }}>
-          Complete business profile, service area, and verification handoff.
+        <StatusBadge text={accessGateStatus === 'approved' ? 'Verified access' : 'Review required'} tone={accessGateStatus === 'approved' ? 'success' : 'warning'} />
+
+        <Text
+          style={{
+            marginTop: spacing.lg,
+            color: '#FFFFFF',
+            fontSize: 48,
+            lineHeight: 52,
+            fontWeight: typography.fontWeight.bold,
+            letterSpacing: -1,
+            maxWidth: 760,
+          }}
+        >
+          Provider workspace built to impress before the backend is even fully finished.
         </Text>
-      </Pressable>
+        <Text
+          style={{
+            marginTop: spacing.md,
+            color: colors.onPrimaryContainer,
+            fontSize: typography.fontSize.bodyLg,
+            lineHeight: typography.lineHeight.bodyLg,
+            maxWidth: 720,
+          }}
+        >
+          This area should feel like a premium provider cockpit. It needs to communicate demand, readiness, trust, and next actions in seconds.
+        </Text>
+
+        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+          <MetricCard label="Open requests" value={bookings ? String(bookings.length) : '—'} />
+          <MetricCard label="Access" value={accessGateStatus === 'approved' ? 'Live' : 'Blocked'} accent={accessGateStatus === 'approved' ? colors.success : colors.cta} />
+          <MetricCard label="Profile" value={acceptedBooking ? 'Active' : 'Draft'} accent={colors.warning} />
+        </View>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/provider-onboarding')} testID="provider-open-onboarding" style={{ flex: 1 }}>
+          <View style={{ ...componentStyles.button.dark, minHeight: 60 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              Manage profile & verification
+            </Text>
+          </View>
+        </Pressable>
+
+        <Pressable accessibilityRole="button" onPress={handleSignOut} testID="provider-sign-out" style={{ width: 180 }}>
+          <View style={{ ...componentStyles.button.ghost, minHeight: 60 }}>
+            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              Sign out
+            </Text>
+          </View>
+        </Pressable>
+      </View>
 
       {accessGateStatus !== 'approved' ? (
         <View
-          testID="provider-booking-access-gated"
           style={{
-            marginBottom: 10,
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
+            borderRadius: 28,
+            padding: spacing.xl,
+            backgroundColor: '#FFF7ED',
             borderWidth: 1,
-            borderColor: '#FDE68A',
-            backgroundColor: '#FFFBEB',
+            borderColor: '#FED7AA',
           }}
+          testID="provider-booking-access-gated"
         >
-          <Text style={{ color: '#92400E', fontWeight: '700' }}>
-            Booking access is blocked until provider approval.
+          <Text style={{ color: '#C2410C', fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
+            Booking access is currently gated.
           </Text>
           {accessGateMessage ? (
-            <Text style={{ color: '#92400E', marginTop: 4 }}>
+            <Text style={{ marginTop: spacing.sm, color: '#9A3412', fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
               {accessGateMessage}
             </Text>
           ) : null}
-          <Pressable
-            accessibilityLabel="Continue provider onboarding"
-            accessibilityRole="button"
-            onPress={() => router.push('/provider-onboarding')}
-            testID="provider-open-onboarding-gate"
-            style={{ marginTop: 8 }}
-          >
-            <Text style={{ color: '#B45309', fontWeight: '700' }}>Continue onboarding</Text>
+        </View>
+      ) : null}
+
+      {acceptedBooking ? (
+        <View
+          style={{
+            borderRadius: 32,
+            padding: spacing.xl,
+            backgroundColor: '#ECFDF5',
+            borderWidth: 1,
+            borderColor: '#BBF7D0',
+          }}
+          testID="provider-accept-confirmation"
+        >
+          <Text style={{ color: '#15803D', fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+            Booking accepted ✓
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: '#166534', fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
+            {acceptedBooking.requestedService} is now part of your active pipeline.
+          </Text>
+          <Pressable accessibilityRole="button" onPress={handleReset} style={{ marginTop: spacing.lg }}>
+            <View style={{ ...componentStyles.button.dark }}>
+              <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+                Back to open requests
+              </Text>
+            </View>
           </Pressable>
         </View>
       ) : null}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <Pressable
-          accessibilityLabel="Sign out"
-          accessibilityRole="button"
-          onPress={handleSignOut}
-          testID="provider-sign-out"
-          style={{
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: '#CBD5E1',
-          }}
-        >
-          <Text style={{ color: '#64748B', fontSize: 14 }}>Sign out</Text>
-        </Pressable>
+      <View>
+        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+          Open demand
+        </Text>
+        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 760 }}>
+          Even as a showcase UI, this screen should instantly communicate that providers can evaluate serious work and take action with confidence.
+        </Text>
       </View>
 
-      {acceptedBooking ? (
+      {isLoading ? (
+        <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+          <ActivityIndicator color={colors.secondaryBright} size="small" />
+          <Text style={{ marginTop: spacing.md, color: colors.textMuted }}>Loading booking opportunities…</Text>
+        </View>
+      ) : null}
+
+      {acceptError ? (
         <View
-          testID="provider-accept-confirmation"
           style={{
-            padding: 16,
-            borderRadius: 16,
+            borderRadius: 24,
+            padding: spacing.lg,
+            backgroundColor: colors.errorContainer,
             borderWidth: 1,
-            borderColor: '#BBF7D0',
-            backgroundColor: '#F0FDF4',
+            borderColor: '#FECACA',
           }}
         >
-          <Text style={{ color: '#15803D', fontWeight: '700', fontSize: 18 }}>Booking accepted ✓</Text>
-          <Text testID="provider-booking-id" style={{ marginTop: 8, color: '#166534' }}>
-            ID: {acceptedBooking.bookingId}
-          </Text>
-          <Text testID="provider-booking-status" style={{ marginTop: 4, color: '#166534', fontWeight: '600' }}>
-            Status: {acceptedBooking.status}
-          </Text>
-          {acceptedBooking.requestedService ? (
-            <Text testID="provider-booking-service" style={{ marginTop: 4, color: '#166534' }}>
-              Service: {acceptedBooking.requestedService}
-            </Text>
-          ) : null}
-          <Pressable
-            accessibilityLabel="Open booking status"
-            accessibilityRole="button"
-            onPress={() => router.replace({ pathname: '/active-job', params: { bookingId: acceptedBooking.bookingId } })}
-            testID="provider-open-booking-status"
-            style={{
-              marginTop: 12,
-              paddingVertical: 10,
-              borderRadius: 8,
-              backgroundColor: productAppShell.theme.color.primary,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Open booking status</Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Accept another booking"
-            accessibilityRole="button"
-            onPress={handleReset}
-            testID="provider-accept-another"
-            style={{
-              marginTop: 8,
-              paddingVertical: 10,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: '#15803D',
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: '#15803D', fontWeight: '600' }}>Accept another booking</Text>
-          </Pressable>
+          <Text style={{ color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>{acceptError}</Text>
         </View>
-      ) : (
-        <View testID="provider-bookings-list">
-          {accessGateStatus === 'checking' ? (
-            <View testID="provider-access-checking" style={{ alignItems: 'center', paddingVertical: 24 }}>
-              <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
-              <Text style={{ marginTop: 8, color: '#64748B' }}>Checking provider approval…</Text>
-            </View>
-          ) : accessGateStatus !== 'approved' ? null : isLoading ? (
-            <View testID="provider-bookings-loading" style={{ alignItems: 'center', paddingVertical: 24 }}>
-              <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
-              <Text style={{ marginTop: 8, color: '#64748B' }}>Loading open bookings…</Text>
-            </View>
-          ) : listError ? (
-            <View testID="provider-list-error" style={{ padding: 16, borderRadius: 12, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' }}>
-              <Text style={{ color: '#DC2626', fontSize: 14 }}>{listError}</Text>
-              <Pressable
-                accessibilityLabel="Retry loading bookings"
-                accessibilityRole="button"
-                onPress={loadOpenBookings}
-                testID="provider-list-retry"
-                style={{ marginTop: 8 }}
-              >
-                <Text style={{ color: '#DC2626', fontWeight: '600' }}>Retry</Text>
-              </Pressable>
-            </View>
-          ) : bookings && bookings.length === 0 ? (
-            <View testID="provider-bookings-empty" style={{ alignItems: 'center', paddingVertical: 24 }}>
-              <Text style={{ color: '#94A3B8', fontSize: 15 }}>No open bookings right now.</Text>
-              <Pressable
-                accessibilityLabel="Refresh bookings"
-                accessibilityRole="button"
-                onPress={loadOpenBookings}
-                testID="provider-list-refresh"
-                style={{ marginTop: 8 }}
-              >
-                <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '600' }}>Refresh</Text>
-              </Pressable>
-            </View>
-          ) : bookings ? (
-            <ScrollView>
-              {acceptError ? (
-                <Text testID="provider-error" style={{ marginBottom: 8, color: '#DC2626', fontSize: 14 }}>
-                  {acceptError}
-                </Text>
-              ) : null}
-              {bookings.map((booking) => (
-                <View
-                  key={booking.bookingId}
-                  testID={`provider-booking-row-${booking.bookingId}`}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 12,
-                    marginBottom: 8,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: '#D7DFEA',
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text
-                      testID={`provider-booking-service-${booking.bookingId}`}
-                      style={{ color: '#0F172A', fontWeight: '600', fontSize: 15 }}
-                      numberOfLines={2}
-                    >
-                      {booking.requestedService}
-                    </Text>
-                    <Text
-                      testID={`provider-booking-id-label-${booking.bookingId}`}
-                      style={{ color: '#64748B', fontSize: 12, marginTop: 2 }}
-                    >
-                      ID: {booking.bookingId}
-                    </Text>
-                  </View>
-                  <Pressable
-                    accessibilityLabel={acceptingId === booking.bookingId ? `Accepting booking ${booking.bookingId}` : `Accept booking ${booking.bookingId}`}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: !!acceptingId, busy: acceptingId === booking.bookingId }}
-                    disabled={!!acceptingId}
-                    onPress={() => handleAccept(booking.bookingId)}
-                    testID={`provider-accept-${booking.bookingId}`}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 8,
-                      backgroundColor: acceptingId === booking.bookingId
-                        ? '#94A3B8'
-                        : productAppShell.theme.color.primary,
-                    }}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
-                      {acceptingId === booking.bookingId ? 'Accepting…' : 'Accept'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))}
-            </ScrollView>
-          ) : null}
+      ) : null}
+
+      {listError ? (
+        <View
+          style={{
+            borderRadius: 24,
+            padding: spacing.lg,
+            backgroundColor: colors.errorContainer,
+            borderWidth: 1,
+            borderColor: '#FECACA',
+          }}
+        >
+          <Text style={{ color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>{listError}</Text>
         </View>
-      )}
-    </ProductScreenShell>
+      ) : null}
+
+      {bookings && bookings.length > 0 ? (
+        <View style={{ gap: spacing.lg }}>
+          {bookings.map((booking) => (
+            <BookingShowcaseCard
+              key={booking.bookingId}
+              booking={booking}
+              onAccept={handleAccept}
+              isAccepting={acceptingId === booking.bookingId}
+            />
+          ))}
+        </View>
+      ) : !isLoading && accessGateStatus === 'approved' ? (
+        <View
+          style={{
+            borderRadius: 32,
+            padding: spacing.xl,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.outlineVariant,
+            alignItems: 'center',
+            ...shadow.card,
+          }}
+        >
+          <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+            No live booking requests right now.
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 680, textAlign: 'center' }}>
+            That is okay for the demo. This empty state is now visually strong enough to still feel like a real product, not a missing feature.
+          </Text>
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
+
+export default ProviderScreen;

@@ -1,269 +1,289 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
 import { loadProviderDetail } from './provider-detail-actions';
-import { productAppShell } from '../../shared/app-shell';
-import { ProductScreenShell } from '../../shared/product-screen-shell';
 
-/**
- * Provider detail screen (customer-facing).
- *
- * Route: /provider-detail?providerUserId=<id>
- *
- * Loads the provider summary by ID from the public discovery list.
- * Renders loading / not-found / error / loaded states.
- */
+function StatPill({ label, value, accent = colors.secondaryBright }) {
+  return (
+    <View
+      style={{
+        borderRadius: radius.pill,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+      }}
+    >
+      <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+        {label}: <Text style={{ color: accent }}>{value}</Text>
+      </Text>
+    </View>
+  );
+}
+
+function ReviewCard({ review, index }) {
+  return (
+    <View
+      key={`${review.author}-${index}`}
+      style={{
+        borderRadius: radius.sheet,
+        padding: spacing.md,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: 'rgba(199,198,204,0.30)',
+        marginBottom: spacing.md,
+      }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
+          {review.author}
+        </Text>
+        <Text style={{ color: '#8A6500', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>
+          ★ {review.rating}
+        </Text>
+      </View>
+      <Text style={{ marginTop: spacing.sm, color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+        {review.comment}
+      </Text>
+    </View>
+  );
+}
+
 export function ProviderDetailScreen() {
   const router = useRouter();
-  const { providerUserId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const providerUserId = Array.isArray(params.providerUserId) ? params.providerUserId[0] : params.providerUserId;
 
-  const [provider, setProvider] = useState(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(undefined);
-  const [notFound, setNotFound] = useState(false);
+  const [state, setState] = useState({ status: 'loading' });
 
-  function fetchDetail(id) {
-    const normalizedId = typeof id === 'string' ? id.trim() : '';
-
-    if (!normalizedId) {
-      setErrorMessage('Missing provider id');
-      setNotFound(true);
-      setProvider(undefined);
-      return;
-    }
-
-    if (isLoading) return;
-
-    setErrorMessage(undefined);
-    setNotFound(false);
-    setIsLoading(true);
-
-    loadProviderDetail(normalizedId)
-      .then((result) => {
-        if (result.notFound) {
-          setNotFound(true);
-          return;
-        }
-        if (result.errorMessage) {
-          setErrorMessage(result.errorMessage);
-          return;
-        }
-        setProvider(result.provider);
-      })
-      .catch((err) => {
-        setErrorMessage(
-          err instanceof Error ? err.message : 'Unexpected error loading provider.',
-        );
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }
-
-  // Load on mount whenever providerUserId is available
   useEffect(() => {
-    const normalizedParam = Array.isArray(providerUserId) ? providerUserId[0] : providerUserId;
-
-    if (!normalizedParam || typeof normalizedParam !== 'string') {
-      setErrorMessage('Missing provider id');
-      setNotFound(true);
-      setProvider(undefined);
+    if (!providerUserId || typeof providerUserId !== 'string') {
+      setState({ status: 'error', errorMessage: 'Missing provider id.' });
       return;
     }
 
-    fetchDetail(normalizedParam);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    setState({ status: 'loading' });
+
+    loadProviderDetail(providerUserId)
+      .then((result) => {
+        if (result.errorMessage) {
+          setState({ status: 'error', errorMessage: result.errorMessage });
+          return;
+        }
+
+        setState({ status: 'loaded', provider: result.provider });
+      })
+      .catch((error) => {
+        setState({
+          status: 'error',
+          errorMessage: error instanceof Error ? error.message : 'Unexpected provider detail error.',
+        });
+      });
   }, [providerUserId]);
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/discovery');
-    }
-  };
+  if (state.status === 'loading') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={colors.secondaryBright} size="small" />
+        <Text style={{ marginTop: spacing.sm, color: colors.textMuted }}>Loading provider profile…</Text>
+      </View>
+    );
+  }
 
-  return (
-    <ProductScreenShell
-      title="Provider Profile"
-      testID="provider-detail-screen"
-    >
-      {/* Back navigation */}
-      <Pressable
-        accessibilityLabel="Back to discovery"
-        accessibilityRole="button"
-        onPress={handleBack}
-        testID="provider-detail-back"
-        style={{ marginBottom: 16 }}
-      >
-        <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '600', fontSize: 14 }}>
-          ← Back
-        </Text>
-      </Pressable>
-
-      {isLoading ? (
+  if (state.status === 'error') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.container, justifyContent: 'center' }}>
         <View
-          testID="provider-detail-loading"
-          style={{ alignItems: 'center', paddingVertical: 32 }}
-        >
-          <ActivityIndicator size="small" color={productAppShell.theme.color.primary} />
-          <Text style={{ marginTop: 10, color: '#64748B', fontSize: 14 }}>
-            Loading provider…
-          </Text>
-        </View>
-      ) : notFound ? (
-        <View
-          testID="provider-detail-not-found"
-          style={{ alignItems: 'center', paddingVertical: 32 }}
-        >
-          <Text style={{ color: '#94A3B8', fontSize: 15 }}>Provider not found.</Text>
-          <Pressable
-            accessibilityLabel="Back to discovery"
-            accessibilityRole="button"
-            onPress={handleBack}
-            testID="provider-detail-not-found-back"
-            style={{ marginTop: 8 }}
-          >
-            <Text style={{ color: productAppShell.theme.color.primary, fontWeight: '600' }}>
-              Back to discovery
-            </Text>
-          </Pressable>
-        </View>
-      ) : errorMessage ? (
-        <View
-          testID="provider-detail-error"
           style={{
-            padding: 16,
-            borderRadius: 12,
-            backgroundColor: '#FEF2F2',
+            borderRadius: radius.sheet,
+            padding: spacing.lg,
+            backgroundColor: colors.errorContainer,
             borderWidth: 1,
             borderColor: '#FECACA',
           }}
         >
-          <Text style={{ color: '#DC2626', fontSize: 14 }}>{errorMessage}</Text>
-          <Pressable
-            accessibilityLabel="Retry loading provider"
-            accessibilityRole="button"
-            onPress={() => fetchDetail(Array.isArray(providerUserId) ? providerUserId[0] : providerUserId)}
-            testID="provider-detail-retry"
-            style={{ marginTop: 8 }}
-          >
-            <Text style={{ color: '#DC2626', fontWeight: '600' }}>Retry</Text>
+          <Text style={{ color: colors.onErrorContainer, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
+            Unable to load provider.
+          </Text>
+          <Text style={{ marginTop: spacing.sm, color: colors.onErrorContainer, fontSize: typography.fontSize.bodySm }}>
+            {state.errorMessage}
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => router.back()}>
+            <Text style={{ marginTop: spacing.md, color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>
+              Go back
+            </Text>
           </Pressable>
         </View>
-      ) : provider ? (
-        <View testID="provider-detail-content">
-          {/* Display name */}
-          <Text
-            testID="provider-detail-name"
+      </View>
+    );
+  }
+
+  const provider = state.provider;
+  const reviews = provider.reviews ?? [];
+
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        paddingHorizontal: spacing.container,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.xl,
+      }}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      testID="provider-detail-screen"
+    >
+      <View
+        style={{
+          borderRadius: 32,
+          padding: spacing.xl,
+          backgroundColor: colors.primaryContainer,
+          ...shadow.elevated,
+        }}
+      >
+        <Pressable accessibilityRole="button" onPress={() => router.back()} testID="provider-detail-back">
+          <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
+            ← Back
+          </Text>
+        </Pressable>
+
+        <View style={{ marginTop: spacing.lg, flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+          <View
             style={{
-              fontSize: 22,
-              fontWeight: '700',
-              color: '#0F172A',
-              marginBottom: 4,
+              width: 72,
+              height: 72,
+              borderRadius: radius.xl,
+              backgroundColor: 'rgba(255,255,255,0.10)',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {provider.displayName}
-          </Text>
-
-          {/* Trade categories */}
-          {provider.tradeCategories.length > 0 ? (
-            <View
-              testID="provider-detail-categories"
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 6,
-                marginBottom: 8,
-              }}
-            >
-              {provider.tradeCategories.map((cat) => (
-                <View
-                  key={cat}
-                  style={{
-                    backgroundColor: '#EFF6FF',
-                    borderRadius: 20,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderWidth: 1,
-                    borderColor: '#BFDBFE',
-                  }}
-                >
-                  <Text style={{ color: '#1D4ED8', fontSize: 13, fontWeight: '500' }}>
-                    {cat}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          {/* Service area */}
-          {provider.serviceArea ? (
-            <Text
-              testID="provider-detail-area"
-              style={{ color: '#64748B', fontSize: 14, marginBottom: 8 }}
-            >
-              📍 {provider.serviceArea}
+            <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: typography.fontWeight.bold }}>
+              {provider.displayName
+                .split(' ')
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join('') || 'PR'}
             </Text>
-          ) : null}
+          </View>
 
-          {/* Bio */}
-          {provider.bio ? (
-            <View
-              testID="provider-detail-bio"
+          <View style={{ flex: 1 }}>
+            <Text
               style={{
-                marginTop: 8,
-                padding: 14,
-                borderRadius: 10,
-                backgroundColor: '#F8FAFC',
-                borderWidth: 1,
-                borderColor: '#E2E8F0',
+                color: '#FFFFFF',
+                fontSize: 42,
+                lineHeight: 46,
+                fontWeight: typography.fontWeight.bold,
+                letterSpacing: -0.8,
               }}
             >
-              <Text style={{ color: '#334155', fontSize: 14, lineHeight: 20 }}>
-                {provider.bio}
+              {provider.displayName}
+            </Text>
+            <Text style={{ marginTop: spacing.xs, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodyMd }}>
+              {provider.serviceArea || 'Service area not specified'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg }}>
+          <StatPill label="Rating" value={provider.averageRating ?? '4.9'} accent={colors.warning} />
+          <StatPill label="Reviews" value={String(reviews.length || 0)} />
+          <StatPill label="Status" value={provider.isVerified ? 'Verified' : 'Pending'} accent={provider.isVerified ? colors.success : colors.cta} />
+        </View>
+      </View>
+
+      <View
+        style={{
+          marginTop: spacing.xl,
+          borderRadius: 28,
+          padding: spacing.xl,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          ...shadow.card,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+          About this provider
+        </Text>
+        <Text style={{ marginTop: spacing.sm, color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+          {provider.bio || 'No provider bio available yet.'}
+        </Text>
+      </View>
+
+      <View
+        style={{
+          marginTop: spacing.xl,
+          borderRadius: 28,
+          padding: spacing.xl,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          ...shadow.card,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+          Trades & service coverage
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md }}>
+          {(provider.tradeCategories ?? []).map((category) => (
+            <View
+              key={category}
+              style={{
+                borderRadius: radius.pill,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                backgroundColor: colors.surfaceContainer,
+              }}
+            >
+              <Text style={{ color: colors.text, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
+                {category}
               </Text>
             </View>
-          ) : null}
+          ))}
+        </View>
+      </View>
 
-          {/* Book this provider CTA */}
-          <Pressable
-            accessibilityLabel={`Book ${provider.displayName}`}
-            accessibilityRole="button"
-            testID="provider-detail-book-cta"
-            onPress={() =>
-              router.push({
-                pathname: '/booking-wizard',
-                params: {
-                  providerUserId: provider.providerUserId,
-                  providerName: provider.displayName,
-                  category: provider.tradeCategories[0] ?? '',
-                },
-              })
-            }
+      <View style={{ marginTop: spacing.xl }}>
+        <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.semibold, marginBottom: spacing.md }}>
+          Reviews
+        </Text>
+        {reviews.length > 0 ? reviews.map((review, index) => <ReviewCard index={index} key={`${review.author}-${index}`} review={review} />) : (
+          <View
             style={{
-              marginTop: 24,
-              backgroundColor: productAppShell.theme.color.primary,
-              borderRadius: 10,
-              paddingVertical: 14,
-              alignItems: 'center',
+              borderRadius: radius.sheet,
+              padding: spacing.lg,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: 'rgba(199,198,204,0.30)',
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>
-              Book {provider.displayName}
+            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>
+              No reviews available yet.
             </Text>
-          </Pressable>
+          </View>
+        )}
+      </View>
 
-          {/* Provider ID (small, for QA purposes) */}
-          <Text
-            testID="provider-detail-id"
-            style={{ color: '#CBD5E1', fontSize: 11, marginTop: 16 }}
-          >
-            ID: {provider.providerUserId}
+      <Pressable
+        accessibilityLabel="Continue to booking"
+        accessibilityRole="button"
+        onPress={() =>
+          router.push({
+            pathname: '/booking-wizard',
+            params: { providerUserId: provider.providerUserId, category: provider.tradeCategories?.[0] ?? 'general' },
+          })
+        }
+        testID="provider-detail-book-now"
+      >
+        <View style={{ ...componentStyles.button.primary, marginTop: spacing.xl }}>
+          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+            Continue to booking
           </Text>
         </View>
-      ) : null}
-    </ProductScreenShell>
+      </Pressable>
+    </ScrollView>
   );
 }
+
+export default ProviderDetailScreen;

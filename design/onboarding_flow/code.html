@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Handwerker OnDemand - Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdcc4",
+                        "primary-fixed": "#dfe2f3",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#c3c6d7",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-container": "#2f1500",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#dcd9da",
+                        "inverse-on-surface": "#f3f0f1",
+                        "on-tertiary-fixed-variant": "#6f3900",
+                        "on-primary-fixed": "#171b28",
+                        "primary-fixed-dim": "#c3c6d7",
+                        "on-tertiary-container": "#c96b00",
+                        "tertiary-fixed-dim": "#ffb77f",
+                        "surface-container": "#f0edee",
+                        "outline": "#76767c",
+                        "inverse-surface": "#313031",
+                        "on-secondary-fixed-variant": "#003fa4",
+                        "error": "#ba1a1a",
+                        "on-background": "#1c1b1c",
+                        "surface": "#fcf8f9",
+                        "surface-container-high": "#ebe7e8",
+                        "primary-container": "#171b28",
+                        "secondary-container": "#0266ff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1c1b1c",
+                        "tertiary": "#000000",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary": "#0050cc",
+                        "primary": "#000000",
+                        "on-secondary-fixed": "#001849",
+                        "surface-tint": "#5a5e6d",
+                        "surface-container-highest": "#e5e2e3",
+                        "on-surface-variant": "#46464c",
+                        "outline-variant": "#c7c6cc",
+                        "secondary-fixed": "#dae1ff",
+                        "surface-container-low": "#f6f3f4",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "background": "#fcf8f9",
+                        "on-primary-fixed-variant": "#434654",
+                        "surface-variant": "#e5e2e3",
+                        "on-secondary-container": "#f9f7ff",
+                        "on-primary-container": "#808393",
+                        "surface-bright": "#fcf8f9",
+                        "secondary-fixed-dim": "#b3c5ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "container-padding": "20px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "unit": "4px",
+                        "xs": "4px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                        "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .carousel-indicator-active { width: 24px; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col items-center overflow-x-hidden">
+<!-- Top Navigation (Header) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-2xl px-container-padding py-md max-w-7xl mx-auto flex justify-between items-center border-b border-outline-variant/20">
+<span class="font-display-lg text-headline-md font-extrabold tracking-tight text-primary">Handwerker</span>
+<button class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors py-2 px-4 rounded-full">
+            Skip
+        </button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-lg mx-auto flex flex-col justify-center items-center pt-32 px-container-padding pb-xl">
+<!-- Step 1 (Active Step) Content Wrapper -->
+<div class="w-full flex flex-col items-center space-y-xl animate-in fade-in duration-700">
+<!-- Hero Image Container with Bento-style Polish -->
+<div class="relative w-full aspect-[4/5] rounded-[32px] overflow-hidden shadow-2xl bg-surface-container-high">
+<img alt="Professional Craftsman" class="w-full h-full object-cover" data-alt="A high-end, close-up photograph of a professional master plumber wearing clean, branded tech-wear, holding a sleek digital tablet displaying complex plumbing blueprints. The lighting is cinematic and cool-toned, reflecting a modern light-mode office aesthetic with soft-focus tools in the background. The scene is sharp, minimalist, and conveys reliability through pristine tool surfaces and a focused, professional expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCL7NDpTrH7-EzECrH3EzS7V7Hqc3S35wcpPMI9pCVDAO_7b526_lPk6jJQ4QcWvw8e14zNbdKIKtWvcH4TI-TzVPozm2oth6_SvK9UIgpXe1U1MXIfIPIt26qbgRvNd4mj8L12_UxKUfua71BoNyfj-PLu1O3i--eGMyedH1j7fAC05lfKNj_OzBrOYEYJVep0Ne5Mrs9zkfQdIUbqFzy5ci4HKfJCP2DIDlkObSBDrAGGa32tduowfrBpOapV7Mf-8E0suvjAW45J"/>
+<!-- Floating Info Badge -->
+<div class="absolute bottom-lg left-lg right-lg glass-card p-md rounded-xl border border-white/20 shadow-lg flex items-center space-x-md">
+<div class="w-12 h-12 bg-[#FF8A00] rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-primary">Response Time</p>
+<p class="font-headline-sm text-headline-sm font-bold text-primary">Avg. 4 Mins</p>
+</div>
+</div>
+</div>
+<!-- Text Content -->
+<div class="text-center space-y-sm">
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">Instant Help</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[85%] mx-auto">
+                    Emergency or planned, find verified professional handymen in your neighborhood within minutes.
+                </p>
+</div>
+<!-- Carousel Indicators -->
+<div class="flex space-x-xs pt-md">
+<div class="h-2 rounded-full bg-[#FF8A00] carousel-indicator-active transition-all duration-300"></div>
+<div class="h-2 w-2 rounded-full bg-outline-variant transition-all duration-300"></div>
+<div class="h-2 w-2 rounded-full bg-outline-variant transition-all duration-300"></div>
+</div>
+</div>
+</main>
+<!-- Footer Action Area -->
+<footer class="w-full max-w-lg mx-auto px-container-padding pb-12">
+<div class="flex flex-col space-y-md">
+<!-- Primary Action -->
+<button class="w-full h-14 bg-[#FF8A00] text-white rounded-2xl font-headline-sm font-semibold shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-transform flex items-center justify-center space-x-2">
+<span>Next</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<!-- Secondary Information -->
+<p class="text-center font-label-sm text-label-sm text-outline px-md">
+                By continuing, you agree to our Terms of Service and Privacy Policy. Handwerker is a platform for vetted service providers.
+            </p>
+</div>
+</footer>
+<!-- Hidden Step 2 Preview (Logic visualization for designer context) -->
+<!-- Verified Experts Step - Imagine this swiping in -->
+<!-- 
+    <div class="hidden">
+        <h1 class="font-headline-lg text-headline-lg">Verified Experts</h1>
+        <p class="font-body-lg text-body-lg">Every professional undergoes a 5-step background check and certification audit.</p>
+        <span class="material-symbols-outlined" data-weight="fill">verified</span>
+    </div>
+    -->
+<!-- Hidden Step 3 Preview -->
+<!-- Secure Payments Step - Imagine this swiping in -->
+<!-- 
+    <div class="hidden">
+        <h1 class="font-headline-lg text-headline-lg">Secure Payments</h1>
+        <p class="font-body-lg text-body-lg">End-to-end encryption with transparent pricing. Pay only when the job is done.</p>
+        <span class="material-symbols-outlined">payments</span>
+    </div>
+    -->
+</body></html>

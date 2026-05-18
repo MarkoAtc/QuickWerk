@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "tertiary-fixed": "#ffdcc4",
+                  "primary-fixed": "#dfe2f3",
+                  "on-error": "#ffffff",
+                  "inverse-primary": "#c3c6d7",
+                  "on-primary": "#ffffff",
+                  "on-error-container": "#93000a",
+                  "tertiary-container": "#2f1500",
+                  "on-secondary": "#ffffff",
+                  "surface-dim": "#dcd9da",
+                  "inverse-on-surface": "#f3f0f1",
+                  "on-tertiary-fixed-variant": "#6f3900",
+                  "on-primary-fixed": "#171b28",
+                  "primary-fixed-dim": "#c3c6d7",
+                  "on-tertiary-container": "#c96b00",
+                  "tertiary-fixed-dim": "#ffb77f",
+                  "surface-container": "#f0edee",
+                  "outline": "#76767c",
+                  "inverse-surface": "#313031",
+                  "on-secondary-fixed-variant": "#003fa4",
+                  "error": "#ba1a1a",
+                  "on-background": "#1c1b1c",
+                  "surface": "#fcf8f9",
+                  "surface-container-high": "#ebe7e8",
+                  "primary-container": "#171b28",
+                  "secondary-container": "#0266ff",
+                  "on-tertiary": "#ffffff",
+                  "on-surface": "#1c1b1c",
+                  "tertiary": "#000000",
+                  "on-tertiary-fixed": "#2f1500",
+                  "secondary": "#0050cc",
+                  "primary": "#000000",
+                  "on-secondary-fixed": "#001849",
+                  "surface-tint": "#5a5e6d",
+                  "surface-container-highest": "#e5e2e3",
+                  "on-surface-variant": "#46464c",
+                  "outline-variant": "#c7c6cc",
+                  "secondary-fixed": "#dae1ff",
+                  "surface-container-low": "#f6f3f4",
+                  "surface-container-lowest": "#ffffff",
+                  "error-container": "#ffdad6",
+                  "background": "#fcf8f9",
+                  "on-primary-fixed-variant": "#434654",
+                  "surface-variant": "#e5e2e3",
+                  "on-secondary-container": "#f9f7ff",
+                  "on-primary-container": "#808393",
+                  "surface-bright": "#fcf8f9",
+                  "secondary-fixed-dim": "#b3c5ff"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "gutter": "16px",
+                  "sm": "8px",
+                  "container-padding": "20px",
+                  "xl": "32px",
+                  "md": "16px",
+                  "unit": "4px",
+                  "xs": "4px",
+                  "lg": "24px"
+          },
+          "fontFamily": {
+                  "label-md": ["Inter"],
+                  "body-md": ["Inter"],
+                  "body-lg": ["Inter"],
+                  "headline-sm": ["Inter"],
+                  "headline-md": ["Inter"],
+                  "headline-lg": ["Inter"],
+                  "body-sm": ["Inter"],
+                  "label-sm": ["Inter"],
+                  "display-lg": ["Inter"]
+          },
+          "fontSize": {
+                  "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                  "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                  "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                  "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                  "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                  "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                  "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                  "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body { font-family: 'Inter', sans-serif; background-color: #fcf8f9; }
+    .glass-nav { background: rgba(252, 248, 249, 0.8); backdrop-filter: blur(20px); }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-background antialiased">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-2xl border-b border-outline-variant/20 dark:border-outline/20 shadow-sm">
+<div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-display-lg text-headline-sm font-bold tracking-tight text-primary">Checkout</h1>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex items-center gap-xs px-sm py-xs bg-secondary/10 rounded-full">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="lock" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-label-md text-label-sm text-secondary">SECURE</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Progress Bar -->
+<div class="fixed top-[64px] left-0 w-full h-[4px] bg-outline-variant/20 z-50">
+<div class="h-full bg-secondary-container w-[75%]"></div>
+</div>
+<main class="pt-[100px] pb-32 px-container-padding max-w-2xl mx-auto min-h-screen">
+<!-- Service Summary Header -->
+<section class="mb-xl">
+<div class="flex items-start justify-between mb-md">
+<div>
+<h2 class="font-headline-md text-headline-md mb-xs">Professional Plumbing Repair</h2>
+<p class="font-body-md text-on-surface-variant">Scheduled for Oct 24, 10:00 AM</p>
+</div>
+<div class="w-16 h-16 rounded-xl overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A macro close-up of a high-quality modern chrome faucet with water droplets, reflecting a clean and professional bathroom environment. The lighting is soft and natural, emphasizing textures and premium materials. The overall aesthetic is minimalist and high-fidelity, following a professional home services theme with bright white tones and subtle blue reflections." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBakr1-0zzN5Khr-qAXxNu51vrmxdEMdS9yrIi0gbIbX3pYrE2LwkfzTGsMUCx3bg9iXhU0AUgqrzADfkBpo6PdUtLh1xzcAebFgC7zLVMwhwnuA-v9ZlpXLTnEUuJJrWBOidr0GpOdVBLiPlWsTDR7St8_g_oB2rBvp6KP_j80NpsloW6TpTDNxrdG9qMs04nym2YOHh_sNN744c9R6bUnA_ycF8k1AIfiVy-2s9Fjaj-yqmNIWYFfRvMmWYqzKl_1GMsUeqy6la0B"/>
+</div>
+</div>
+</section>
+<!-- Payment Methods Section -->
+<section class="mb-xl">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-md">Payment Method</h3>
+<!-- Primary: Apple Pay (Bento-style large card) -->
+<button class="w-full mb-md bg-primary text-on-primary p-lg rounded-[24px] flex flex-col items-center justify-center gap-sm border border-white/10 shadow-lg active:scale-95 transition-transform">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[32px]" data-icon="apple">ios</span>
+<span class="text-2xl font-bold">Pay</span>
+</div>
+<p class="font-label-sm opacity-70">Express checkout enabled</p>
+</button>
+<!-- Secondary: Card Selection -->
+<div class="grid grid-cols-1 gap-md">
+<label class="relative flex items-center p-md bg-white border border-outline-variant rounded-xl cursor-pointer hover:border-secondary transition-colors group">
+<input checked="" class="hidden" name="payment" type="radio"/>
+<div class="flex items-center gap-md w-full">
+<div class="w-12 h-8 bg-surface-container rounded flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="credit_card">credit_card</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-md font-semibold">Visa ending in 4242</span>
+<span class="font-body-sm text-on-surface-variant">Expires 12/26</span>
+</div>
+<div class="ml-auto w-5 h-5 rounded-full border-2 border-secondary flex items-center justify-center">
+<div class="w-2.5 h-2.5 bg-secondary rounded-full"></div>
+</div>
+</div>
+</label>
+<button class="flex items-center gap-md p-md border-2 border-dashed border-outline-variant rounded-xl hover:bg-surface-container transition-colors group">
+<div class="w-12 h-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline group-hover:text-secondary" data-icon="add_circle">add_circle</span>
+</div>
+<span class="font-body-md font-medium text-on-surface-variant">Add new card</span>
+</button>
+</div>
+</section>
+<!-- Order Itemization -->
+<section class="bg-white p-lg rounded-[24px] border border-outline-variant shadow-sm mb-xl">
+<h3 class="font-headline-sm text-headline-sm mb-lg">Order Summary</h3>
+<div class="space-y-md">
+<div class="flex justify-between items-center">
+<span class="font-body-md text-on-surface-variant">Base Call-out Fee</span>
+<span class="font-body-md font-semibold">$45.00</span>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<span class="font-body-md text-on-surface-variant">Plumbing Labor</span>
+<p class="font-label-sm text-on-surface-variant/60">Estimated 2.0 hours at $85/hr</p>
+</div>
+<span class="font-body-md font-semibold">$170.00</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-xs">
+<span class="font-body-md text-on-surface-variant">Platform Service Fee</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant/40" data-icon="info">info</span>
+</div>
+<span class="font-body-md font-semibold">$12.50</span>
+</div>
+<div class="pt-md border-t border-outline-variant/30 flex justify-between items-center">
+<span class="font-headline-sm text-headline-sm">Total due</span>
+<div class="text-right">
+<span class="font-display-lg text-headline-lg text-primary">$227.50</span>
+<p class="font-label-sm text-secondary font-semibold">Taxes included</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Badges -->
+<div class="flex flex-col items-center gap-md opacity-60">
+<div class="flex gap-lg">
+<span class="material-symbols-outlined text-[32px]" data-icon="verified_user">verified_user</span>
+<span class="material-symbols-outlined text-[32px]" data-icon="security">security</span>
+<span class="material-symbols-outlined text-[32px]" data-icon="shield_with_heart">shield_with_heart</span>
+</div>
+<p class="font-body-sm text-center px-lg">Your payment is encrypted with AES-256 standards. Handwerker does not store your full card details.</p>
+</div>
+</main>
+<!-- Sticky Footer CTA -->
+<footer class="fixed bottom-0 w-full bg-surface/80 backdrop-blur-2xl border-t border-outline-variant/30 px-container-padding py-lg z-50">
+<div class="max-w-2xl mx-auto">
+<button class="w-full h-14 bg-[#FF8A00] text-white rounded-[16px] font-headline-sm flex items-center justify-center gap-sm shadow-xl active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="lock" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lock</span>
+        Pay Securely $227.50
+      </button>
+<p class="mt-sm text-center font-label-sm text-on-surface-variant">
+        By tapping "Pay Securely", you agree to our 
+        <a class="text-secondary underline" href="#">Terms of Service</a>
+</p>
+</div>
+</footer>
+</body></html>

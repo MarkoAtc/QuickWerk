@@ -1,80 +1,81 @@
 import { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
+import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
 const STEPS_BY_CATEGORY = {
   plumbing: [
     {
       id: 'issue',
-      question: "What's the main issue?",
-      subtitle: 'Select the option that best describes your plumbing emergency.',
+      question: "What's the issue?",
+      subtitle: 'Select the request type that best matches the real situation so the provider immediately understands the context.',
       options: [
-        { id: 'burst-pipe', label: 'Burst Pipe', icon: '💧' },
-        { id: 'blocked-drain', label: 'Blocked Drain', icon: '🚿' },
-        { id: 'toilet-overflow', label: 'Toilet Overflow', icon: '🚽' },
-        { id: 'no-hot-water', label: 'No Hot Water', icon: '🔥' },
-        { id: 'severe-leak', label: 'Severe Leak', icon: '💦' },
-        { id: 'something-else', label: 'Something Else', icon: '❓' },
+        { id: 'burst-pipe', label: 'Burst Pipe', icon: '💧', tone: colors.cta },
+        { id: 'blocked-drain', label: 'Blocked Drain', icon: '🚿', tone: colors.secondaryBright },
+        { id: 'toilet-overflow', label: 'Toilet Overflow', icon: '🚽', tone: colors.warning },
+        { id: 'no-hot-water', label: 'No Hot Water', icon: '🔥', tone: colors.cta },
+        { id: 'severe-leak', label: 'Severe Leak', icon: '💦', tone: colors.secondaryBright },
+        { id: 'something-else', label: 'Something Else', icon: '❓', tone: colors.textMuted },
       ],
     },
     {
       id: 'urgency',
-      question: "How urgent is it?",
-      subtitle: "We'll match you with the right availability.",
+      question: 'How urgent is it?',
+      subtitle: 'Urgency changes provider expectations, timing, and how the booking should be prioritized in the flow.',
       options: [
-        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
-        { id: 'today', label: 'Today', icon: '⏰' },
-        { id: 'this-week', label: 'This week', icon: '📅' },
-        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+        { id: 'emergency', label: 'Emergency', helper: 'Right now', icon: '🚨', tone: colors.cta },
+        { id: 'today', label: 'Today', helper: 'Same day', icon: '⏰', tone: colors.warning },
+        { id: 'this-week', label: 'This week', helper: 'Flexible timing', icon: '📅', tone: colors.secondaryBright },
+        { id: 'schedule', label: 'Schedule', helper: 'Choose later', icon: '🗓', tone: colors.textMuted },
       ],
     },
   ],
   electrical: [
     {
       id: 'issue',
-      question: "What's the main issue?",
-      subtitle: 'Select the option that best describes your electrical issue.',
+      question: "What's the issue?",
+      subtitle: 'Choose the problem that best describes the situation so the request already feels qualified before provider outreach.',
       options: [
-        { id: 'power-outage', label: 'Power Outage', icon: '⚡' },
-        { id: 'sparking', label: 'Sparking / Burning', icon: '🔥' },
-        { id: 'lighting-failure', label: 'Lighting Failure', icon: '💡' },
-        { id: 'circuit-breaker', label: 'Circuit Breaker Tripped', icon: '🔌' },
-        { id: 'outlet-dead', label: 'Dead Outlet', icon: '🖥️' },
-        { id: 'something-else', label: 'Something Else', icon: '❓' },
+        { id: 'power-outage', label: 'Power Outage', icon: '⚡', tone: colors.warning },
+        { id: 'sparking', label: 'Sparking', icon: '🔥', tone: colors.cta },
+        { id: 'lighting-failure', label: 'Lighting Failure', icon: '💡', tone: colors.secondaryBright },
+        { id: 'circuit-breaker', label: 'Breaker Tripped', icon: '🔌', tone: colors.secondaryBright },
+        { id: 'outlet-dead', label: 'Dead Outlet', icon: '🖥️', tone: colors.textMuted },
+        { id: 'something-else', label: 'Something Else', icon: '❓', tone: colors.textMuted },
       ],
     },
     {
       id: 'urgency',
-      question: "How urgent is it?",
-      subtitle: "We'll match you with the right availability.",
+      question: 'How urgent is it?',
+      subtitle: 'Set the right response expectation before the request is sent into the marketplace.',
       options: [
-        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
-        { id: 'today', label: 'Today', icon: '⏰' },
-        { id: 'this-week', label: 'This week', icon: '📅' },
-        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+        { id: 'emergency', label: 'Emergency', helper: 'Immediate hazard', icon: '🚨', tone: colors.cta },
+        { id: 'today', label: 'Today', helper: 'Fast resolution', icon: '⏰', tone: colors.warning },
+        { id: 'this-week', label: 'This week', helper: 'Planned visit', icon: '📅', tone: colors.secondaryBright },
+        { id: 'schedule', label: 'Schedule', helper: 'Later timing', icon: '🗓', tone: colors.textMuted },
       ],
     },
   ],
   default: [
     {
       id: 'issue',
-      question: "What's the main issue?",
-      subtitle: 'Tell us what you need help with.',
+      question: 'What kind of help do you need?',
+      subtitle: 'Start with the clearest possible framing of the request.',
       options: [
-        { id: 'general', label: 'General Issue', icon: '🔧' },
-        { id: 'something-else', label: 'Something Else', icon: '❓' },
+        { id: 'general-help', label: 'General help', icon: '🛠', tone: colors.secondaryBright },
+        { id: 'repair', label: 'Repair', icon: '🔧', tone: colors.cta },
+        { id: 'installation', label: 'Installation', icon: '📦', tone: colors.secondaryBright },
+        { id: 'inspection', label: 'Inspection', icon: '📝', tone: colors.warning },
       ],
     },
     {
       id: 'urgency',
-      question: "How urgent is it?",
-      subtitle: "We'll match you with the right availability.",
+      question: 'How urgent is it?',
+      subtitle: 'This helps shape provider expectations and the booking timeline.',
       options: [
-        { id: 'emergency', label: 'Emergency (now)', icon: '🚨' },
-        { id: 'today', label: 'Today', icon: '⏰' },
-        { id: 'this-week', label: 'This week', icon: '📅' },
-        { id: 'schedule', label: 'Schedule it', icon: '🗓' },
+        { id: 'today', label: 'Today', helper: 'Priority', icon: '⏰', tone: colors.warning },
+        { id: 'this-week', label: 'This week', helper: 'Standard timing', icon: '📅', tone: colors.secondaryBright },
+        { id: 'schedule', label: 'Schedule', helper: 'Flexible', icon: '🗓', tone: colors.textMuted },
       ],
     },
   ],
@@ -82,144 +83,137 @@ const STEPS_BY_CATEGORY = {
 
 const DEFAULT_ADDRESS = '1010 Vienna, AT';
 
-function ProgressBar({ step, total }) {
+function ProgressHeader({ step, total, onBack }) {
+  const progress = `${Math.min(100, Math.round((step / total) * 100))}%`;
+
   return (
-    <View
-      style={{
-        height: 4,
-        backgroundColor: colors.muted,
-        borderRadius: radius.pill,
-        overflow: 'hidden',
-        marginTop: spacing.sm,
-      }}
-    >
-      <View
-        style={{
-          height: '100%',
-          width: `${(step / total) * 100}%`,
-          backgroundColor: colors.primary,
-          borderRadius: radius.pill,
-        }}
-      />
+    <View style={{ backgroundColor: colors.primaryContainer, paddingHorizontal: spacing.container, paddingTop: spacing.md, paddingBottom: spacing.lg }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={onBack} testID="booking-wizard-back">
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: radius.full,
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 18 }}>←</Text>
+          </View>
+        </Pressable>
+
+        <View>
+          <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.labelMd, textAlign: 'right', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+            Booking flow
+          </Text>
+          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold, textAlign: 'right' }}>
+            Step {step} of {total}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ marginTop: spacing.lg, height: 6, borderRadius: radius.full, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' }}>
+        <View style={{ width: progress, height: '100%', backgroundColor: colors.secondaryBright }} />
+      </View>
     </View>
   );
 }
 
 function OptionTile({ option, selected, onPress }) {
   return (
-    <TouchableOpacity
-      onPress={() => onPress(option.id)}
-      accessibilityRole="button"
-      accessibilityLabel={option.label}
-      accessibilityState={{ selected }}
-      activeOpacity={0.85}
-      style={{
-        flex: 1,
-        height: 120,
-        backgroundColor: selected ? '#E8F5EE' : colors.surface,
-        borderRadius: radius.card,
-        borderWidth: 2,
-        borderColor: selected ? colors.primary : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: spacing.sm,
-        ...shadow.soft,
-      }}
-    >
-      <Text style={{ fontSize: 28 }}>{option.icon}</Text>
-      <Text
+    <Pressable accessibilityRole="button" onPress={() => onPress(option.id)} style={{ width: '48.6%' }} testID={`booking-option-${option.id}`}>
+      <View
         style={{
-          color: colors.text,
-          fontSize: typography.fontSize.sm,
-          fontWeight: typography.fontWeight.medium,
-          textAlign: 'center',
-          paddingHorizontal: spacing.xs,
+          minHeight: 180,
+          borderRadius: 32,
+          padding: spacing.xl,
+          justifyContent: 'space-between',
+          backgroundColor: '#FFFFFF',
+          borderWidth: 1.5,
+          borderColor: selected ? option.tone : colors.outlineVariant,
+          ...shadow.card,
         }}
       >
-        {option.label}
-      </Text>
-    </TouchableOpacity>
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 18,
+            backgroundColor: `${option.tone}14`,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 26 }}>{option.icon}</Text>
+        </View>
+
+        <View>
+          <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+            {option.label}
+          </Text>
+          {option.helper ? (
+            <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+              {option.helper}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
-function LocationStep({ address, onEdit, onConfirm, isSubmitting = false }) {
+function LocationCard({ address, onEdit, onConfirm, isSubmitting = false }) {
   return (
-    <View style={{ flex: 1 }}>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={`Location: ${address}. Tap to edit.`}
-        onPress={onEdit ?? (() => {})}
-        activeOpacity={0.85}
+    <View>
+      <View
         style={{
-          backgroundColor: colors.surface,
-          borderRadius: radius.card,
-          padding: spacing.lg,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          borderRadius: 32,
+          padding: spacing.xl,
+          backgroundColor: '#FFFFFF',
           borderWidth: 1,
-          borderColor: colors.muted,
-          marginBottom: spacing.xl,
-          ...shadow.soft,
+          borderColor: colors.outlineVariant,
+          ...shadow.card,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-          <Text style={{ fontSize: 24 }}>📍</Text>
-          <View>
-            <Text
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 }}>
+            <View
               style={{
-                color: colors.muted,
-                fontSize: typography.fontSize.xs,
-                fontWeight: typography.fontWeight.medium,
-                letterSpacing: 1,
-                marginBottom: 2,
+                width: 56,
+                height: 56,
+                borderRadius: 20,
+                backgroundColor: `${colors.secondaryBright}14`,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              YOUR LOCATION
-            </Text>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.fontSize.md,
-                fontWeight: typography.fontWeight.semibold,
-              }}
-            >
-              {address}
-            </Text>
+              <Text style={{ fontSize: 24 }}>📍</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                Service location
+              </Text>
+              <Text style={{ marginTop: spacing.xs, color: colors.text, fontSize: typography.fontSize.bodyLg, lineHeight: typography.lineHeight.bodyLg, fontWeight: typography.fontWeight.bold }}>
+                {address}
+              </Text>
+            </View>
           </View>
-        </View>
-        <Text style={{ color: colors.primary, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium }}>
-          Edit
-        </Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={isSubmitting ? 'Finding pros' : 'Confirm and find pros'}
-        accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
-        disabled={isSubmitting}
-        onPress={onConfirm ?? (() => {})}
-        testID="booking-wizard-confirm"
-        activeOpacity={0.85}
-        style={{
-          backgroundColor: isSubmitting ? colors.muted : colors.primary,
-          borderRadius: radius.pill,
-          height: 56,
-          alignItems: 'center',
-          justifyContent: 'center',
-          ...shadow.soft,
-        }}
-      >
-        <Text
-          style={{
-            color: colors.surface,
-            fontSize: typography.fontSize.md,
-            fontWeight: typography.fontWeight.bold,
-          }}
-        >
-          {isSubmitting ? 'Finding Pros…' : 'Confirm & Find Pros'}
-        </Text>
-      </TouchableOpacity>
+          <Pressable accessibilityRole="button" onPress={onEdit}>
+            <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>Edit</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <Pressable accessibilityLabel={isSubmitting ? 'Sending booking request' : 'Confirm booking request'} accessibilityRole="button" accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }} disabled={isSubmitting} onPress={onConfirm} testID="booking-wizard-confirm">
+        <View style={{ ...componentStyles.button.primary, marginTop: spacing.xl, opacity: isSubmitting ? 0.7 : 1, minHeight: 64 }}>
+          <Text style={{ color: colors.onPrimary, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+            {isSubmitting ? 'Sending request…' : 'Confirm & continue'}
+          </Text>
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -235,9 +229,9 @@ export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete,
 
   const handleBack = () => {
     if (step === 0) {
-      if (onBack) onBack();
+      onBack?.();
     } else {
-      setStep((s) => s - 1);
+      setStep((previous) => previous - 1);
     }
   };
 
@@ -245,135 +239,104 @@ export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete,
     if (step === 0) {
       setIssueType(optionId);
       setStep(1);
-    } else if (step === 1) {
+      return;
+    }
+
+    if (step === 1) {
       setUrgency(optionId);
       setStep(2);
     }
   };
 
   const handleConfirm = () => {
-    if (onComplete) {
-      onComplete({ issueType, urgency, address });
-    }
+    onComplete?.({ issueType, urgency, address });
   };
 
   const currentStep = steps[step];
+  const bookingSummary = [categoryKey, issueType, urgency].filter(Boolean);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={handleBack}
-            testID="booking-wizard-back"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: radius.pill,
-              backgroundColor: colors.surface,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: colors.muted,
-              marginRight: spacing.md,
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: 18 }}>←</Text>
-          </TouchableOpacity>
-          <Text
-            style={{
-              color: colors.muted,
-              fontSize: typography.fontSize.sm,
-              fontWeight: typography.fontWeight.medium,
-            }}
-          >
-            Step {step + 1} of {totalSteps}
-          </Text>
-        </View>
-        <ProgressBar step={step + 1} total={totalSteps} />
-      </View>
+      <ProgressHeader onBack={handleBack} step={step + 1} total={totalSteps} />
 
       <ScrollView
-        style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: spacing.container,
           paddingTop: spacing.xl,
           paddingBottom: spacing.xl,
         }}
+        style={{ flex: 1 }}
         testID="booking-wizard-screen"
       >
-        {step < 2 ? (
-          <>
-            {/* Step question */}
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.fontSize.xxl,
-                fontWeight: typography.fontWeight.bold,
-                lineHeight: 36,
-                marginBottom: spacing.sm,
-              }}
-            >
-              {currentStep.question}
-            </Text>
-            <Text
-              style={{
-                color: colors.muted,
-                fontSize: typography.fontSize.sm,
-                lineHeight: 20,
-                marginBottom: spacing.xl,
-              }}
-            >
-              {currentStep.subtitle}
-            </Text>
+        <View
+          style={{
+            borderRadius: 36,
+            padding: spacing.xl,
+            backgroundColor: '#FFFFFF',
+            borderWidth: 1,
+            borderColor: colors.outlineVariant,
+            ...shadow.card,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 52,
+              lineHeight: 56,
+              fontWeight: typography.fontWeight.bold,
+              letterSpacing: -1,
+              maxWidth: 860,
+            }}
+          >
+            {step < 2 ? currentStep.question : 'Confirm your request'}
+          </Text>
+          <Text
+            style={{
+              marginTop: spacing.md,
+              color: colors.textSoft,
+              fontSize: typography.fontSize.bodyLg,
+              lineHeight: typography.lineHeight.bodyLg,
+              maxWidth: 760,
+            }}
+          >
+            {step < 2
+              ? currentStep.subtitle
+              : 'Review the booking summary and send the request into the provider flow.'}
+          </Text>
 
-            {/* Options grid — 2 columns */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
-              {currentStep.options.map((option, index) => {
-                const isLeftColumn = index % 2 === 0;
+          {bookingSummary.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xl }}>
+              {bookingSummary.map((item) => (
+                <View
+                  key={item}
+                  style={{
+                    borderRadius: radius.pill,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                    backgroundColor: colors.surfaceContainer,
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold }}>
+                    {String(item).replace(/-/g, ' ')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ marginTop: spacing.xl }}>
+          {step < 2 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.lg }}>
+              {currentStep.options.map((option) => {
                 const selected = step === 0 ? issueType === option.id : urgency === option.id;
-                return (
-                  <View key={option.id} style={{ width: '47%' }}>
-                    <OptionTile
-                      option={option}
-                      selected={selected}
-                      onPress={handleOptionSelect}
-                    />
-                  </View>
-                );
+                return <OptionTile key={option.id} onPress={handleOptionSelect} option={option} selected={selected} />;
               })}
             </View>
-          </>
-        ) : (
-          <>
-            {/* Step 3: Location confirm */}
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: typography.fontSize.xxl,
-                fontWeight: typography.fontWeight.bold,
-                lineHeight: 36,
-                marginBottom: spacing.sm,
-              }}
-            >
-              Confirm your location
-            </Text>
-            <Text
-              style={{
-                color: colors.muted,
-                fontSize: typography.fontSize.sm,
-                lineHeight: 20,
-                marginBottom: spacing.xl,
-              }}
-            >
-              We'll send pros to this address.
-            </Text>
-            <LocationStep address={address} onEdit={onEdit} onConfirm={handleConfirm} isSubmitting={isSubmitting} />
-          </>
-        )}
+          ) : (
+            <LocationCard address={address} onConfirm={handleConfirm} onEdit={onEdit} isSubmitting={isSubmitting} />
+          )}
+        </View>
       </ScrollView>
     </View>
   );
