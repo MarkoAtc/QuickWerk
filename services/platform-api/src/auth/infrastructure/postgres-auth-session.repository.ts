@@ -6,6 +6,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidCredentialsError,
   InvalidOtpError,
   OtpExpiredError,
   OtpRequestCooldownError,
@@ -50,13 +51,13 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
       const user = userResult.rows[0];
 
       if (!user || !user.password_hash) {
-        throw new Error('Invalid email or password.');
+        throw new InvalidCredentialsError();
       }
 
       const isValidPassword = await verifyPassword(input.password, user.password_hash);
 
       if (!isValidPassword) {
-        throw new Error('Invalid email or password.');
+        throw new InvalidCredentialsError();
       }
 
       // Create session for authenticated user

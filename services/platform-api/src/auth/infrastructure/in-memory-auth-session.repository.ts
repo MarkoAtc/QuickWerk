@@ -8,6 +8,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidCredentialsError,
   InvalidOtpError,
   OtpExpiredError,
   OtpRequestCooldownError,
@@ -54,6 +55,18 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     const token = randomUUID();
     const now = new Date().toISOString();
     const registeredCustomer = this.customersByEmail.get(input.email);
+
+    if (isPasswordAuthInput(input)) {
+      // verifyHashedCode does a generic scrypt-hash + timingSafeEqual
+      // comparison — used here for passwords, and for OTP codes below.
+      const isValidPassword =
+        registeredCustomer && (await verifyHashedCode(input.password, registeredCustomer.passwordHash));
+
+      if (!isValidPassword) {
+        throw new InvalidCredentialsError();
+      }
+    }
+
     const role = isPasswordAuthInput(input) ? (registeredCustomer?.role ?? 'customer') : input.role;
     const session: AuthSession = {
       createdAt: now,

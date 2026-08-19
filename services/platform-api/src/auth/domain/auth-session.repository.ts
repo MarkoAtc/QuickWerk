@@ -47,6 +47,13 @@ export class DuplicateEmailError extends Error {
   }
 }
 
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super('Invalid email or password.');
+    this.name = 'InvalidCredentialsError';
+  }
+}
+
 export class InvalidOtpError extends Error {
   constructor(phone: string) {
     super(`Invalid or already-used verification code for phone "${phone}".`);
