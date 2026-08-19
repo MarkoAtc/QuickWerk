@@ -80,19 +80,21 @@ export class AuthService {
   }
 
   async signUp(
-    input: { name?: string; email?: string; password?: string },
+    input: { name?: string; email?: string; password?: string; role?: string },
     context?: { correlationId?: string },
   ) {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const name = this.normalizeName(input.name);
     const email = this.normalizeEmail(input.email);
     const password = this.normalizePassword(input.password);
+    const role = this.resolveRole(input.role);
 
     try {
       const session = await this.sessionStore.registerCustomer({
         name,
         email,
         password,
+        role,
       });
 
       logStructuredBreadcrumb({

@@ -15,14 +15,14 @@ export async function signInWithCredentials({ email, password, role }, sessionAp
   );
 }
 
-export async function signUpWithCredentials({ name, email, password }, sessionApiBase) {
-  const request = createSignUpRequest({ name, email, password });
+export async function signUpWithCredentials({ name, email, password, role }, sessionApiBase) {
+  const request = createSignUpRequest({ name, email, password, role });
   return runAuthRequest(
     request,
     {
       failurePrefix: 'Sign-up',
       unknownFailureMessage: 'Unknown sign-up failure.',
-      fallbackRole: 'customer',
+      fallbackRole: role ?? 'customer',
     },
     sessionApiBase,
   );

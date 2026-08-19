@@ -63,6 +63,29 @@ describe('auth-entry-actions', () => {
     }
   });
 
+  it('sends the requested role and reports it back on provider sign-up', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ token: 'tok-provider-sign-up' }),
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    try {
+      const result = await signUpWithCredentials(
+        { name: 'Priya Provider', email: 'priya@quickwerk.local', password: 'supersecure', role: 'provider' },
+        'http://localhost:3100',
+      );
+      expect(result).toMatchObject({ ok: true, sessionToken: 'tok-provider-sign-up', role: 'provider' });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(requestBody.role).toBe('provider');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('returns an error when auth responses omit token', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

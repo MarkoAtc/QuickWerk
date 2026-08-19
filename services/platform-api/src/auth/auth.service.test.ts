@@ -69,6 +69,32 @@ describe('AuthService', () => {
     }
   });
 
+  it('registers a provider on sign-up and preserves the role on a later sign-in', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const signedUp = await service.signUp({
+      name: 'Priya Provider',
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    expect(signedUp.sessionState).toBe('authenticated');
+    if (signedUp.sessionState === 'authenticated') {
+      expect(signedUp.session.role).toBe('provider');
+    }
+
+    const signedIn = await service.signIn({
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    expect(signedIn.sessionState).toBe('authenticated');
+    if (signedIn.sessionState === 'authenticated') {
+      expect(signedIn.session.role).toBe('provider');
+    }
+  });
+
   it('rejects invalid sign-up payloads', async () => {
     const service = new AuthService(new InMemoryAuthSessionRepository());
 

@@ -27,6 +27,7 @@ export type RegisterCustomerInput = {
   name: string;
   email: string;
   password: string;
+  role: SessionRole;
 };
 
 export type RequestOtpResult = {
