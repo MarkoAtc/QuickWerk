@@ -355,6 +355,14 @@ export function ProviderScreen() {
           </View>
         </Pressable>
 
+        <Pressable accessibilityRole="button" onPress={() => router.push('/payouts')} testID="provider-open-payouts" style={{ flex: 1 }}>
+          <View style={{ ...componentStyles.button.ghost, minHeight: 60 }}>
+            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              View payouts
+            </Text>
+          </View>
+        </Pressable>
+
         <Pressable accessibilityRole="button" onPress={handleSignOut} testID="provider-sign-out" style={{ width: 180 }}>
           <View style={{ ...componentStyles.button.ghost, minHeight: 60 }}>
             <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
