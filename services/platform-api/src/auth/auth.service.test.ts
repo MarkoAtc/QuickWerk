@@ -118,6 +118,16 @@ describe('AuthService', () => {
   describe('phone + OTP auth', () => {
     afterEach(() => {
       vi.useRealTimers();
+      delete process.env.PERSISTENCE_MODE;
+    });
+
+    it('never exposes devOtpCode outside in-memory persistence mode', async () => {
+      process.env.PERSISTENCE_MODE = 'postgres';
+      const service = new AuthService(new InMemoryAuthSessionRepository());
+
+      const requested = await service.requestOtp('+15550001234');
+
+      expect(requested).not.toHaveProperty('devOtpCode');
     });
 
     it('requests then verifies an OTP and returns an authenticated session', async () => {

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
+import { resolvePersistenceMode } from '../persistence/persistence-mode';
 import {
   AUTH_SESSION_REPOSITORY,
   AuthSession,
@@ -167,11 +168,13 @@ export class AuthService {
         details: { phone },
       });
 
+      const exposeDevCode = result.devCode && resolvePersistenceMode() === 'in-memory';
+
       return {
         resource: 'auth-otp',
         phone,
         expiresAt: result.expiresAt,
-        ...(result.devCode ? { devOtpCode: result.devCode } : {}),
+        ...(exposeDevCode ? { devOtpCode: result.devCode } : {}),
       } as const;
     } catch (error) {
       if (error instanceof OtpRequestCooldownError) {
