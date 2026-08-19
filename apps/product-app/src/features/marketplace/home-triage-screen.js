@@ -1,457 +1,359 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
+import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-const SERVICE_CATEGORIES = [
-  {
-    id: 'plumbing',
-    label: 'Plumbing',
-    description: 'Leaks, drains, hot water, emergency repairs',
-    icon: '🔧',
-    prosNearby: 4,
-    accent: colors.secondaryBright,
-    testID: 'service-card-plumbing',
-  },
-  {
-    id: 'electrical',
-    label: 'Electrical',
-    description: 'Power issues, sockets, lighting, urgent fixes',
-    icon: '⚡',
-    prosNearby: 2,
-    accent: colors.cta,
-    testID: 'service-card-electrical',
-  },
-  {
-    id: 'heating',
-    label: 'Heating',
-    description: 'Boilers, radiators, pressure, maintenance',
-    icon: '🔥',
-    prosNearby: 3,
-    accent: colors.warning,
-    testID: 'service-card-heating',
-  },
-  {
-    id: 'cleaning',
-    label: 'Cleaning',
-    description: 'Move-out cleans, offices, recurring support',
-    icon: '✨',
-    prosNearby: 6,
-    accent: colors.secondaryBright,
-    testID: 'service-card-cleaning',
-  },
+const CATEGORY_CHIPS = [
+  { id: 'plumbing', label: 'Plumber', icon: '🔧' },
+  { id: 'electrical', label: 'Electrician', icon: '⚡' },
+  { id: 'carpenter', label: 'Carpenter', icon: '🪚' },
+  { id: 'painting', label: 'Painter', icon: '🎨' },
 ];
 
-const TRUST_HIGHLIGHTS = [
-  { label: 'Verified providers', value: '120+' },
-  { label: 'Average response', value: '< 12 min' },
-  { label: 'Bookings completed', value: '2,400+' },
+const MAP_MARKERS = [
+  { id: 'plumber', label: 'Plumber $85/hr', top: '35%', left: '38%' },
+  { id: 'electrician', label: 'Electrician $90/hr', top: '52%', left: '64%' },
+  { id: 'carpenter', label: 'Carpenter $75/hr', top: '24%', left: '18%' },
 ];
 
 const CURATED_MATCHES = [
   {
-    id: 'ak-sanitary',
-    name: 'AK Sanitary Services',
-    specialty: 'Emergency plumbing • Vienna',
+    id: 'marcus-weber',
+    name: 'Marcus Weber',
+    initials: 'MW',
+    specialty: 'Master Electrician',
     rating: '4.9',
-    eta: '3 min response',
+    distance: '2.4km',
+    rate: '$90/hr',
   },
   {
-    id: 'voltworks',
-    name: 'VoltWorks Electrical',
-    specialty: 'Electrical repair • 1010-1090',
+    id: 'sarah-chen',
+    name: 'Sarah Chen',
+    initials: 'SC',
+    specialty: 'Licensed Plumber',
     rating: '4.8',
-    eta: '12 min response',
+    distance: '1.2km',
+    rate: '$85/hr',
   },
   {
-    id: 'cleanflow',
-    name: 'CleanFlow Facility Care',
-    specialty: 'Office cleaning • Same-day slots',
-    rating: '4.7',
-    eta: 'Today available',
+    id: 'tom-jenkins',
+    name: 'Tom Jenkins',
+    initials: 'TJ',
+    specialty: 'Expert Carpenter',
+    rating: '5.0',
+    distance: '3.8km',
+    rate: '$75/hr',
   },
 ];
 
-function AddressPill({ address, onPress }) {
+function Header({ address, onChangeAddress }) {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 30,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.container,
+        paddingVertical: spacing.md,
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        borderBottomWidth: 1,
+        borderBottomColor: colors.outlineVariant,
+      }}
+    >
+      <Pressable
+        accessibilityLabel={`Current location: ${address}. Tap to change.`}
+        accessibilityRole="button"
+        onPress={onChangeAddress}
+        testID="home-triage-address-pill"
+        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}
+      >
+        <Text style={{ color: colors.text, fontSize: 20, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+          QuickWerk
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }} numberOfLines={1}>
+          · {address}
+        </Text>
+      </Pressable>
+
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: radius.full,
+          backgroundColor: colors.primaryContainer,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 2,
+          borderColor: colors.secondaryBright,
+        }}
+      >
+        <Text style={{ color: '#FFFFFF', fontSize: 16 }}>👤</Text>
+      </View>
+    </View>
+  );
+}
+
+function MapMarker({ marker }) {
+  return (
+    <View style={{ position: 'absolute', top: marker.top, left: marker.left, alignItems: 'center' }}>
+      <View
+        style={{
+          borderRadius: radius.md,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.xs,
+          backgroundColor: colors.secondaryBright,
+          marginBottom: spacing.xs,
+          ...shadow.card,
+        }}
+      >
+        <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold, whiteSpace: 'nowrap' }}>
+          {marker.label}
+        </Text>
+      </View>
+      <Text style={{ color: colors.secondaryBright, fontSize: 22 }}>📍</Text>
+    </View>
+  );
+}
+
+function SearchBar() {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        borderRadius: radius.lg,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        borderWidth: 1,
+        borderColor: colors.outlineVariant,
+        ...shadow.elevated,
+      }}
+    >
+      <Text style={{ fontSize: 16 }}>🔍</Text>
+      <TextInput
+        editable={false}
+        placeholder="Search for professionals..."
+        placeholderTextColor={colors.textMuted}
+        style={{ flex: 1, fontSize: typography.fontSize.bodyMd, color: colors.text }}
+        testID="home-triage-search-input"
+      />
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: radius.md,
+          backgroundColor: colors.primaryContainer,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: '#FFFFFF', fontSize: 14 }}>⚙️</Text>
+      </View>
+    </View>
+  );
+}
+
+function CategoryChip({ chip, isSelected, onPress }) {
   return (
     <Pressable
-      accessibilityLabel={`Current location: ${address}. Tap to change.`}
+      accessibilityLabel={chip.label}
       accessibilityRole="button"
-      onPress={onPress}
-      style={{ alignSelf: 'flex-start' }}
-      testID="home-triage-address-pill"
+      onPress={() => onPress(chip.id)}
+      testID={`home-triage-chip-${chip.id}`}
     >
       <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: spacing.sm,
+          gap: spacing.xs,
           borderRadius: radius.pill,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
-          backgroundColor: '#FFFFFF',
-          borderWidth: 1,
+          backgroundColor: isSelected ? colors.secondaryBright : 'rgba(255,255,255,0.9)',
+          borderWidth: isSelected ? 0 : 1,
           borderColor: colors.outlineVariant,
           ...shadow.card,
         }}
       >
-        <Text style={{ color: colors.secondaryBright, fontSize: 14 }}>📍</Text>
-        <Text style={{ color: colors.text, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>{address}</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 12 }}>›</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function TrustMetric({ label, value }) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        borderRadius: 24,
-        padding: spacing.lg,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: colors.outlineVariant,
-        ...shadow.card,
-      }}
-    >
-      <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-        {label}
-      </Text>
-      <Text style={{ marginTop: spacing.sm, color: colors.text, fontSize: 30, lineHeight: 34, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function ServiceCard({ category, onPress }) {
-  return (
-    <Pressable
-      accessibilityLabel={`${category.label}. ${category.prosNearby} providers nearby.`}
-      accessibilityRole="button"
-      onPress={() => onPress(category.id)}
-      style={{ width: '48.8%' }}
-      testID={category.testID}
-    >
-      <View
-        style={{
-          minHeight: 260,
-          borderRadius: 32,
-          padding: spacing.xl,
-          justifyContent: 'space-between',
-          backgroundColor: '#FFFFFF',
-          borderWidth: 1,
-          borderColor: colors.outlineVariant,
-          ...shadow.card,
-        }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 20,
-              backgroundColor: `${category.accent}14`,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 28 }}>{category.icon}</Text>
-          </View>
-
-          <View
-            style={{
-              borderRadius: radius.pill,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm,
-              backgroundColor: colors.surfaceContainer,
-            }}
-          >
-            <Text style={{ color: category.accent, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              {category.prosNearby} nearby
-            </Text>
-          </View>
-        </View>
-
-        <View>
-          <Text style={{ color: colors.text, fontSize: 34, lineHeight: 38, fontWeight: typography.fontWeight.bold, letterSpacing: -0.5 }}>
-            {category.label}
-          </Text>
-          <Text style={{ marginTop: spacing.md, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-            {category.description}
-          </Text>
-          <Text style={{ marginTop: spacing.lg, color: colors.primary, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>
-            Explore category →
-          </Text>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function MatchCard({ match, onBrowseProviders }) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onBrowseProviders} style={{ width: 320 }}>
-      <View
-        style={{
-          borderRadius: 28,
-          padding: spacing.lg,
-          backgroundColor: '#FFFFFF',
-          borderWidth: 1,
-          borderColor: colors.outlineVariant,
-          ...shadow.card,
-        }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
-              {match.name}
-            </Text>
-            <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
-              {match.specialty}
-            </Text>
-          </View>
-          <Text style={{ color: '#8A6500', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>★ {match.rating}</Text>
-        </View>
-        <Text style={{ marginTop: spacing.lg, color: colors.secondaryBright, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>
-          {match.eta}
+        <Text style={{ fontSize: 14 }}>{chip.icon}</Text>
+        <Text
+          style={{
+            color: isSelected ? '#FFFFFF' : colors.text,
+            fontSize: typography.fontSize.labelMd,
+            fontWeight: typography.fontWeight.bold,
+          }}
+        >
+          {chip.label}
         </Text>
       </View>
     </Pressable>
   );
 }
 
-function LiveMapPreview() {
-  const providers = [
-    { initials: 'AK', eta: '3 min', top: 48, left: 44 },
-    { initials: 'JS', eta: '5 min', top: 88, right: 48 },
-    { initials: 'MP', eta: '8 min', bottom: 36, left: 120 },
-  ];
-
+function SosButton({ onPress }) {
   return (
-    <View
-      style={{
-        marginTop: spacing.xl,
-        borderRadius: 36,
-        overflow: 'hidden',
-        backgroundColor: '#EAF1F8',
-        borderWidth: 1,
-        borderColor: '#DCE4EE',
-        minHeight: 440,
-        ...shadow.card,
-      }}
+    <Pressable
+      accessibilityLabel="Request emergency help"
+      accessibilityRole="button"
+      onPress={onPress}
+      testID="home-triage-sos"
+      style={{ position: 'absolute', right: spacing.container, top: '50%', marginTop: -32, zIndex: 30 }}
     >
-      <View style={{ position: 'absolute', inset: 0, backgroundColor: '#EEF3F8' }} />
-
       <View
         style={{
-          position: 'absolute',
-          top: 20,
-          left: 20,
-          right: 20,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
+          width: 64,
+          height: 64,
+          borderRadius: radius.full,
+          backgroundColor: colors.cta,
           alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 4,
+          borderColor: '#FFFFFF',
+          ...shadow.elevated,
         }}
       >
-        <View
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.92)',
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            borderWidth: 1,
-            borderColor: 'rgba(199,198,204,0.4)',
-          }}
-        >
-          <Text style={{ color: colors.text, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.semibold }}>
-            Live provider map
-          </Text>
-        </View>
-
-        <View
-          style={{
-            backgroundColor: 'rgba(255,138,0,0.12)',
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-          }}
-        >
-          <Text style={{ color: colors.cta, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-            3 nearby now
-          </Text>
-        </View>
+        <Text style={{ fontSize: 20 }}>⚠️</Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: typography.fontWeight.bold, letterSpacing: 1 }}>SOS</Text>
       </View>
+    </Pressable>
+  );
+}
 
-      {providers.map((provider) => (
-        <View
-          key={provider.initials}
-          style={{
-            position: 'absolute',
-            top: provider.top,
-            left: provider.left,
-            right: provider.right,
-            bottom: provider.bottom,
-            alignItems: 'center',
-          }}
-        >
+function MatchCard({ match, onPress }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} testID={`home-triage-match-${match.id}`} style={{ width: 260 }}>
+      <View
+        style={{
+          borderRadius: 24,
+          padding: spacing.md,
+          backgroundColor: '#FFFFFF',
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          ...shadow.elevated,
+        }}
+      >
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View
             style={{
               width: 56,
               height: 56,
-              borderRadius: radius.full,
-              backgroundColor: colors.primaryContainer,
-              borderWidth: 2,
-              borderColor: '#FFFFFF',
+              borderRadius: radius.lg,
+              backgroundColor: `${colors.secondaryBright}14`,
               alignItems: 'center',
               justifyContent: 'center',
-              ...shadow.card,
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.labelMd }}>
-              {provider.initials}
+            <Text style={{ color: colors.secondaryBright, fontSize: 18, fontWeight: typography.fontWeight.bold }}>
+              {match.initials}
             </Text>
           </View>
-          <View
-            style={{
-              marginTop: spacing.xs,
-              borderRadius: radius.pill,
-              backgroundColor: '#FFFFFF',
-              paddingHorizontal: spacing.sm,
-              paddingVertical: 4,
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-            }}
-          >
-            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.semibold }}>
-              {provider.eta}
-            </Text>
+
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold, flexShrink: 1 }}>
+                {match.name}
+              </Text>
+              <View
+                style={{
+                  borderRadius: radius.sm,
+                  paddingHorizontal: spacing.xs,
+                  paddingVertical: 2,
+                  backgroundColor: 'rgba(255, 214, 0, 0.2)',
+                }}
+              >
+                <Text style={{ color: '#8A6500', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>
+                  ★ {match.rating}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ marginTop: 2, color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>{match.specialty}</Text>
           </View>
         </View>
-      ))}
 
-      <View
-        style={{
-          position: 'absolute',
-          left: 24,
-          right: 24,
-          bottom: 24,
-          borderRadius: 32,
-          padding: spacing.xl,
-          backgroundColor: 'rgba(255,255,255,0.94)',
-          borderWidth: 1,
-          borderColor: 'rgba(199,198,204,0.28)',
-          ...shadow.elevated,
-        }}
-      >
-        <Text style={{ color: colors.text, fontSize: 40, lineHeight: 44, fontWeight: typography.fontWeight.bold, letterSpacing: -0.7, maxWidth: 620 }}>
-          Fast local help, without the old marketplace clutter.
-        </Text>
-        <Text style={{ marginTop: spacing.md, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 560 }}>
-          Browse verified trades, compare availability, and continue straight into booking with a calmer, more premium flow.
-        </Text>
+        <View style={{ marginTop: spacing.sm, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd }}>📍 {match.distance}</Text>
+          <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
+            {match.rate}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            marginTop: spacing.sm,
+            borderRadius: radius.md,
+            paddingVertical: spacing.sm,
+            backgroundColor: colors.secondaryBright,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>Book Instantly</Text>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onChangeAddress, onBrowseProviders }) {
-  return (
-    <ScrollView
-      contentContainerStyle={{
-        paddingHorizontal: spacing.container,
-        paddingTop: spacing.xl,
-        paddingBottom: spacing.xl,
-      }}
-      style={{ flex: 1, backgroundColor: colors.background }}
-      testID="home-triage-screen"
-    >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl }}>
-        <AddressPill address={address} onPress={onChangeAddress} />
+  const [selectedChip, setSelectedChip] = useState(CATEGORY_CHIPS[0].id);
 
+  const handleSelectCategory = (categoryId) => {
+    setSelectedChip(categoryId);
+    (onSelectCategory ?? (() => {}))(categoryId);
+  };
+
+  const handleMatchPress = onBrowseProviders ?? (() => {});
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }} testID="home-triage-screen">
+      <Header address={address} onChangeAddress={onChangeAddress} />
+
+      <View style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#E5E7EB', paddingTop: 64 }}>
         <View
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: radius.full,
-            backgroundColor: colors.primaryContainer,
-            alignItems: 'center',
-            justifyContent: 'center',
-            ...shadow.card,
+            position: 'absolute',
+            top: 64,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#E5E7EB',
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 18 }}>👤</Text>
+          {MAP_MARKERS.map((marker) => (
+            <MapMarker key={marker.id} marker={marker} />
+          ))}
+        </View>
+
+        <View style={{ zIndex: 20, paddingHorizontal: spacing.container, paddingTop: spacing.md, gap: spacing.sm }}>
+          <SearchBar />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
+            {CATEGORY_CHIPS.map((chip) => (
+              <CategoryChip key={chip.id} chip={chip} isSelected={selectedChip === chip.id} onPress={handleSelectCategory} />
+            ))}
+          </ScrollView>
+        </View>
+
+        <SosButton onPress={() => handleSelectCategory('emergency')} />
+
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: spacing.xl, zIndex: 20 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: spacing.container }}
+          >
+            {CURATED_MATCHES.map((match) => (
+              <MatchCard key={match.id} match={match} onPress={handleMatchPress} />
+            ))}
+          </ScrollView>
         </View>
       </View>
-
-      <View style={{ marginBottom: spacing.lg, maxWidth: 920 }}>
-        <Text style={{ color: colors.text, fontSize: 64, lineHeight: 68, fontWeight: typography.fontWeight.bold, letterSpacing: -1.4, maxWidth: 880 }}>
-          Find the right pro, without the marketplace noise.
-        </Text>
-        <Text style={{ marginTop: spacing.lg, color: colors.textSoft, fontSize: typography.fontSize.bodyLg, lineHeight: typography.lineHeight.bodyLg, maxWidth: 700 }}>
-          Choose a service category, compare trusted professionals, and move through booking in a flow that actually feels complete.
-        </Text>
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
-        {TRUST_HIGHLIGHTS.map((item) => (
-          <TrustMetric key={item.label} label={item.label} value={item.value} />
-        ))}
-      </View>
-
-      <View style={{ marginTop: spacing.xxl }}>
-        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
-          Popular service categories
-        </Text>
-        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-          Start with the most common demand types customers ask for on the platform.
-        </Text>
-      </View>
-
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.lg, marginTop: spacing.xl }}>
-        {SERVICE_CATEGORIES.map((category) => (
-          <ServiceCard key={category.id} category={category} onPress={onSelectCategory ?? (() => {})} />
-        ))}
-      </View>
-
-      <View style={{ marginTop: spacing.xxl }}>
-        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
-          Curated nearby matches
-        </Text>
-        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-          Give the customer immediate confidence that real providers exist before they drill deeper.
-        </Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.sm }}>
-        {CURATED_MATCHES.map((match) => (
-          <MatchCard key={match.id} match={match} onBrowseProviders={onBrowseProviders ?? (() => {})} />
-        ))}
-      </ScrollView>
-
-      <LiveMapPreview />
-
-      {onBrowseProviders ? (
-        <Pressable accessibilityLabel="Browse all providers" accessibilityRole="button" onPress={onBrowseProviders} testID="home-triage-browse-providers">
-          <View
-            style={{
-              ...componentStyles.button.dark,
-              marginTop: spacing.xl,
-              flexDirection: 'row',
-              gap: spacing.sm,
-              minHeight: 68,
-              borderRadius: 24,
-            }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              Browse all providers
-            </Text>
-            <Text style={{ color: '#FFFFFF', fontSize: 16 }}>→</Text>
-          </View>
-        </Pressable>
-      ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
