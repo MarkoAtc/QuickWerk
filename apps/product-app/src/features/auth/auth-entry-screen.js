@@ -344,23 +344,6 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
             value={password}
           />
 
-          {mode === 'create-account' && role !== 'customer' ? (
-            <View
-              style={{
-                borderRadius: radius.lg,
-                padding: spacing.md,
-                backgroundColor: 'rgba(255, 138, 0, 0.12)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 138, 0, 0.24)',
-                marginBottom: spacing.md,
-              }}
-            >
-              <Text style={{ color: '#FFD8B0', fontSize: typography.fontSize.bodySm }}>
-                Provider account creation is not available yet. Providers can currently use sign-in only.
-              </Text>
-            </View>
-          ) : null}
-
           <Pressable
             accessibilityLabel={ctaLabel}
             accessibilityRole="button"

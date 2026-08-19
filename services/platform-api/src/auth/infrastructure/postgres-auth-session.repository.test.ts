@@ -135,6 +135,7 @@ describe('PostgresAuthSessionRepository', () => {
       name: 'Marta Meister',
       email: 'MARTA@quickwerk.local',
       password: 'supersecure',
+      role: 'customer',
     });
 
     expect(registration).toMatchObject({
@@ -145,10 +146,47 @@ describe('PostgresAuthSessionRepository', () => {
     });
 
     const registrationQueryParams = query.mock.calls[0]?.[1] as unknown[] | undefined;
-    const storedPasswordHash = registrationQueryParams?.[3];
+    expect(registrationQueryParams?.[2]).toBe('customer');
+    const storedPasswordHash = registrationQueryParams?.[4];
     expect(typeof storedPasswordHash).toBe('string');
     expect(storedPasswordHash).toMatch(/^scrypt\$/);
     expect(storedPasswordHash).not.toBe('supersecure');
+  });
+
+  it('registers a provider account with the requested role', async () => {
+    const query = vi.fn().mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [{ id: '22222222-2222-4222-8222-222222222222' }],
+    }).mockResolvedValueOnce({
+      rowCount: 1,
+      rows: [
+        {
+          token: '11111111-1111-4111-8111-111111111111',
+          user_id: '22222222-2222-4222-8222-222222222222',
+          created_at: '2026-03-20T12:00:00.000Z',
+          expires_at: '2026-03-20T12:30:00.000Z',
+        },
+      ],
+    });
+
+    const repository = new PostgresAuthSessionRepository(
+      {
+        query,
+        withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }),
+      } as unknown as PostgresClient,
+      postgresConfig,
+    );
+
+    const registration = await repository.registerCustomer({
+      name: 'Priya Provider',
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    expect(registration.role).toBe('provider');
+    const registrationQueryParams = query.mock.calls[0]?.[1] as unknown[] | undefined;
+    expect(registrationQueryParams?.[2]).toBe('provider');
   });
 
   it('throws a duplicate-email error when registration email already exists', async () => {
@@ -170,6 +208,7 @@ describe('PostgresAuthSessionRepository', () => {
         name: 'Marta Meister',
         email: 'marta@quickwerk.local',
         password: 'supersecure',
+        role: 'customer',
       }),
     ).rejects.toThrow('already exists');
   });

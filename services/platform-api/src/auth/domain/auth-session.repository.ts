@@ -27,6 +27,7 @@ export type RegisterCustomerInput = {
   name: string;
   email: string;
   password: string;
+  role: SessionRole;
 };
 
 export type RequestOtpResult = {
@@ -43,6 +44,13 @@ export class DuplicateEmailError extends Error {
   constructor(email: string) {
     super(`An account with email "${email}" already exists.`);
     this.name = 'DuplicateEmailError';
+  }
+}
+
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super('Invalid email or password.');
+    this.name = 'InvalidCredentialsError';
   }
 }
 

@@ -46,17 +46,12 @@ export default function ProductAuthProviderScreen() {
   };
 
   const handleCreateAccount = async ({ name, email, password, role }) => {
-    if (role !== 'customer') {
-      setError('Provider account creation is not available yet.');
-      return;
-    }
-
     if (loading) return;
     setLoading(true);
     setError(null);
 
     try {
-      const result = await signUpWithCredentials({ name, email, password });
+      const result = await signUpWithCredentials({ name, email, password, role });
 
       if (!result.ok) {
         setError(result.error);
@@ -69,7 +64,7 @@ export default function ProductAuthProviderScreen() {
         role: result.role,
       });
 
-      router.replace('/home-triage');
+      router.replace(result.role === 'provider' ? '/provider' : '/home-triage');
     } finally {
       setLoading(false);
     }

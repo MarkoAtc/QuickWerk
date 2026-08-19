@@ -68,6 +68,7 @@ export type SignUpRequestBody = {
   name?: string;
   email?: string;
   password?: string;
+  role?: SessionRole;
 };
 
 export type OtpRequestBody = {

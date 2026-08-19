@@ -42,6 +42,7 @@ describe('InMemoryAuthSessionRepository', () => {
       name: 'Marta Meister',
       email: 'marta@quickwerk.local',
       password: 'supersecure',
+      role: 'customer',
     });
 
     await expect(
@@ -49,8 +50,53 @@ describe('InMemoryAuthSessionRepository', () => {
         name: 'Marta Meister',
         email: 'MARTA@quickwerk.local',
         password: 'supersecure',
+        role: 'customer',
       }),
     ).rejects.toThrow('already exists');
+  });
+
+  it('registers a provider and preserves the role on a later password sign-in', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    const registered = await repository.registerCustomer({
+      name: 'Priya Provider',
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    expect(registered.role).toBe('provider');
+
+    const signedIn = await repository.createSession({
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    expect(signedIn.role).toBe('provider');
+    expect(signedIn.userId).toBe(registered.userId);
+  });
+
+  it('rejects password sign-in with an incorrect password', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    await repository.registerCustomer({
+      name: 'Priya Provider',
+      email: 'priya3@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    await expect(
+      repository.createSession({ email: 'priya3@quickwerk.local', password: 'wrong-password' }),
+    ).rejects.toThrow('Invalid email or password.');
+  });
+
+  it('rejects password sign-in for an email that was never registered', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    await expect(
+      repository.createSession({ email: 'nobody@quickwerk.local', password: 'anything' }),
+    ).rejects.toThrow('Invalid email or password.');
   });
 
   it('locks out OTP verification after exceeding the attempt cap', async () => {

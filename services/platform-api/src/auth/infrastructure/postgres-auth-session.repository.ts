@@ -6,6 +6,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidCredentialsError,
   InvalidOtpError,
   OtpExpiredError,
   OtpRequestCooldownError,
@@ -50,13 +51,13 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
       const user = userResult.rows[0];
 
       if (!user || !user.password_hash) {
-        throw new Error('Invalid email or password.');
+        throw new InvalidCredentialsError();
       }
 
       const isValidPassword = await verifyPassword(input.password, user.password_hash);
 
       if (!isValidPassword) {
-        throw new Error('Invalid email or password.');
+        throw new InvalidCredentialsError();
       }
 
       // Create session for authenticated user
@@ -131,10 +132,10 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
     return this.postgresClient.withTransaction(async (client) => {
       const userResult = await client.query<{ id: string }>(
         `INSERT INTO users (id, email, role, full_name, password_hash)
-         VALUES ($1::uuid, $2, 'customer', $3, $4)
+         VALUES ($1::uuid, $2, $3, $4, $5)
          ON CONFLICT (email) DO NOTHING
          RETURNING id::text`,
-        [userId, normalizedEmail, input.name, passwordHash],
+        [userId, normalizedEmail, input.role, input.name, passwordHash],
       );
 
       const createdUser = userResult.rows[0];
@@ -160,7 +161,7 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
         createdAt: toIsoString(row.created_at),
         expiresAt: toIsoString(row.expires_at),
         email: normalizedEmail,
-        role: 'customer' as const,
+        role: input.role,
         token: row.token,
         userId: row.user_id,
       };

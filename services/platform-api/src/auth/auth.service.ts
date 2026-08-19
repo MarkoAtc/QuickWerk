@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import { resolvePersistenceMode } from '../persistence/persistence-mode';
@@ -8,6 +8,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidCredentialsError,
   InvalidOtpError,
   OtpExpiredError,
   OtpRequestCooldownError,
@@ -61,38 +62,54 @@ export class AuthService {
           role,
         };
 
-    const session = await this.sessionStore.createSession(createSessionInput);
+    try {
+      const session = await this.sessionStore.createSession(createSessionInput);
 
-    logStructuredBreadcrumb({
-      event: 'auth.sign-in.write',
-      correlationId,
-      status: 'succeeded',
-      details: {
-        userId: session.userId,
-        role,
-      },
-    });
+      logStructuredBreadcrumb({
+        event: 'auth.sign-in.write',
+        correlationId,
+        status: 'succeeded',
+        details: {
+          userId: session.userId,
+          role,
+        },
+      });
 
-    return {
-      ...(await this.getSession(session.token)),
-      token: session.token,
-    } as const;
+      return {
+        ...(await this.getSession(session.token)),
+        token: session.token,
+      } as const;
+    } catch (error) {
+      if (error instanceof InvalidCredentialsError) {
+        logStructuredBreadcrumb({
+          event: 'auth.sign-in.write',
+          correlationId,
+          status: 'failed',
+          details: { reason: 'invalid-credentials' },
+        });
+        throw new UnauthorizedException('Invalid email or password.');
+      }
+
+      throw error;
+    }
   }
 
   async signUp(
-    input: { name?: string; email?: string; password?: string },
+    input: { name?: string; email?: string; password?: string; role?: string },
     context?: { correlationId?: string },
   ) {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const name = this.normalizeName(input.name);
     const email = this.normalizeEmail(input.email);
     const password = this.normalizePassword(input.password);
+    const role = this.resolveSelfServiceRole(input.role);
 
     try {
       const session = await this.sessionStore.registerCustomer({
         name,
         email,
         password,
+        role,
       });
 
       logStructuredBreadcrumb({
@@ -259,6 +276,20 @@ export class AuthService {
     }
 
     return 'customer';
+  }
+
+  // Public self-service sign-up: 'operator' is never self-service-creatable
+  // (would be a privilege-escalation path via a public, unauthenticated
+  // endpoint). signIn still allows resolving an existing operator's role via
+  // resolveRole above — this guard is sign-up-only.
+  private resolveSelfServiceRole(role: string | undefined): SessionRole {
+    const resolved = this.resolveRole(role);
+
+    if (resolved === 'operator') {
+      throw new BadRequestException('Operator accounts cannot self-register.');
+    }
+
+    return resolved;
   }
 
   private normalizeName(name: string | undefined): string {

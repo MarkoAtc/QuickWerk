@@ -8,6 +8,7 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidCredentialsError,
   InvalidOtpError,
   OtpExpiredError,
   OtpRequestCooldownError,
@@ -23,6 +24,7 @@ type RegisteredCustomer = {
   name: string;
   email: string;
   passwordHash: string;
+  role: SessionRole;
 };
 
 type OtpRecord = {
@@ -53,7 +55,19 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     const token = randomUUID();
     const now = new Date().toISOString();
     const registeredCustomer = this.customersByEmail.get(input.email);
-    const role = isPasswordAuthInput(input) ? 'customer' : input.role;
+
+    if (isPasswordAuthInput(input)) {
+      // verifyHashedCode does a generic scrypt-hash + timingSafeEqual
+      // comparison — used here for passwords, and for OTP codes below.
+      const isValidPassword =
+        registeredCustomer && (await verifyHashedCode(input.password, registeredCustomer.passwordHash));
+
+      if (!isValidPassword) {
+        throw new InvalidCredentialsError();
+      }
+    }
+
+    const role = isPasswordAuthInput(input) ? (registeredCustomer?.role ?? 'customer') : input.role;
     const session: AuthSession = {
       createdAt: now,
       expiresAt: computeSessionExpiryIso(now, this.sessionTtlSeconds),
@@ -75,17 +89,18 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
       throw new DuplicateEmailError(normalizedEmail);
     }
 
-    const userId = `customer-${randomUUID().slice(0, 8)}`;
+    const userId = `${input.role}-${randomUUID().slice(0, 8)}`;
     this.customersByEmail.set(normalizedEmail, {
       userId,
       name: input.name,
       email: normalizedEmail,
       passwordHash: await hashPassword(input.password),
+      role: input.role,
     });
 
     return this.createSession({
       email: normalizedEmail,
-      role: 'customer',
+      role: input.role,
     });
   }
 

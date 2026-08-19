@@ -69,6 +69,68 @@ describe('AuthService', () => {
     }
   });
 
+  it('registers a provider on sign-up and preserves the role on a later sign-in', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    const signedUp = await service.signUp({
+      name: 'Priya Provider',
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    expect(signedUp.sessionState).toBe('authenticated');
+    if (signedUp.sessionState === 'authenticated') {
+      expect(signedUp.session.role).toBe('provider');
+    }
+
+    const signedIn = await service.signIn({
+      email: 'priya@quickwerk.local',
+      password: 'supersecure',
+    });
+
+    expect(signedIn.sessionState).toBe('authenticated');
+    if (signedIn.sessionState === 'authenticated') {
+      expect(signedIn.session.role).toBe('provider');
+    }
+  });
+
+  it('rejects operator role on public self-service sign-up', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    await expect(
+      service.signUp({
+        name: 'Fake Operator',
+        email: 'fake-operator@quickwerk.local',
+        password: 'supersecure',
+        role: 'operator',
+      }),
+    ).rejects.toThrow('Operator accounts cannot self-register.');
+  });
+
+  it('rejects sign-in with an incorrect password for a registered account', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    await service.signUp({
+      name: 'Priya Provider',
+      email: 'priya2@quickwerk.local',
+      password: 'supersecure',
+      role: 'provider',
+    });
+
+    await expect(
+      service.signIn({ email: 'priya2@quickwerk.local', password: 'totally-wrong' }),
+    ).rejects.toThrow('Invalid email or password.');
+  });
+
+  it('rejects sign-in with a password for an unregistered email', async () => {
+    const service = new AuthService(new InMemoryAuthSessionRepository());
+
+    await expect(
+      service.signIn({ email: 'nobody@quickwerk.local', password: 'anything-at-all' }),
+    ).rejects.toThrow('Invalid email or password.');
+  });
+
   it('rejects invalid sign-up payloads', async () => {
     const service = new AuthService(new InMemoryAuthSessionRepository());
 
