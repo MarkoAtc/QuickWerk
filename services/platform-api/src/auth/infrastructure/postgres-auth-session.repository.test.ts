@@ -173,4 +173,114 @@ describe('PostgresAuthSessionRepository', () => {
       }),
     ).rejects.toThrow('already exists');
   });
+
+  describe('phone + OTP auth', () => {
+    it('requests then verifies an OTP end to end, upserting a phone-authenticated user', async () => {
+      const query = vi
+        .fn()
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // cooldown check: none active
+        .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // delete prior active codes
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] }); // insert new code
+
+      const repository = new PostgresAuthSessionRepository(
+        { query, withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }) } as unknown as PostgresClient,
+        postgresConfig,
+      );
+
+      const requested = await repository.requestOtp('+15550001234');
+      expect(requested.devCode).toMatch(/^\d{6}$/);
+
+      const insertArgs = query.mock.calls[2]?.[2] as unknown[];
+      const codeHash = insertArgs?.[2] as string;
+      expect(codeHash).toMatch(/^scrypt\$/);
+
+      query
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              id: '33333333-3333-4333-8333-333333333333',
+              code_hash: codeHash,
+              expires_at: new Date(Date.now() + 60_000).toISOString(),
+              attempt_count: 0,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rowCount: 1, rows: [] }) // mark consumed
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ id: '22222222-2222-4222-8222-222222222222', role: 'customer' }],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [
+            {
+              token: '11111111-1111-4111-8111-111111111111',
+              user_id: '22222222-2222-4222-8222-222222222222',
+              created_at: '2026-03-20T12:00:00.000Z',
+              expires_at: '2026-03-20T12:30:00.000Z',
+            },
+          ],
+        });
+
+      const session = await repository.verifyOtp({ phone: '+15550001234', code: requested.devCode as string });
+
+      expect(session).toMatchObject({
+        email: '15550001234@phone.quickwerk.local',
+        role: 'customer',
+        token: '11111111-1111-4111-8111-111111111111',
+        userId: '22222222-2222-4222-8222-222222222222',
+      });
+    });
+
+    it('rejects a second OTP request within the cooldown window', async () => {
+      const query = vi.fn().mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ id: '33333333-3333-4333-8333-333333333333' }],
+      });
+
+      const repository = new PostgresAuthSessionRepository(
+        { query, withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }) } as unknown as PostgresClient,
+        postgresConfig,
+      );
+
+      await expect(repository.requestOtp('+15550001234')).rejects.toThrow('already requested for phone');
+    });
+
+    it('rejects verification when no active code exists for the phone', async () => {
+      const query = vi.fn().mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+      const repository = new PostgresAuthSessionRepository(
+        { query, withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }) } as unknown as PostgresClient,
+        postgresConfig,
+      );
+
+      await expect(
+        repository.verifyOtp({ phone: '+15550001234', code: '123456' }),
+      ).rejects.toThrow('Invalid or already-used verification code');
+    });
+
+    it('rejects verification with an expired code', async () => {
+      const query = vi.fn().mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [
+          {
+            id: '33333333-3333-4333-8333-333333333333',
+            code_hash: 'scrypt$deadbeef$00',
+            expires_at: new Date(Date.now() - 1000).toISOString(),
+            attempt_count: 0,
+          },
+        ],
+      });
+
+      const repository = new PostgresAuthSessionRepository(
+        { query, withTransaction: async <T>(fn: (client: { query: typeof query }) => Promise<T>) => fn({ query }) } as unknown as PostgresClient,
+        postgresConfig,
+      );
+
+      await expect(
+        repository.verifyOtp({ phone: '+15550001234', code: '123456' }),
+      ).rejects.toThrow('has expired');
+    });
+  });
 });

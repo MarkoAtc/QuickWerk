@@ -7,6 +7,9 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidOtpError,
+  OtpExpiredError,
+  OtpRequestCooldownError,
   SessionRole,
 } from './domain/auth-session.repository';
 
@@ -148,6 +151,99 @@ export class AuthService {
 
   async resolveSessionOrNull(token: string | undefined): Promise<AuthSession | null> {
     return this.sessionStore.resolveSession(token);
+  }
+
+  async requestOtp(phoneInput: string | undefined, context?: { correlationId?: string }) {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const phone = this.normalizePhone(phoneInput);
+
+    try {
+      const result = await this.sessionStore.requestOtp(phone);
+
+      logStructuredBreadcrumb({
+        event: 'auth.otp.requested',
+        correlationId,
+        status: 'succeeded',
+        details: { phone },
+      });
+
+      return {
+        resource: 'auth-otp',
+        phone,
+        expiresAt: result.expiresAt,
+        ...(result.devCode ? { devOtpCode: result.devCode } : {}),
+      } as const;
+    } catch (error) {
+      if (error instanceof OtpRequestCooldownError) {
+        logStructuredBreadcrumb({
+          event: 'auth.otp.requested',
+          correlationId,
+          status: 'failed',
+          details: { phone, reason: 'cooldown' },
+        });
+        throw new BadRequestException('A verification code was already sent. Please wait before requesting another.');
+      }
+
+      throw error;
+    }
+  }
+
+  async verifyOtp(
+    input: { phone?: string; code?: string; role?: string },
+    context?: { correlationId?: string },
+  ) {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const phone = this.normalizePhone(input.phone);
+    const code = this.normalizeOtpCode(input.code);
+    const role = this.resolveRole(input.role);
+
+    try {
+      const session = await this.sessionStore.verifyOtp({ phone, code, role });
+
+      logStructuredBreadcrumb({
+        event: 'auth.otp.verified',
+        correlationId,
+        status: 'succeeded',
+        details: { userId: session.userId, role: session.role },
+      });
+
+      return {
+        ...(await this.getSession(session.token)),
+        token: session.token,
+      } as const;
+    } catch (error) {
+      if (error instanceof InvalidOtpError || error instanceof OtpExpiredError) {
+        logStructuredBreadcrumb({
+          event: 'auth.otp.verified',
+          correlationId,
+          status: 'failed',
+          details: { phone, reason: error.name },
+        });
+        throw new BadRequestException('Invalid or expired verification code.');
+      }
+
+      throw error;
+    }
+  }
+
+  private normalizePhone(phone: string | undefined): string {
+    const digitsAndPlus = phone?.trim().replace(/[^\d+]/g, '') ?? '';
+
+    if (!/^\+\d{8,15}$/.test(digitsAndPlus)) {
+      throw new BadRequestException('Phone must be a valid number in international format, e.g. +15550001234.');
+    }
+
+    return digitsAndPlus;
+  }
+
+  private normalizeOtpCode(code: string | undefined): string {
+    const normalized = code?.trim() ?? '';
+
+    if (!/^\d{6}$/.test(normalized)) {
+      throw new BadRequestException('Verification code must be 6 digits.');
+    }
+
+    return normalized;
   }
 
   private resolveRole(role: string | undefined): SessionRole {

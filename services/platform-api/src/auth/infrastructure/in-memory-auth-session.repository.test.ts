@@ -52,4 +52,31 @@ describe('InMemoryAuthSessionRepository', () => {
       }),
     ).rejects.toThrow('already exists');
   });
+
+  it('locks out OTP verification after exceeding the attempt cap', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    const { devCode } = await repository.requestOtp('+15550001234');
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await expect(
+        repository.verifyOtp({ phone: '+15550001234', code: '000000' }),
+      ).rejects.toThrow('Invalid or already-used verification code');
+    }
+
+    await expect(
+      repository.verifyOtp({ phone: '+15550001234', code: devCode as string }),
+    ).rejects.toThrow('Invalid or already-used verification code');
+  });
+
+  it('single-uses an OTP code — verifying twice fails the second time', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    const { devCode } = await repository.requestOtp('+15550001234');
+    await repository.verifyOtp({ phone: '+15550001234', code: devCode as string });
+
+    await expect(
+      repository.verifyOtp({ phone: '+15550001234', code: devCode as string }),
+    ).rejects.toThrow('Invalid or already-used verification code');
+  });
 });

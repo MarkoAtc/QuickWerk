@@ -37,6 +37,12 @@ This folder contains plain SQL migration scaffolding for the upcoming PostgreSQL
 - `0009_booking_customer_location.sql`
   - adds nullable `bookings.customer_location` for booking address continuity
   - preserves backward compatibility for existing booking creation flows
+- `0009_signup_customer_profile_fields.sql`
+  - adds nullable `users.full_name` and `users.password_hash` for customer sign-up
+- `0010_phone_otp_auth.sql`
+  - adds nullable, uniquely-indexed `users.phone` for phone-number auth
+  - creates durable `otp_codes` table (code hash, expiry, consumed marker, attempt counter) for OTP sign-in
+  - additive only; existing email/password auth is unaffected
 
 ## How to run later (manual)
 
@@ -52,6 +58,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0006
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0007_disputes_lifecycle.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0008_relay_csv_handoff_jobs.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0009_booking_customer_location.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0009_signup_customer_profile_fields.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f services/platform-api/migrations/0010_phone_otp_auth.sql
 ```
 
 Rollback is currently manual (early scaffold phase).
