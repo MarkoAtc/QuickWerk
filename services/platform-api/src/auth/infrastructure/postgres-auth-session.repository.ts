@@ -6,8 +6,14 @@ import {
   AuthSessionRepository,
   CreateAuthSessionInput,
   DuplicateEmailError,
+  InvalidOtpError,
+  OtpExpiredError,
+  OtpRequestCooldownError,
   PasswordAuthSessionInput,
   RegisterCustomerInput,
+  RequestOtpResult,
+  SessionRole,
+  VerifyOtpInput,
 } from '../domain/auth-session.repository';
 import { PostgresClient } from '../../persistence/postgres-client';
 import { PostgresPersistenceConfig } from '../../persistence/persistence-mode';
@@ -219,6 +225,157 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
 
     return (result.rowCount ?? 0) > 0;
   }
+
+  async requestOtp(phone: string): Promise<RequestOtpResult> {
+    const cooldownResult = await this.postgresClient.query<{ id: string }>(
+      this.postgresConfig,
+      `SELECT id::text FROM otp_codes
+       WHERE phone = $1
+         AND consumed_at IS NULL
+         AND created_at > NOW() - INTERVAL '${OTP_REQUEST_COOLDOWN_SECONDS} seconds'
+       LIMIT 1`,
+      [phone],
+    );
+
+    if (cooldownResult.rows[0]) {
+      throw new OtpRequestCooldownError(phone);
+    }
+
+    const code = generateOtpCode();
+    const codeHash = await hashPassword(code);
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+    await this.postgresClient.query(
+      this.postgresConfig,
+      `DELETE FROM otp_codes WHERE phone = $1 AND consumed_at IS NULL`,
+      [phone],
+    );
+
+    await this.postgresClient.query(
+      this.postgresConfig,
+      `INSERT INTO otp_codes (id, phone, code_hash, expires_at)
+       VALUES ($1::uuid, $2, $3, $4)`,
+      [randomUUID(), phone, codeHash, expiresAt.toISOString()],
+    );
+
+    // ponytail: no SMS/email provider exists in this repo; devCode lets the
+    // demo flow be completable end to end. Real delivery is future work.
+    return { expiresAt: expiresAt.toISOString(), devCode: code };
+  }
+
+  async verifyOtp(input: VerifyOtpInput): Promise<AuthSession> {
+    const otpResult = await this.postgresClient.query<{
+      id: string;
+      code_hash: string;
+      expires_at: Date | string;
+      attempt_count: number;
+    }>(
+      this.postgresConfig,
+      `SELECT id::text, code_hash, expires_at, attempt_count
+       FROM otp_codes
+       WHERE phone = $1 AND consumed_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [input.phone],
+    );
+
+    const otpRow = otpResult.rows[0];
+
+    if (!otpRow) {
+      throw new InvalidOtpError(input.phone);
+    }
+
+    if (new Date(otpRow.expires_at).getTime() <= Date.now()) {
+      throw new OtpExpiredError(input.phone);
+    }
+
+    if (otpRow.attempt_count >= OTP_MAX_ATTEMPTS) {
+      throw new InvalidOtpError(input.phone);
+    }
+
+    const isValid = await verifyPassword(input.code, otpRow.code_hash);
+
+    if (!isValid) {
+      await this.postgresClient.query(
+        this.postgresConfig,
+        `UPDATE otp_codes SET attempt_count = attempt_count + 1 WHERE id = $1::uuid`,
+        [otpRow.id],
+      );
+      throw new InvalidOtpError(input.phone);
+    }
+
+    // Conditional on consumed_at IS NULL so two concurrent verifications of
+    // the same code can't both win: only the first UPDATE affects a row.
+    const consumeResult = await this.postgresClient.query(
+      this.postgresConfig,
+      `UPDATE otp_codes SET consumed_at = NOW() WHERE id = $1::uuid AND consumed_at IS NULL`,
+      [otpRow.id],
+    );
+
+    if ((consumeResult.rowCount ?? 0) === 0) {
+      throw new InvalidOtpError(input.phone);
+    }
+
+    const userId = randomUUID();
+    const token = randomUUID();
+
+    // Role is never accepted from this public, unauthenticated endpoint —
+    // new phone identities default to 'customer'; ON CONFLICT below
+    // preserves whatever role an existing user already has.
+    const userResult = await this.postgresClient.query<{ id: string; role: SessionRole }>(
+      this.postgresConfig,
+      `INSERT INTO users (id, phone, email, role)
+       VALUES ($1::uuid, $2, $3, $4)
+       ON CONFLICT (phone) WHERE phone IS NOT NULL DO UPDATE SET phone = EXCLUDED.phone
+       RETURNING id::text, role`,
+      [userId, input.phone, phoneToSyntheticEmail(input.phone), 'customer' satisfies SessionRole],
+    );
+
+    const user = userResult.rows[0];
+
+    if (!user) {
+      throw new Error('Failed to upsert phone-authenticated user in postgres repository.');
+    }
+
+    const sessionResult = await this.postgresClient.query<SessionRow>(
+      this.postgresConfig,
+      `INSERT INTO sessions (token, user_id, expires_at)
+       VALUES ($1::uuid, $2::uuid, NOW() + make_interval(secs => $3::int))
+       RETURNING token::text, user_id::text, created_at, expires_at`,
+      [token, user.id, this.sessionTtlSeconds],
+    );
+
+    const sessionRow = sessionResult.rows[0];
+
+    if (!sessionRow) {
+      throw new Error('Failed to create auth session during OTP verification.');
+    }
+
+    return {
+      createdAt: toIsoString(sessionRow.created_at),
+      expiresAt: toIsoString(sessionRow.expires_at),
+      email: phoneToSyntheticEmail(input.phone),
+      role: user.role,
+      token: sessionRow.token,
+      userId: sessionRow.user_id,
+    };
+  }
+}
+
+const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_REQUEST_COOLDOWN_SECONDS = 30;
+
+// ponytail: placeholder identity so phone-authenticated users still satisfy
+// AuthSession.email (used widely downstream); add real optional-email support
+// if a screen needs to distinguish phone- from email-authenticated users.
+function phoneToSyntheticEmail(phone: string): string {
+  return `${phone.replace(/[^0-9a-zA-Z]/g, '')}@phone.quickwerk.local`;
+}
+
+function generateOtpCode(): string {
+  const value = randomBytes(4).readUInt32BE(0) % 1_000_000;
+  return value.toString().padStart(6, '0');
 }
 
 function toIsoString(value: Date | string): string {

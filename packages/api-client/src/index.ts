@@ -41,6 +41,8 @@ export const authApiRoutes = {
   signIn: `${apiRoutes.auth}/sign-in`,
   signUp: `${apiRoutes.auth}/sign-up`,
   signOut: `${apiRoutes.auth}/sign-out`,
+  otpRequest: `${apiRoutes.auth}/otp/request`,
+  otpVerify: `${apiRoutes.auth}/otp/verify`,
 } as const;
 
 export const bookingApiRoutes = {
@@ -66,6 +68,15 @@ export type SignUpRequestBody = {
   name?: string;
   email?: string;
   password?: string;
+};
+
+export type OtpRequestBody = {
+  phone?: string;
+};
+
+export type OtpVerifyBody = {
+  phone?: string;
+  code?: string;
 };
 
 export type CreateBookingRequestBody = {
@@ -95,6 +106,18 @@ export const createSignOutRequest = (sessionToken: string) => ({
   method: 'POST',
   path: authApiRoutes.signOut,
   headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export const createOtpRequestRequest = (body: OtpRequestBody) => ({
+  method: 'POST',
+  path: authApiRoutes.otpRequest,
+  body,
+}) as const;
+
+export const createOtpVerifyRequest = (body: OtpVerifyBody) => ({
+  method: 'POST',
+  path: authApiRoutes.otpVerify,
+  body,
 }) as const;
 
 export const createMarketplacePreviewRequest = () => ({

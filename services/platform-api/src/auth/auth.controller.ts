@@ -15,6 +15,15 @@ type SignUpRequestBody = {
   password?: string;
 };
 
+type OtpRequestBody = {
+  phone?: string;
+};
+
+type OtpVerifyBody = {
+  phone?: string;
+  code?: string;
+};
+
 type RequestLike = {
   method: string;
   path: string;
@@ -91,6 +100,46 @@ export class AuthController {
     response.setHeader(correlationIdHeaderName, correlationId);
 
     return this.authService.signOut(token, {
+      correlationId,
+    });
+  }
+
+  @Post('otp/request')
+  async requestOtp(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Body() body: OtpRequestBody,
+  ) {
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    return this.authService.requestOtp(body.phone, {
+      correlationId,
+    });
+  }
+
+  @Post('otp/verify')
+  async verifyOtp(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Body() body: OtpVerifyBody,
+  ) {
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      body,
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    return this.authService.verifyOtp(body, {
       correlationId,
     });
   }

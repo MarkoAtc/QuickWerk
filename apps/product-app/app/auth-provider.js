@@ -1,0 +1,98 @@
+import { useState } from 'react';
+import { Text, View } from 'react-native';
+
+import { useRouter } from 'expo-router';
+
+import { AuthEntryScreen } from '../src/features/auth/auth-entry-screen';
+import { signInWithCredentials, signUpWithCredentials } from '../src/features/auth/auth-entry-actions';
+import { useSession } from '../src/shared/session-provider';
+
+// Legacy email/password entry, kept as the sign-in path for providers until
+// phone+OTP provider onboarding exists. Reachable via "Continue as a provider"
+// on the primary phone-entry screen (app/auth.js).
+export default function ProductAuthProviderScreen() {
+  const router = useRouter();
+  const { setSession } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSignIn = async ({ email, password, role }) => {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await signInWithCredentials({ email, password, role });
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setSession({
+        status: 'authenticated',
+        sessionToken: result.sessionToken,
+        role: result.role,
+      });
+
+      if (result.role === 'provider') {
+        router.replace('/provider');
+      } else {
+        router.replace('/home-triage');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async ({ name, email, password, role }) => {
+    if (role !== 'customer') {
+      setError('Provider account creation is not available yet.');
+      return;
+    }
+
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await signUpWithCredentials({ name, email, password });
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setSession({
+        status: 'authenticated',
+        sessionToken: result.sessionToken,
+        role: result.role,
+      });
+
+      router.replace('/home-triage');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <AuthEntryScreen onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} isSigningIn={loading} />
+      {error ? (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            left: 16,
+            right: 16,
+            backgroundColor: '#FEE2E2',
+            borderRadius: 8,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: '#B91C1C', textAlign: 'center', fontSize: 14 }}>{error}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
