@@ -6,7 +6,7 @@ import { colors, componentStyles, radius, spacing, typography } from '@quickwerk
 import { PhoneKeypad } from './phone-keypad';
 
 const COUNTRY_CODE = '+1';
-const MIN_PHONE_DIGITS = 7;
+const NANP_PHONE_DIGITS = 10;
 
 function formatPhoneDigits(digits) {
   if (!digits) {
@@ -21,7 +21,7 @@ function formatPhoneDigits(digits) {
 export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUseProviderSignIn }) {
   const [digits, setDigits] = useState('');
 
-  const isSendDisabled = isSending || digits.length < MIN_PHONE_DIGITS;
+  const isSendDisabled = isSending || digits.length !== NANP_PHONE_DIGITS;
   const ctaLabel = isSending ? 'Sending...' : 'Send OTP';
 
   const handleDigit = (digit) => {

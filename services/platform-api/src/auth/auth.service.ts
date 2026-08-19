@@ -165,7 +165,6 @@ export class AuthService {
         event: 'auth.otp.requested',
         correlationId,
         status: 'succeeded',
-        details: { phone },
       });
 
       const exposeDevCode = result.devCode && resolvePersistenceMode() === 'in-memory';
@@ -182,7 +181,7 @@ export class AuthService {
           event: 'auth.otp.requested',
           correlationId,
           status: 'failed',
-          details: { phone, reason: 'cooldown' },
+          details: { reason: 'cooldown' },
         });
         throw new BadRequestException('A verification code was already sent. Please wait before requesting another.');
       }
@@ -191,17 +190,16 @@ export class AuthService {
     }
   }
 
-  async verifyOtp(
-    input: { phone?: string; code?: string; role?: string },
-    context?: { correlationId?: string },
-  ) {
+  async verifyOtp(input: { phone?: string; code?: string }, context?: { correlationId?: string }) {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const phone = this.normalizePhone(input.phone);
     const code = this.normalizeOtpCode(input.code);
-    const role = this.resolveRole(input.role);
 
+    // Role is never accepted from this public, unauthenticated endpoint —
+    // repositories default new phone identities to 'customer' and preserve
+    // whatever role an existing user already has on repeat verification.
     try {
-      const session = await this.sessionStore.verifyOtp({ phone, code, role });
+      const session = await this.sessionStore.verifyOtp({ phone, code });
 
       logStructuredBreadcrumb({
         event: 'auth.otp.verified',
@@ -220,7 +218,7 @@ export class AuthService {
           event: 'auth.otp.verified',
           correlationId,
           status: 'failed',
-          details: { phone, reason: error.name },
+          details: { reason: error.name },
         });
         throw new BadRequestException('Invalid or expired verification code.');
       }

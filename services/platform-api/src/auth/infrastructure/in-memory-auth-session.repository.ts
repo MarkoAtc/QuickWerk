@@ -163,10 +163,17 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
       throw new InvalidOtpError(input.phone);
     }
 
+    // Re-check identity (no await between here and delete, so this is
+    // effectively atomic in single-threaded Node): if a concurrent verify
+    // already consumed/replaced this record while we awaited the hash
+    // check above, this call loses the race instead of also succeeding.
+    if (this.otpByPhone.get(input.phone) !== record) {
+      throw new InvalidOtpError(input.phone);
+    }
     this.otpByPhone.delete(input.phone);
 
     const existingUser = this.usersByPhone.get(input.phone);
-    const role = existingUser?.role ?? input.role ?? 'customer';
+    const role = existingUser?.role ?? 'customer';
     const userId = existingUser?.userId ?? `${role}-${randomUUID().slice(0, 8)}`;
     this.usersByPhone.set(input.phone, { userId, role });
 

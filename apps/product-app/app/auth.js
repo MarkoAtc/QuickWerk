@@ -44,7 +44,7 @@ export default function ProductAuthScreen() {
     setError(null);
 
     try {
-      const result = await verifyOtp({ phone, code, role: 'customer' });
+      const result = await verifyOtp({ phone, code });
 
       if (!result.ok) {
         setError(result.error);
@@ -69,7 +69,11 @@ export default function ProductAuthScreen() {
         devOtpCode={devOtpCode}
         error={error}
         isVerifying={isVerifying}
-        onBack={() => setStep('phone-entry')}
+        onBack={() => {
+          setError(null);
+          setDevOtpCode(null);
+          setStep('phone-entry');
+        }}
         onResend={() => handleSendCode({ phone })}
         onVerify={handleVerify}
         phone={phone}

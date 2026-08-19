@@ -22,7 +22,6 @@ type OtpRequestBody = {
 type OtpVerifyBody = {
   phone?: string;
   code?: string;
-  role?: string;
 };
 
 type RequestLike = {

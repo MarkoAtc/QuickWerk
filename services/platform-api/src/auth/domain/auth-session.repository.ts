@@ -37,7 +37,6 @@ export type RequestOtpResult = {
 export type VerifyOtpInput = {
   phone: string;
   code: string;
-  role?: SessionRole;
 };
 
 export class DuplicateEmailError extends Error {

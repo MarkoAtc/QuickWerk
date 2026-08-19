@@ -11,13 +11,13 @@ export async function requestOtp({ phone }, sessionApiBase) {
   }), sessionApiBase);
 }
 
-export async function verifyOtp({ phone, code, role }, sessionApiBase) {
-  const request = createOtpVerifyRequest({ phone, code, role });
+export async function verifyOtp({ phone, code }, sessionApiBase) {
+  const request = createOtpVerifyRequest({ phone, code });
   return runOtpRequest(request, 'Verification', (payload) => {
     if (!payload.token) {
       return { ok: false, error: 'Verification response did not include a session token.' };
     }
-    return { ok: true, sessionToken: payload.token, role: payload.role ?? role ?? 'customer' };
+    return { ok: true, sessionToken: payload.token, role: payload.role ?? 'customer' };
   }, sessionApiBase);
 }
 
@@ -32,7 +32,7 @@ async function runOtpRequest(request, failurePrefix, onSuccess, sessionApiBase) 
     });
 
     if (!response.ok) {
-      return { ok: false, error: `${failurePrefix} failed with HTTP ${response.status}.` };
+      return { ok: false, error: await extractErrorMessage(response, failurePrefix) };
     }
 
     const payload = await response.json();
@@ -42,5 +42,16 @@ async function runOtpRequest(request, failurePrefix, onSuccess, sessionApiBase) 
       ok: false,
       error: error instanceof Error ? error.message : `Unknown ${failurePrefix.toLowerCase()} failure.`,
     };
+  }
+}
+
+async function extractErrorMessage(response, failurePrefix) {
+  const fallback = `${failurePrefix} failed with HTTP ${response.status}.`;
+
+  try {
+    const body = await response.json();
+    return typeof body?.message === 'string' && body.message.trim() ? body.message : fallback;
+  } catch {
+    return fallback;
   }
 }

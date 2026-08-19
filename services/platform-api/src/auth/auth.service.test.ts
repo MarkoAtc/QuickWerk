@@ -146,6 +146,24 @@ describe('AuthService', () => {
       }
     });
 
+    it('ignores a client-supplied role and always creates a customer session', async () => {
+      const service = new AuthService(new InMemoryAuthSessionRepository());
+
+      const requested = await service.requestOtp('+15550001234');
+      // role is not part of the verifyOtp TS input, but a raw/untyped caller
+      // (or a client bypassing the frontend) could still send it — must be ignored.
+      const verified = await service.verifyOtp({
+        phone: '+15550001234',
+        code: requested.devOtpCode,
+        role: 'operator',
+      } as unknown as { phone: string; code: string });
+
+      expect(verified.sessionState).toBe('authenticated');
+      if (verified.sessionState === 'authenticated') {
+        expect(verified.session.role).toBe('customer');
+      }
+    });
+
     it('reuses the same user on repeat OTP verification for the same phone', async () => {
       const service = new AuthService(new InMemoryAuthSessionRepository());
 

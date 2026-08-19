@@ -77,7 +77,6 @@ export type OtpRequestBody = {
 export type OtpVerifyBody = {
   phone?: string;
   code?: string;
-  role?: SessionRole;
 };
 
 export type CreateBookingRequestBody = {

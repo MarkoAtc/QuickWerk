@@ -37,7 +37,8 @@ was cleared; `npm i playwright` is a no-op if `node_modules` already exists ther
 From the scratch dir created above (so `require('playwright')` resolves):
 
 ```bash
-node /home/kenny/.openclaw/workspace/projects/client/QuickWerk/.claude/skills/browser-drive/drive.mjs <<'EOF'
+REPO_DIR=/path/to/QuickWerk   # this repo's checkout root
+node "$REPO_DIR/.claude/skills/browser-drive/drive.mjs" <<'EOF'
 nav http://localhost:8081/auth
 wait-for text=Enter your phone
 screenshot phone-entry

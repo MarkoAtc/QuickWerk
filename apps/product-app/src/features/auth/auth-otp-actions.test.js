@@ -48,8 +48,44 @@ describe('auth-otp-actions', () => {
     globalThis.fetch = fetchMock;
 
     try {
-      const result = await verifyOtp({ phone: '+15550001234', code: '123456', role: 'customer' }, 'http://localhost:3100');
+      const result = await verifyOtp({ phone: '+15550001234', code: '123456' }, 'http://localhost:3100');
       expect(result).toMatchObject({ ok: true, sessionToken: 'tok-otp-verify', role: 'customer' });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('does not send a role on otp verification', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ token: 'tok-otp-verify' }),
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    try {
+      await verifyOtp({ phone: '+15550001234', code: '123456' }, 'http://localhost:3100');
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(requestBody).toEqual({ phone: '+15550001234', code: '123456' });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('surfaces the backend error message on failed verification', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ message: 'Invalid or expired verification code.', error: 'Bad Request', statusCode: 400 }),
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    try {
+      const result = await verifyOtp({ phone: '+15550001234', code: '000000' }, 'http://localhost:3100');
+      expect(result).toMatchObject({ ok: false, error: 'Invalid or expired verification code.' });
     } finally {
       globalThis.fetch = originalFetch;
     }

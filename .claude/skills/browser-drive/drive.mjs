@@ -46,6 +46,7 @@ page.on('pageerror', (err) => {
 });
 
 let shotSeq = 0;
+let failed = false;
 
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
 
@@ -127,15 +128,18 @@ for await (const rawLine of rl) {
       }
       case 'quit': {
         await browser.close();
-        process.exit(0);
+        process.exit(failed ? 1 : 0);
         break;
       }
       default:
+        failed = true;
         console.log(`[error] unknown command: ${cmd}`);
     }
   } catch (error) {
+    failed = true;
     console.log(`[error] ${cmd} failed: ${error.message}`);
   }
 }
 
 await browser.close();
+process.exitCode = failed ? 1 : 0;

@@ -304,23 +304,31 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
       throw new InvalidOtpError(input.phone);
     }
 
-    await this.postgresClient.query(
+    // Conditional on consumed_at IS NULL so two concurrent verifications of
+    // the same code can't both win: only the first UPDATE affects a row.
+    const consumeResult = await this.postgresClient.query(
       this.postgresConfig,
-      `UPDATE otp_codes SET consumed_at = NOW() WHERE id = $1::uuid`,
+      `UPDATE otp_codes SET consumed_at = NOW() WHERE id = $1::uuid AND consumed_at IS NULL`,
       [otpRow.id],
     );
 
+    if ((consumeResult.rowCount ?? 0) === 0) {
+      throw new InvalidOtpError(input.phone);
+    }
+
     const userId = randomUUID();
     const token = randomUUID();
-    const role: SessionRole = input.role ?? 'customer';
 
+    // Role is never accepted from this public, unauthenticated endpoint —
+    // new phone identities default to 'customer'; ON CONFLICT below
+    // preserves whatever role an existing user already has.
     const userResult = await this.postgresClient.query<{ id: string; role: SessionRole }>(
       this.postgresConfig,
       `INSERT INTO users (id, phone, email, role)
        VALUES ($1::uuid, $2, $3, $4)
        ON CONFLICT (phone) WHERE phone IS NOT NULL DO UPDATE SET phone = EXCLUDED.phone
        RETURNING id::text, role`,
-      [userId, input.phone, phoneToSyntheticEmail(input.phone), role],
+      [userId, input.phone, phoneToSyntheticEmail(input.phone), 'customer' satisfies SessionRole],
     );
 
     const user = userResult.rows[0];
