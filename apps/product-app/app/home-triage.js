@@ -39,7 +39,7 @@ export default function HomeTriageRoute() {
           router.push({ pathname: '/discovery', params: { location: address } });
         }}
         onOpenCategories={() => {
-          router.push('/categories');
+          router.push({ pathname: '/categories', params: { address } });
         }}
       />
 

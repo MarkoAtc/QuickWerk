@@ -85,6 +85,10 @@ export function ServiceCategories({ onSelectCategory, onBack }) {
           <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>← Back</Text>
         </Pressable>
 
+        <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
+          Choose a service
+        </Text>
+
         <View
           style={{
             width: 40,
@@ -159,14 +163,14 @@ export function ServiceCategories({ onSelectCategory, onBack }) {
           }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>
-            New: Premium Plus
+            Coming soon: Premium Plus
           </Text>
         </View>
         <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
-          Guaranteed quality, fixed price.
+          A higher tier of vetted pros.
         </Text>
         <Text style={{ marginTop: spacing.xs, color: 'rgba(255,255,255,0.75)', fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
-          Book certified professionals with insurance coverage and a 2-year warranty on all work.
+          We're building extra vetting and buyer protections for select bookings. Details land here once the terms are finalized.
         </Text>
       </View>
     </ScrollView>
