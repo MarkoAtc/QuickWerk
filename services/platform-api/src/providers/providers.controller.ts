@@ -27,6 +27,9 @@ type UpsertProfileBody = {
   tradeCategories?: string[];
   serviceArea?: string;
   isPublic?: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
 };
 
 type RequestLike = {

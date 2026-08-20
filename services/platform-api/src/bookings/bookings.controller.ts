@@ -244,6 +244,44 @@ export class BookingsController {
   }
 
   /**
+   * GET /api/v1/bookings/:bookingId/provider-identity
+   * Fetch the assigned provider's name/photo/vehicle/plate for the active-job screen.
+   * Booking-scoped: only a party to this specific accepted booking can see it.
+   */
+  @Get(':bookingId/provider-identity')
+  async getBookingProviderIdentity(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to view provider identity.', 401);
+    }
+
+    const result = await this.bookingsService.getBookingProviderIdentity(session, bookingId);
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.providerIdentity;
+  }
+
+  /**
    * POST /api/v1/bookings/:bookingId/decline
    * Provider declines a submitted booking.
    */

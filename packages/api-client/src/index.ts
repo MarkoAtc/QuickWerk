@@ -54,6 +54,7 @@ export const bookingApiRoutes = {
   decline: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/decline`,
   complete: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/complete`,
   payment: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/payment`,
+  providerIdentity: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/provider-identity`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -208,6 +209,9 @@ export type UpsertProviderProfileBody = {
   tradeCategories?: string[];
   serviceArea?: string;
   isPublic?: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
 };
 
 export const createUpsertProviderProfileRequest = (sessionToken: string, body: UpsertProviderProfileBody) => ({
@@ -232,6 +236,9 @@ export type PublicProviderProfile = {
   tradeCategories: string[];
   serviceArea?: string;
   isPublic: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -289,6 +296,17 @@ export const createCompleteBookingRequest = (sessionToken: string, bookingId: st
 export const createGetBookingPaymentRequest = (sessionToken: string, bookingId: string) => ({
   method: 'GET',
   path: bookingApiRoutes.payment(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+/**
+ * Booking-scoped provider identity (name, photo, vehicle, license plate) for the
+ * active-job screen. Unlike public provider discovery, this is authorized per-booking
+ * on the server and only returns data once the booking is accepted.
+ */
+export const createGetBookingProviderIdentityRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.providerIdentity(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 

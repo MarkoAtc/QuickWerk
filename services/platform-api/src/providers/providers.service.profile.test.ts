@@ -122,4 +122,72 @@ describe('ProvidersService — profile', () => {
     // tradeCategories preserved from first upsert
     expect(updated.profile.tradeCategories).toEqual(['plumbing']);
   });
+
+  it('provider can set photo, vehicle, and license plate', async () => {
+    const service = createService();
+    const provider = createSession('provider', 'provider-1');
+
+    const result = await service.upsertProfile(provider, {
+      displayName: 'Marcus Hoffman',
+      photoUrl: 'https://storage.stub/photo.jpg',
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.profile.photoUrl).toBe('https://storage.stub/photo.jpg');
+    expect(result.profile.vehicleDescription).toBe('White VW Transporter');
+    expect(result.profile.licensePlate).toBe('B-HW-2024');
+  });
+
+  it('partial update preserves existing photo, vehicle, and license plate', async () => {
+    const service = createService();
+    const provider = createSession('provider', 'provider-1');
+
+    await service.upsertProfile(provider, {
+      displayName: 'Marcus Hoffman',
+      photoUrl: 'https://storage.stub/photo.jpg',
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+
+    const updated = await service.upsertProfile(provider, { displayName: 'Marcus H.' });
+
+    expect(updated.ok).toBe(true);
+    if (!updated.ok) return;
+    expect(updated.profile.photoUrl).toBe('https://storage.stub/photo.jpg');
+    expect(updated.profile.vehicleDescription).toBe('White VW Transporter');
+    expect(updated.profile.licensePlate).toBe('B-HW-2024');
+  });
+
+  it('getProviderIdentitySummary returns full identity including vehicle/plate, unrestricted by isPublic', async () => {
+    const service = createService();
+    const provider = createSession('provider', 'provider-1');
+
+    await service.upsertProfile(provider, {
+      displayName: 'Marcus Hoffman',
+      isPublic: false,
+      photoUrl: 'https://storage.stub/photo.jpg',
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+
+    const identity = await service.getProviderIdentitySummary('provider-1');
+
+    expect(identity).toEqual({
+      displayName: 'Marcus Hoffman',
+      photoUrl: 'https://storage.stub/photo.jpg',
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+  });
+
+  it('getProviderIdentitySummary returns null when no profile exists', async () => {
+    const service = createService();
+
+    const identity = await service.getProviderIdentitySummary('nobody');
+
+    expect(identity).toBeNull();
+  });
 });

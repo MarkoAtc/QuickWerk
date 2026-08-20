@@ -74,4 +74,36 @@ describe('presentActiveJob', () => {
     expect(model.counterpartLabel).toBe('Customer');
     expect(model.counterpartValue).toBe('cust-1');
   });
+
+  it('surfaces providerIdentity for the customer viewer', () => {
+    const model = presentActiveJob({
+      viewerRole: 'customer',
+      booking: createBooking('accepted'),
+      providerIdentity: {
+        displayName: 'Marcus Hoffman',
+        averageRating: 4.9,
+        reviewCount: 12,
+        vehicleDescription: 'White VW Transporter',
+        licensePlate: 'B-HW-2024',
+      },
+    });
+
+    expect(model.providerIdentity).toEqual({
+      displayName: 'Marcus Hoffman',
+      averageRating: 4.9,
+      reviewCount: 12,
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+  });
+
+  it('omits providerIdentity for the provider viewer even when supplied', () => {
+    const model = presentActiveJob({
+      viewerRole: 'provider',
+      booking: { ...createBooking('accepted'), customerUserId: 'cust-1' },
+      providerIdentity: { displayName: 'Marcus Hoffman', reviewCount: 0 },
+    });
+
+    expect(model.providerIdentity).toBeUndefined();
+  });
 });

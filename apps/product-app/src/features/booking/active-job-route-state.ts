@@ -1,5 +1,5 @@
 import { presentActiveJob, type ActiveJobViewModel } from './active-job-presenter';
-import { loadBookingContinuation } from './active-job-screen-actions';
+import { loadBookingContinuation, loadProviderIdentity } from './active-job-screen-actions';
 
 export type ActiveJobRouteState =
   | { status: 'loading' }
@@ -14,6 +14,7 @@ type ResolveActiveJobRouteStateInput = {
   bookingId: string | null;
   viewerRole: ViewerRole;
   loadBookingContinuationImpl?: typeof loadBookingContinuation;
+  loadProviderIdentityImpl?: typeof loadProviderIdentity;
   presentActiveJobImpl?: typeof presentActiveJob;
 };
 
@@ -35,6 +36,7 @@ export async function resolveActiveJobRouteState(
   }
 
   const loadImpl = input.loadBookingContinuationImpl ?? loadBookingContinuation;
+  const loadProviderIdentityImpl = input.loadProviderIdentityImpl ?? loadProviderIdentity;
   const presentImpl = input.presentActiveJobImpl ?? presentActiveJob;
 
   const result = await loadImpl({ sessionToken: input.sessionToken, bookingId: input.bookingId });
@@ -51,6 +53,14 @@ export async function resolveActiveJobRouteState(
     return { status: 'handoff', bookingId: result.booking.bookingId };
   }
 
+  const providerIdentity = input.viewerRole === 'customer' && result.booking.providerUserId
+    ? await loadProviderIdentityImpl({
+      sessionToken: input.sessionToken,
+      bookingId: input.bookingId,
+      providerUserId: result.booking.providerUserId,
+    })
+    : null;
+
   return {
     status: 'loaded',
     viewModel: presentImpl({
@@ -58,6 +68,7 @@ export async function resolveActiveJobRouteState(
       booking: result.booking,
       payment: result.payment,
       warningMessage: result.warningMessage,
+      providerIdentity,
     }),
   };
 }

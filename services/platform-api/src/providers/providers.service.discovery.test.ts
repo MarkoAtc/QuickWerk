@@ -39,6 +39,30 @@ describe('ProvidersService.listPublicProviders', () => {
     expect(result.providers).toEqual([]);
   });
 
+  it('excludes vehicleDescription and licensePlate from public responses', async () => {
+    const { service } = createService();
+
+    await service.upsertProfile(makeProviderSession('prov-1'), {
+      displayName: 'Alice the Plumber',
+      tradeCategories: ['plumbing'],
+      isPublic: true,
+      vehicleDescription: 'White VW Transporter',
+      licensePlate: 'B-HW-2024',
+    });
+    await approveProvider(service, 'prov-1');
+
+    const listResult = await service.listPublicProviders();
+    expect(listResult.ok).toBe(true);
+    expect(listResult.providers[0]).not.toHaveProperty('vehicleDescription');
+    expect(listResult.providers[0]).not.toHaveProperty('licensePlate');
+
+    const detailResult = await service.getPublicProviderById('prov-1');
+    expect(detailResult.ok).toBe(true);
+    if (!detailResult.ok) return;
+    expect(detailResult.provider).not.toHaveProperty('vehicleDescription');
+    expect(detailResult.provider).not.toHaveProperty('licensePlate');
+  });
+
   it('returns only public profiles', async () => {
     const { service } = createService();
 

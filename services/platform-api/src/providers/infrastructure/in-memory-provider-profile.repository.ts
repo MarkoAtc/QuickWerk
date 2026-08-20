@@ -22,6 +22,11 @@ export class InMemoryProviderProfileRepository implements ProviderProfileReposit
         .filter(Boolean),
       serviceArea: input.serviceArea !== undefined ? (input.serviceArea.trim() || undefined) : existing?.serviceArea,
       isPublic: input.isPublic ?? existing?.isPublic ?? false,
+      photoUrl: input.photoUrl !== undefined ? (input.photoUrl.trim() || undefined) : existing?.photoUrl,
+      vehicleDescription: input.vehicleDescription !== undefined
+        ? (input.vehicleDescription.trim() || undefined)
+        : existing?.vehicleDescription,
+      licensePlate: input.licensePlate !== undefined ? (input.licensePlate.trim() || undefined) : existing?.licensePlate,
       createdAt: existing?.createdAt ?? input.now,
       updatedAt: input.now,
     };

@@ -1,4 +1,9 @@
-import { createGetBookingPaymentRequest, createGetBookingRequest } from '@quickwerk/api-client';
+import {
+  createGetBookingPaymentRequest,
+  createGetBookingProviderIdentityRequest,
+  createGetBookingRequest,
+  createGetProviderReviewsRequest,
+} from '@quickwerk/api-client';
 
 import { runtimeConfig } from '../../shared/runtime-config';
 
@@ -212,5 +217,105 @@ export async function loadBookingContinuation(
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown booking continuation failure.',
     };
+  }
+}
+
+export type ProviderIdentitySummary = {
+  displayName: string;
+  photoUrl?: string;
+  averageRating?: number;
+  reviewCount: number;
+  vehicleDescription?: string;
+  licensePlate?: string;
+};
+
+function parseBookingProviderIdentity(payload: unknown): Pick<ProviderIdentitySummary, 'displayName' | 'photoUrl' | 'vehicleDescription' | 'licensePlate'> | null {
+  if (payload === null || typeof payload !== 'object') {
+    return null;
+  }
+
+  const profile = payload as Record<string, unknown>;
+
+  if (typeof profile['displayName'] !== 'string') {
+    return null;
+  }
+
+  return {
+    displayName: profile['displayName'],
+    photoUrl: typeof profile['photoUrl'] === 'string' ? profile['photoUrl'] : undefined,
+    vehicleDescription: typeof profile['vehicleDescription'] === 'string' ? profile['vehicleDescription'] : undefined,
+    licensePlate: typeof profile['licensePlate'] === 'string' ? profile['licensePlate'] : undefined,
+  };
+}
+
+function parseReviewRatings(payload: unknown): number[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .map((item) => (item !== null && typeof item === 'object' ? (item as Record<string, unknown>)['rating'] : null))
+    .filter((rating): rating is number => typeof rating === 'number' && Number.isInteger(rating) && rating >= 1 && rating <= 5);
+}
+
+type LoadProviderIdentityInput = {
+  sessionToken: string;
+  bookingId: string;
+  providerUserId: string;
+};
+
+/**
+ * Best-effort fetch: the provider identity card is a graceful enhancement, not a
+ * required part of the screen, so any failure (network, not-yet-accepted booking,
+ * malformed response) resolves to null rather than surfacing an error.
+ *
+ * Name/photo/vehicle/plate come from the booking-scoped endpoint (server-authorized
+ * per booking, not public discovery — see bookings.service.ts getBookingProviderIdentity).
+ * Rating is a separate, already-public lookup by providerUserId.
+ */
+export async function loadProviderIdentity(
+  input: LoadProviderIdentityInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ProviderIdentitySummary | null> {
+  try {
+    const identityRequest = createGetBookingProviderIdentityRequest(input.sessionToken, input.bookingId);
+    const identityResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${identityRequest.path}`, {
+      method: identityRequest.method,
+      headers: identityRequest.headers,
+    });
+
+    if (!identityResponse.ok) {
+      return null;
+    }
+
+    const identity = parseBookingProviderIdentity(await identityResponse.json());
+    if (!identity) {
+      return null;
+    }
+
+    let ratings: number[] = [];
+    try {
+      const reviewsRequest = createGetProviderReviewsRequest(input.providerUserId);
+      const reviewsResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${reviewsRequest.path}`, {
+        method: reviewsRequest.method,
+      });
+
+      if (reviewsResponse.ok) {
+        ratings = parseReviewRatings(await reviewsResponse.json());
+      }
+    } catch {
+      // Rating is a further enhancement on top of the identity fetch — omit it, don't fail the whole card.
+    }
+
+    return {
+      displayName: identity.displayName,
+      photoUrl: identity.photoUrl,
+      vehicleDescription: identity.vehicleDescription,
+      licensePlate: identity.licensePlate,
+      averageRating: ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : undefined,
+      reviewCount: ratings.length,
+    };
+  } catch {
+    return null;
   }
 }

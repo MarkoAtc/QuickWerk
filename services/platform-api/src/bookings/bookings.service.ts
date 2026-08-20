@@ -765,6 +765,45 @@ export class BookingsService {
     return { ok: true, statusCode: 200, payment };
   }
 
+  /**
+   * Booking-scoped provider identity (name, photo, vehicle, license plate) for the
+   * active-job screen. Deliberately narrower than public discovery: only a party to
+   * this specific booking, once accepted, can see it — vehicle/plate identify a
+   * person's vehicle and must not leak through any public or list endpoint.
+   */
+  async getBookingProviderIdentity(
+    session: AuthSession,
+    bookingId: string,
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | {
+      ok: true;
+      statusCode: 200;
+      providerIdentity: Awaited<ReturnType<ProvidersService['getProviderIdentitySummary']>>;
+    }
+  > {
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (booking.status !== 'accepted' || !booking.providerUserId) {
+      return { ok: true, statusCode: 200, providerIdentity: null };
+    }
+
+    const providerIdentity = await this.providersService.getProviderIdentitySummary(booking.providerUserId);
+    return { ok: true, statusCode: 200, providerIdentity };
+  }
+
   private serializeRecord(record: BookingRecord) {
     return {
       bookingId: record.bookingId,

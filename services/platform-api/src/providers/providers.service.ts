@@ -33,6 +33,9 @@ type UpsertProfileInput = {
   tradeCategories?: string[];
   serviceArea?: string;
   isPublic?: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
 };
 
 export type ProviderApprovalStatus = 'not-submitted' | 'pending' | 'request-more-info' | 'rejected' | 'approved';
@@ -333,6 +336,9 @@ export class ProvidersService {
       tradeCategories: input.tradeCategories,
       serviceArea: input.serviceArea,
       isPublic: input.isPublic,
+      photoUrl: input.photoUrl,
+      vehicleDescription: input.vehicleDescription,
+      licensePlate: input.licensePlate,
       now: new Date().toISOString(),
     });
 
@@ -351,7 +357,7 @@ export class ProvidersService {
     context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 404; error: string }
-    | { ok: true; statusCode: 200; provider: ReturnType<ProvidersService['serializeProfile']> }
+    | { ok: true; statusCode: 200; provider: ReturnType<ProvidersService['serializePublicProfile']> }
   > {
     const correlationId = context?.correlationId ?? 'corr-missing';
     const trimmedId = providerUserId?.trim();
@@ -392,13 +398,13 @@ export class ProvidersService {
       details: { providerUserId: trimmedId },
     });
 
-    return { ok: true, statusCode: 200, provider: this.serializeProfile(profile) };
+    return { ok: true, statusCode: 200, provider: this.serializePublicProfile(profile) };
   }
 
   async listPublicProviders(
     filter?: { tradeCategory?: string; location?: string },
     context?: { correlationId?: string },
-  ): Promise<{ ok: true; statusCode: 200; providers: ReturnType<ProvidersService['serializeProfile']>[] }> {
+  ): Promise<{ ok: true; statusCode: 200; providers: ReturnType<ProvidersService['serializePublicProfile']>[] }> {
     const correlationId = context?.correlationId ?? 'corr-missing';
 
     const profiles = await this.profiles.listPublicProfiles(filter);
@@ -422,7 +428,7 @@ export class ProvidersService {
       },
     });
 
-    return { ok: true, statusCode: 200, providers: approvedProfiles.map((p) => this.serializeProfile(p)) };
+    return { ok: true, statusCode: 200, providers: approvedProfiles.map((p) => this.serializePublicProfile(p)) };
   }
 
   async getMyProfile(
@@ -449,6 +455,13 @@ export class ProvidersService {
     return { ok: true, statusCode: 200, profile: profile ? this.serializeProfile(profile) : null };
   }
 
+  /**
+   * Full profile, including fields the provider set for themselves (vehicle/plate) that
+   * must NOT appear on public discovery responses — those go out to any anonymous caller,
+   * while vehicle/license-plate identify a person's vehicle and are only safe to disclose
+   * booking-scoped (see BookingsService.getBookingProviderIdentity). Used for the owner's
+   * own "/me/profile" view only.
+   */
   private serializeProfile(profile: ProviderProfile) {
     return {
       providerUserId: profile.providerUserId,
@@ -457,9 +470,43 @@ export class ProvidersService {
       tradeCategories: profile.tradeCategories,
       serviceArea: profile.serviceArea,
       isPublic: profile.isPublic,
+      photoUrl: profile.photoUrl,
+      vehicleDescription: profile.vehicleDescription,
+      licensePlate: profile.licensePlate,
       createdAt: profile.createdAt,
       updatedAt: profile.updatedAt,
     } as const;
+  }
+
+  /** Discovery-safe view: excludes vehicleDescription/licensePlate. See serializeProfile. */
+  private serializePublicProfile(profile: ProviderProfile) {
+    const { vehicleDescription: _vehicleDescription, licensePlate: _licensePlate, ...publicFields } =
+      this.serializeProfile(profile);
+    return publicFields;
+  }
+
+  /**
+   * Booking-scoped identity lookup: no isPublic/approval gate (the caller — BookingsService —
+   * has already authorized the requester as a party to a specific accepted booking with this
+   * provider, which is a stronger, narrower authorization than public discovery).
+   */
+  async getProviderIdentitySummary(providerUserId: string): Promise<{
+    displayName: string;
+    photoUrl?: string;
+    vehicleDescription?: string;
+    licensePlate?: string;
+  } | null> {
+    const profile = await this.profiles.getProfileByProviderId(providerUserId);
+    if (!profile) {
+      return null;
+    }
+
+    return {
+      displayName: profile.displayName,
+      photoUrl: profile.photoUrl,
+      vehicleDescription: profile.vehicleDescription,
+      licensePlate: profile.licensePlate,
+    };
   }
 
   private serializeRecord(record: ProviderVerificationRecord) {
