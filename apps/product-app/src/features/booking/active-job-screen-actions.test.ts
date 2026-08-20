@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadBookingContinuation, loadProviderIdentity } from './active-job-screen-actions';
+import { loadBookingContinuation, loadProviderIdentity, loadTracking } from './active-job-screen-actions';
 
 describe('loadBookingContinuation', () => {
   it('loads booking and payment details when both requests succeed', async () => {
@@ -229,5 +229,59 @@ describe('loadProviderIdentity', () => {
     const identity = await loadProviderIdentity(baseInput, fetchMock);
 
     expect(identity).toBeNull();
+  });
+});
+
+describe('loadTracking', () => {
+  const trackingInput = { sessionToken: 'tok-1', bookingId: 'bk-1' };
+
+  it('returns tracking when the request succeeds with a well-formed payload', async () => {
+    const fetchMock: typeof fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 }),
+    } as Response);
+
+    const tracking = await loadTracking(trackingInput, fetchMock);
+
+    expect(tracking).toEqual({ source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 });
+  });
+
+  it('returns null when the booking is not yet accepted (endpoint returns null body)', async () => {
+    const fetchMock: typeof fetch = async () => ({ ok: true, status: 200, json: async () => null } as Response);
+
+    const tracking = await loadTracking(trackingInput, fetchMock);
+
+    expect(tracking).toBeNull();
+  });
+
+  it('returns null when the request fails', async () => {
+    const fetchMock: typeof fetch = async () => ({ ok: false, status: 403 } as Response);
+
+    const tracking = await loadTracking(trackingInput, fetchMock);
+
+    expect(tracking).toBeNull();
+  });
+
+  it('returns null on a malformed payload', async () => {
+    const fetchMock: typeof fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ source: 'simulated', status: 'en-route' }),
+    } as Response);
+
+    const tracking = await loadTracking(trackingInput, fetchMock);
+
+    expect(tracking).toBeNull();
+  });
+
+  it('returns null on thrown fetch error', async () => {
+    const fetchMock: typeof fetch = async () => {
+      throw new Error('Network down');
+    };
+
+    const tracking = await loadTracking(trackingInput, fetchMock);
+
+    expect(tracking).toBeNull();
   });
 });

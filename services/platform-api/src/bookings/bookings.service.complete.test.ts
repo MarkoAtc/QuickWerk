@@ -201,6 +201,24 @@ describe('BookingsService.getBookingPayment', () => {
     if (!result.ok) expect(result.statusCode).toBe(403);
   });
 
+  it('denies an operator who is not a party to the booking (regression: role-branching let non-customer/provider roles fall through)', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+    const operator = createSession('operator', 'operator-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Plumbing' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await service.acceptBooking(provider, created.booking.bookingId);
+    await service.completeBooking(provider, created.booking.bookingId);
+
+    const result = await service.getBookingPayment(operator, created.booking.bookingId);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.statusCode).toBe(403);
+  });
+
   it('returns payment for booking owner', async () => {
     const { service } = createService();
     const customer = createSession('customer', 'customer-1');

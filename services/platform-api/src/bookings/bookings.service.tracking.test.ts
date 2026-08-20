@@ -24,21 +24,6 @@ const createSession = (role: AuthSession['role'], userId: string): AuthSession =
   };
 };
 
-const phoneByUserId: Record<string, string> = {
-  'customer-1': '+15550001111',
-  'provider-1': '+15550002222',
-};
-
-const createProvidersServiceStub = (): ProvidersService =>
-  ({
-    getProviderApprovalStatus: async () => 'approved',
-  }) as unknown as ProvidersService;
-
-const createAuthServiceStub = (): AuthService =>
-  ({
-    getPhoneByUserId: async (userId: string) => phoneByUserId[userId] ?? null,
-  }) as unknown as AuthService;
-
 const createService = () => {
   const paymentsService = new PaymentsService(
     new InMemoryPaymentRepository(),
@@ -52,17 +37,19 @@ const createService = () => {
     async publishBookingCompleted() {},
     async publishPaymentCaptured() {},
   };
+  const providersService = { getProviderApprovalStatus: async () => 'approved' } as unknown as ProvidersService;
+  const authService = { getPhoneByUserId: async () => null } as unknown as AuthService;
 
   return new BookingsService(
     new InMemoryBookingRepository(),
     eventPublisher,
     paymentsService,
-    createProvidersServiceStub(),
-    createAuthServiceStub(),
+    providersService,
+    authService,
   );
 };
 
-describe('BookingsService.getBookingContact — denial paths', () => {
+describe('BookingsService.getBookingTracking — denial paths', () => {
   it('denies a customer who is not a party to the booking', async () => {
     const service = createService();
     const customer = createSession('customer', 'customer-1');
@@ -73,7 +60,7 @@ describe('BookingsService.getBookingContact — denial paths', () => {
     if (!created.ok) throw new Error('create failed');
     await service.acceptBooking(provider, created.booking.bookingId);
 
-    const result = await service.getBookingContact(otherCustomer, created.booking.bookingId);
+    const result = await service.getBookingTracking(otherCustomer, created.booking.bookingId);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -90,7 +77,7 @@ describe('BookingsService.getBookingContact — denial paths', () => {
     if (!created.ok) throw new Error('create failed');
     await service.acceptBooking(provider, created.booking.bookingId);
 
-    const result = await service.getBookingContact(otherProvider, created.booking.bookingId);
+    const result = await service.getBookingTracking(otherProvider, created.booking.bookingId);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -101,7 +88,7 @@ describe('BookingsService.getBookingContact — denial paths', () => {
     const service = createService();
     const customer = createSession('customer', 'customer-1');
 
-    const result = await service.getBookingContact(customer, 'does-not-exist');
+    const result = await service.getBookingTracking(customer, 'does-not-exist');
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -118,30 +105,30 @@ describe('BookingsService.getBookingContact — denial paths', () => {
     if (!created.ok) throw new Error('create failed');
     await service.acceptBooking(provider, created.booking.bookingId);
 
-    const result = await service.getBookingContact(operator, created.booking.bookingId);
+    const result = await service.getBookingTracking(operator, created.booking.bookingId);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.statusCode).toBe(403);
   });
 
-  it('returns no phone before the booking is accepted, even for the owning customer', async () => {
+  it('returns no tracking before the booking is accepted, even for the owning customer', async () => {
     const service = createService();
     const customer = createSession('customer', 'customer-1');
 
     const created = await service.createBooking(customer, { requestedService: 'Fix sink' });
     if (!created.ok) throw new Error('create failed');
 
-    const result = await service.getBookingContact(customer, created.booking.bookingId);
+    const result = await service.getBookingTracking(customer, created.booking.bookingId);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.phone).toBeNull();
+    expect(result.tracking).toBeNull();
   });
 });
 
-describe('BookingsService.getBookingContact — happy paths', () => {
-  it('returns the provider phone to the customer once accepted', async () => {
+describe('BookingsService.getBookingTracking — happy paths', () => {
+  it('returns simulated tracking to the customer once accepted', async () => {
     const service = createService();
     const customer = createSession('customer', 'customer-1');
     const provider = createSession('provider', 'provider-1');
@@ -150,14 +137,18 @@ describe('BookingsService.getBookingContact — happy paths', () => {
     if (!created.ok) throw new Error('create failed');
     await service.acceptBooking(provider, created.booking.bookingId);
 
-    const result = await service.getBookingContact(customer, created.booking.bookingId);
+    const result = await service.getBookingTracking(customer, created.booking.bookingId);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.phone).toBe('+15550002222');
+    expect(result.tracking).not.toBeNull();
+    expect(result.tracking?.source).toBe('simulated');
+    expect(result.tracking?.status).toBe('en-route');
+    expect(result.tracking?.etaSeconds).toBeLessThanOrEqual(720);
+    expect(result.tracking?.distanceKm).toBeLessThanOrEqual(3.2);
   });
 
-  it('returns the customer phone to the assigned provider (symmetric authorization)', async () => {
+  it('returns simulated tracking to the assigned provider too (symmetric authorization)', async () => {
     const service = createService();
     const customer = createSession('customer', 'customer-1');
     const provider = createSession('provider', 'provider-1');
@@ -166,26 +157,10 @@ describe('BookingsService.getBookingContact — happy paths', () => {
     if (!created.ok) throw new Error('create failed');
     await service.acceptBooking(provider, created.booking.bookingId);
 
-    const result = await service.getBookingContact(provider, created.booking.bookingId);
+    const result = await service.getBookingTracking(provider, created.booking.bookingId);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.phone).toBe('+15550001111');
-  });
-
-  it('returns null when the counterpart has no phone on file', async () => {
-    const service = createService();
-    const customer = createSession('customer', 'customer-with-no-phone');
-    const provider = createSession('provider', 'provider-1');
-
-    const created = await service.createBooking(customer, { requestedService: 'Fix sink' });
-    if (!created.ok) throw new Error('create failed');
-    await service.acceptBooking(provider, created.booking.bookingId);
-
-    const result = await service.getBookingContact(provider, created.booking.bookingId);
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.phone).toBeNull();
+    expect(result.tracking?.source).toBe('simulated');
   });
 });

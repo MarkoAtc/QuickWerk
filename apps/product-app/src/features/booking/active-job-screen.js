@@ -44,7 +44,16 @@ function resolveStatusTone(status) {
   return { background: 'rgba(255,138,0,0.14)', text: colors.cta };
 }
 
-function MapStage({ statusLabel }) {
+function formatTrackingHeadline(tracking) {
+  if (tracking.status === 'arrived') {
+    return 'Provider has arrived';
+  }
+
+  const minutes = Math.max(1, Math.ceil(tracking.etaSeconds / 60));
+  return `Arriving in ${minutes} min${minutes === 1 ? '' : 's'}`;
+}
+
+function MapStage({ statusLabel, tracking }) {
   return (
     <View
       style={{
@@ -154,26 +163,48 @@ function MapStage({ statusLabel }) {
           ...shadow.card,
         }}
       >
-        <Text
-          style={{
-            color: colors.text,
-            fontSize: typography.fontSize.headlineSm,
-            lineHeight: typography.lineHeight.headlineSm,
-            fontWeight: typography.fontWeight.semibold,
-          }}
-        >
-          Booking progress stays visible, not buried.
-        </Text>
-        <Text
-          style={{
-            marginTop: spacing.sm,
-            color: colors.textMuted,
-            fontSize: typography.fontSize.bodySm,
-            lineHeight: typography.lineHeight.bodySm,
-          }}
-        >
-          This view is the foundation for a richer live tracking experience, provider updates, and next-step actions.
-        </Text>
+        {tracking ? (
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} testID="active-job-tracking">
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: typography.fontSize.headlineSm,
+                lineHeight: typography.lineHeight.headlineSm,
+                fontWeight: typography.fontWeight.bold,
+              }}
+            >
+              {formatTrackingHeadline(tracking)}
+            </Text>
+            {tracking.status === 'en-route' ? (
+              <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>
+                {tracking.distanceKm.toFixed(1)} km
+              </Text>
+            ) : null}
+          </View>
+        ) : (
+          <>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: typography.fontSize.headlineSm,
+                lineHeight: typography.lineHeight.headlineSm,
+                fontWeight: typography.fontWeight.semibold,
+              }}
+            >
+              Booking progress stays visible, not buried.
+            </Text>
+            <Text
+              style={{
+                marginTop: spacing.sm,
+                color: colors.textMuted,
+                fontSize: typography.fontSize.bodySm,
+                lineHeight: typography.lineHeight.bodySm,
+              }}
+            >
+              This view is the foundation for a richer live tracking experience, provider updates, and next-step actions.
+            </Text>
+          </>
+        )}
       </View>
     </View>
   );
@@ -424,7 +455,7 @@ export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMess
       </View>
 
       <View style={{ marginTop: spacing.xl }}>
-        <MapStage statusLabel={model.statusLabel} />
+        <MapStage statusLabel={model.statusLabel} tracking={model.tracking} />
       </View>
 
       <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>

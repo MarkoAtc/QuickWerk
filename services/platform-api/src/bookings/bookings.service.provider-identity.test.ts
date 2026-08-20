@@ -153,4 +153,21 @@ describe('BookingsService.getBookingProviderIdentity', () => {
     if (result.ok) return;
     expect(result.statusCode).toBe(404);
   });
+
+  it('denies an operator who is not a party to the booking (regression: role-branching let non-customer/provider roles fall through)', async () => {
+    const service = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+    const operator = createSession('operator', 'operator-1');
+
+    const created = await service.createBooking(customer, { requestedService: 'Fix sink' });
+    if (!created.ok) throw new Error('create failed');
+    await service.acceptBooking(provider, created.booking.bookingId);
+
+    const result = await service.getBookingProviderIdentity(operator, created.booking.bookingId);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.statusCode).toBe(403);
+  });
 });

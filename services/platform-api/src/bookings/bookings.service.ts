@@ -20,6 +20,7 @@ import {
 import { PaymentsService } from '../payments/payments.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
+import { computeSimulatedTracking, SimulatedTracking } from './simulated-tracking';
 
 @Injectable()
 export class BookingsService {
@@ -749,12 +750,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    // Validate access for both customer and provider
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -765,6 +761,17 @@ export class BookingsService {
     }
 
     return { ok: true, statusCode: 200, payment };
+  }
+
+  /**
+   * True only for the booking's own customer or its assigned provider. Deliberately
+   * NOT role-branching (`role === 'customer' && ...`) — that shape lets any role that
+   * isn't literally 'customer' or 'provider' (e.g. 'operator') fall through both checks
+   * and pass unauthorized. Found by CodeRabbit on TEC-98's getBookingTracking and fixed
+   * here for all three booking-scoped sensitive-data endpoints that shared the bug.
+   */
+  private isBookingParty(session: AuthSession, booking: BookingRecord): boolean {
+    return booking.customerUserId === session.userId || booking.providerUserId === session.userId;
   }
 
   /**
@@ -790,11 +797,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -828,11 +831,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -843,6 +842,44 @@ export class BookingsService {
     const counterpartUserId = session.role === 'provider' ? booking.customerUserId : booking.providerUserId;
     const phone = await this.authService.getPhoneByUserId(counterpartUserId);
     return { ok: true, statusCode: 200, phone };
+  }
+
+  /**
+   * Booking-scoped simulated en-route tracking (ETA/distance) for the active-job screen.
+   * Same party authorization as the sibling booking-scoped endpoints, applied for
+   * consistency even though this data is lower-stakes than phone/vehicle. Deterministic
+   * and computed on read from the booking's `accepted` timestamp — see
+   * simulated-tracking.ts for why that means no state to reset on reload/retry.
+   */
+  async getBookingTracking(
+    session: AuthSession,
+    bookingId: string,
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | { ok: true; statusCode: 200; tracking: SimulatedTracking | null }
+  > {
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    if (!this.isBookingParty(session, booking)) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (booking.status !== 'accepted') {
+      return { ok: true, statusCode: 200, tracking: null };
+    }
+
+    const acceptedEvent = booking.statusHistory.find((event) => event.to === 'accepted');
+
+    if (!acceptedEvent) {
+      return { ok: true, statusCode: 200, tracking: null };
+    }
+
+    const tracking = computeSimulatedTracking(acceptedEvent.changedAt, new Date());
+    return { ok: true, statusCode: 200, tracking };
   }
 
   private serializeRecord(record: BookingRecord) {
