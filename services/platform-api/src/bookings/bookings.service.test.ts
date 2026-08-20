@@ -6,6 +6,7 @@ import type {
 } from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
+import { AuthService } from '../auth/auth.service';
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BookingDomainEventPublisher } from '../orchestration/domain-event.publisher';
 import { InMemoryInvoiceRepository } from '../invoices/infrastructure/in-memory-invoice.repository';
@@ -57,13 +58,20 @@ const createService = () => {
     new InvoicesService(new InMemoryInvoiceRepository()),
   );
   const providersService = createProvidersServiceStub('approved');
+  const authService = createAuthServiceStub();
 
   return {
     createdEvents,
     emittedEvents,
     declinedEvents,
     completedEvents,
-    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService, providersService),
+    service: new BookingsService(
+      new InMemoryBookingRepository(),
+      eventPublisher,
+      paymentsService,
+      providersService,
+      authService,
+    ),
   };
 };
 
@@ -73,6 +81,11 @@ const createProvidersServiceStub = (
   ({
     getProviderApprovalStatus: async () => approvalStatus,
   }) as unknown as ProvidersService;
+
+const createAuthServiceStub = (): AuthService =>
+  ({
+    getPhoneByUserId: async () => null,
+  }) as unknown as AuthService;
 
 describe('BookingsService', () => {
   it('enforces role auth for create and accept flows', async () => {
@@ -235,6 +248,7 @@ describe('BookingsService', () => {
       eventPublisher,
       paymentsService,
       createProvidersServiceStub('pending'),
+      createAuthServiceStub(),
     );
 
     const customer = createSession('customer', 'customer-1');

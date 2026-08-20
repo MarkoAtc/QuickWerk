@@ -105,13 +105,22 @@ describe('loadBookingContinuation', () => {
 describe('loadProviderIdentity', () => {
   const baseInput = { sessionToken: 'tok-1', bookingId: 'bk-1', providerUserId: 'prov-1' };
 
-  it('combines booking-scoped identity and average rating when both requests succeed', async () => {
+  it('combines booking-scoped identity, average rating, and contact phone when all requests succeed', async () => {
     const fetchMock: typeof fetch = async (url) => {
-      if (url.toString().includes('/reviews')) {
+      const href = url.toString();
+      if (href.includes('/reviews')) {
         return {
           ok: true,
           status: 200,
           json: async () => [{ rating: 5 }, { rating: 4 }],
+        } as Response;
+      }
+
+      if (href.includes('/contact')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ phone: '+15550002222' }),
         } as Response;
       }
 
@@ -136,7 +145,47 @@ describe('loadProviderIdentity', () => {
       licensePlate: 'B-HW-2024',
       averageRating: 4.5,
       reviewCount: 2,
+      phone: '+15550002222',
     });
+  });
+
+  it('omits phone when the contact request returns no phone (counterpart has none on file)', async () => {
+    const fetchMock: typeof fetch = async (url) => {
+      const href = url.toString();
+      if (href.includes('/reviews')) {
+        return { ok: true, status: 200, json: async () => [] } as Response;
+      }
+
+      if (href.includes('/contact')) {
+        return { ok: true, status: 200, json: async () => ({ phone: null }) } as Response;
+      }
+
+      return { ok: true, status: 200, json: async () => ({ displayName: 'Marcus Hoffman' }) } as Response;
+    };
+
+    const identity = await loadProviderIdentity(baseInput, fetchMock);
+
+    expect(identity?.phone).toBeUndefined();
+  });
+
+  it('omits phone when the contact request fails (e.g. not yet accepted)', async () => {
+    const fetchMock: typeof fetch = async (url) => {
+      const href = url.toString();
+      if (href.includes('/reviews')) {
+        return { ok: true, status: 200, json: async () => [] } as Response;
+      }
+
+      if (href.includes('/contact')) {
+        return { ok: false, status: 403 } as Response;
+      }
+
+      return { ok: true, status: 200, json: async () => ({ displayName: 'Marcus Hoffman' }) } as Response;
+    };
+
+    const identity = await loadProviderIdentity(baseInput, fetchMock);
+
+    expect(identity?.phone).toBeUndefined();
+    expect(identity?.displayName).toBe('Marcus Hoffman');
   });
 
   it('returns identity with no rating when reviews request fails', async () => {

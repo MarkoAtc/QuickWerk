@@ -10,6 +10,7 @@ import type {
 } from '@quickwerk/domain';
 import { Inject, Injectable } from '@nestjs/common';
 
+import { AuthService } from '../auth/auth.service';
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { logStructuredBreadcrumb } from '../observability/structured-log';
 import {
@@ -29,6 +30,7 @@ export class BookingsService {
     private readonly domainEvents: BookingDomainEventPublisher,
     private readonly paymentsService: PaymentsService,
     private readonly providersService: ProvidersService,
+    private readonly authService: AuthService,
   ) {}
 
   getMarketplacePreview() {
@@ -802,6 +804,45 @@ export class BookingsService {
 
     const providerIdentity = await this.providersService.getProviderIdentitySummary(booking.providerUserId);
     return { ok: true, statusCode: 200, providerIdentity };
+  }
+
+  /**
+   * Booking-scoped counterpart phone number for the "Call" affordance on active-job.
+   * Same party-and-accepted-only authorization as getBookingProviderIdentity — a phone
+   * number is the most sensitive field this app exposes, so this is the ONLY endpoint
+   * anywhere in the API surface that returns one. Symmetric by role (customer gets the
+   * provider's phone, provider gets the customer's), even though only the customer-facing
+   * "Call Provider" UI is wired up today — same authorization shape as the sibling
+   * booking-scoped endpoints, not a new pattern.
+   */
+  async getBookingContact(
+    session: AuthSession,
+    bookingId: string,
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404; error: string }
+    | { ok: true; statusCode: 200; phone: string | null }
+  > {
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    }
+
+    if (booking.status !== 'accepted' || !booking.providerUserId) {
+      return { ok: true, statusCode: 200, phone: null };
+    }
+
+    const counterpartUserId = session.role === 'provider' ? booking.customerUserId : booking.providerUserId;
+    const phone = await this.authService.getPhoneByUserId(counterpartUserId);
+    return { ok: true, statusCode: 200, phone };
   }
 
   private serializeRecord(record: BookingRecord) {

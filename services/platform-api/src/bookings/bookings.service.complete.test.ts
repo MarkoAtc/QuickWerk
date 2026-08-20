@@ -7,6 +7,7 @@ import type {
 } from '@quickwerk/domain';
 import { describe, expect, it } from 'vitest';
 
+import { AuthService } from '../auth/auth.service';
 import { AuthSession } from '../auth/domain/auth-session.repository';
 import { BookingDomainEventPublisher } from '../orchestration/domain-event.publisher';
 import { InMemoryInvoiceRepository } from '../invoices/infrastructure/in-memory-invoice.repository';
@@ -56,8 +57,15 @@ const createService = () => {
   const providersService = ({
     getProviderApprovalStatus: async () => 'approved',
   }) as unknown as ProvidersService;
+  const authService = { getPhoneByUserId: async () => null } as unknown as AuthService;
   return {
-    service: new BookingsService(new InMemoryBookingRepository(), eventPublisher, paymentsService, providersService),
+    service: new BookingsService(
+      new InMemoryBookingRepository(),
+      eventPublisher,
+      paymentsService,
+      providersService,
+      authService,
+    ),
     paymentsService,
     createdEvents,
     completedEvents,

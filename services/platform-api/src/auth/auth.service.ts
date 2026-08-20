@@ -24,6 +24,11 @@ export class AuthService {
     private readonly sessionStore: AuthSessionRepository,
   ) {}
 
+  /** Null for accounts with no phone on file (e.g. email/password-only), not an error. */
+  async getPhoneByUserId(userId: string): Promise<string | null> {
+    return this.sessionStore.getPhoneByUserId(userId);
+  }
+
   async getSession(token: string | undefined) {
     const session = await this.sessionStore.resolveSession(token);
 
