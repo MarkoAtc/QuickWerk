@@ -120,7 +120,7 @@ function MapMarker({ marker }) {
   );
 }
 
-function SearchBar() {
+function SearchBar({ onOpenCategories }) {
   return (
     <View
       style={{
@@ -144,18 +144,20 @@ function SearchBar() {
         style={{ flex: 1, fontSize: typography.fontSize.bodyMd, color: colors.text }}
         testID="home-triage-search-input"
       />
-      <View
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: radius.md,
-          backgroundColor: colors.primaryContainer,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text style={{ color: '#FFFFFF', fontSize: 14 }}>⚙️</Text>
-      </View>
+      <Pressable accessibilityLabel="Browse service categories" accessibilityRole="button" onPress={onOpenCategories} testID="home-triage-open-categories">
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: radius.md,
+            backgroundColor: colors.primaryContainer,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 14 }}>⚙️</Text>
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -300,7 +302,7 @@ function MatchCard({ match, onPress }) {
   );
 }
 
-export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onChangeAddress, onBrowseProviders }) {
+export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onChangeAddress, onBrowseProviders, onOpenCategories }) {
   const [selectedChip, setSelectedChip] = useState(CATEGORY_CHIPS[0].id);
 
   const handleSelectCategory = (categoryId) => {
@@ -331,7 +333,7 @@ export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onCh
         </View>
 
         <View style={{ zIndex: 20, paddingHorizontal: spacing.container, paddingTop: spacing.md, gap: spacing.sm }}>
-          <SearchBar />
+          <SearchBar onOpenCategories={onOpenCategories ?? (() => {})} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
             {CATEGORY_CHIPS.map((chip) => (
               <CategoryChip key={chip.id} chip={chip} isSelected={selectedChip === chip.id} onPress={handleSelectCategory} />

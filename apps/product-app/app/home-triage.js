@@ -38,6 +38,9 @@ export default function HomeTriageRoute() {
         onBrowseProviders={() => {
           router.push({ pathname: '/discovery', params: { location: address } });
         }}
+        onOpenCategories={() => {
+          router.push({ pathname: '/categories', params: { address } });
+        }}
       />
 
       {isEditingAddress ? (
