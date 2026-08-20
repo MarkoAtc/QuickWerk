@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
@@ -234,6 +234,83 @@ function Timeline({ items }) {
   );
 }
 
+function initialsFromName(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
+function ProviderIdentityCard({ identity }) {
+  return (
+    <View
+      style={{
+        marginTop: spacing.xl,
+        borderRadius: 28,
+        padding: spacing.xl,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.outlineVariant,
+        ...shadow.card,
+      }}
+      testID="active-job-provider-identity"
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: radius.lg,
+            backgroundColor: `${colors.secondaryBright}14`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          {identity.photoUrl ? (
+            <Image accessibilityLabel={identity.displayName} source={{ uri: identity.photoUrl }} style={{ width: '100%', height: '100%' }} />
+          ) : (
+            <Text style={{ color: colors.secondaryBright, fontSize: 18, fontWeight: typography.fontWeight.bold }}>
+              {initialsFromName(identity.displayName)}
+            </Text>
+          )}
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
+            {identity.displayName}
+          </Text>
+          {identity.vehicleDescription || identity.licensePlate ? (
+            <Text style={{ marginTop: 2, color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>
+              {[identity.vehicleDescription, identity.licensePlate].filter(Boolean).join(' • ')}
+            </Text>
+          ) : null}
+        </View>
+
+        {identity.reviewCount > 0 && identity.averageRating != null ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              borderRadius: radius.sm,
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.xs,
+              backgroundColor: 'rgba(255, 214, 0, 0.2)',
+            }}
+          >
+            <Text style={{ color: '#8A6500', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              ★ {identity.averageRating.toFixed(1)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 function InfoCard({ title, value, accent }) {
   return (
     <View
@@ -327,6 +404,8 @@ export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMess
         <InfoCard title="Service" value={model.requestedService} />
         <InfoCard title={model.counterpartLabel} value={model.counterpartValue} accent={colors.secondaryBright} />
       </View>
+
+      {model.providerIdentity ? <ProviderIdentityCard identity={model.providerIdentity} /> : null}
 
       <View
         style={{

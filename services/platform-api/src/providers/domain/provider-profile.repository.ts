@@ -5,6 +5,9 @@ export type ProviderProfile = {
   tradeCategories: string[];
   serviceArea?: string;
   isPublic: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -16,6 +19,9 @@ export type UpsertProviderProfileInput = {
   tradeCategories?: string[];
   serviceArea?: string;
   isPublic?: boolean;
+  photoUrl?: string;
+  vehicleDescription?: string;
+  licensePlate?: string;
   now: string;
 };
 

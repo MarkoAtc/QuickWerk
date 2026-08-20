@@ -2,6 +2,7 @@ import type {
   BookingContinuationPayment,
   BookingContinuationRecord,
   BookingContinuationStatus,
+  ProviderIdentitySummary,
 } from './active-job-screen-actions';
 
 export type TimelineStepState = 'done' | 'active' | 'pending';
@@ -25,6 +26,7 @@ export type ActiveJobViewModel = {
   paymentSummary: string;
   timeline: ActiveJobTimelineStep[];
   statusHistory: string[];
+  providerIdentity?: ProviderIdentitySummary;
 };
 
 type ViewerRole = 'customer' | 'provider';
@@ -34,6 +36,7 @@ type PresentActiveJobInput = {
   booking: BookingContinuationRecord;
   payment?: BookingContinuationPayment;
   warningMessage?: string;
+  providerIdentity?: ProviderIdentitySummary | null;
 };
 
 const defaultStatusLabels: Record<BookingContinuationStatus, string> = {
@@ -159,5 +162,6 @@ export function presentActiveJob(input: PresentActiveJobInput): ActiveJobViewMod
     paymentSummary: resolvePaymentSummary(input.payment, input.warningMessage),
     timeline: resolveTimeline(input.booking.status),
     statusHistory: resolveStatusHistory(input.booking),
+    providerIdentity: input.viewerRole === 'customer' && input.providerIdentity ? input.providerIdentity : undefined,
   };
 }
