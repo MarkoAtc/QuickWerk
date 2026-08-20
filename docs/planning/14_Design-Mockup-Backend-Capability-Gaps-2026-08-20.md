@@ -26,18 +26,26 @@ Scoping this turned out cheaper than the payment side — most pieces are alread
 
 **Privacy note carried into execution:** persisting and exposing phone numbers between customer and provider is a real risk if scoped wrong. The lookup must be authorized only when the requester is a party to that specific booking **and** its status is `accepted`; never exposed on `submitted`/`declined`; never returned from any list endpoint. This gets its own PR and its own denial-path test, not bundled into a larger diff.
 
-## 4. Execution sequence
+## 4. Implementation constraints for the remaining slices
+
+Slice 1 (provider identity, TEC-96, PR #37) already validated one of these the hard way — an initial pass put `vehicleDescription`/`licensePlate` on the *public* discovery endpoint before catching it in review; fixed to a booking-scoped, party-and-accepted-only lookup before opening the PR. The remaining slices carry equivalent risk and should be built against these constraints from the start, not discovered after the fact:
+
+- **Contact provider (slice 2):** same booking-scoped pattern as the provider-identity endpoint — authorized only when the requester is a party to that specific booking and its status is `accepted`; never on `submitted`/`declined`; never through any public/list/discovery endpoint. Write the denial-path test (non-party, wrong status) before the happy path, not after.
+- **Simulated en-route feed (slice 3):** a `ponytail:`-style code comment is not sufficient by itself — expose an explicit `source`/`isSimulated` field in the API contract so no client can mistake it for real telemetry, and define what happens on cancel/complete/zero-ETA and on reload/retry (the feed shouldn't reset or duplicate).
+- **Payment (slice 4):** the client must never supply a total or line items — the server creates an immutable quote (line items, amount, pricing-table version, expiry) from booking data, and checkout accepts only the quote id. Decide and document one payment write path: does checkout record the final simulated payment, or an authorization that completion finalizes? Whichever it is, reconcile it with the existing post-completion `capturePaymentForBooking` path rather than running two. The payment-method domain module must only ever accept server-generated fixtures or opaque demo tokens — reject any raw PAN/CVV/expiry input, mark simulated methods explicitly, and never log card-shaped fields.
+
+## 5. Execution sequence
 
 Split by vertical capability (backend + the frontend that consumes it, shipped together), not by backend/frontend layer — a backend-only PR adding five unrelated fields with no consumer isn't reviewable or verifiable.
 
-1. **Provider identity on active-job** — rating aggregate, photo field + upload, vehicle/plate, rendered into the active-job screen.
+1. **Provider identity on active-job** (TEC-96, PR #37) — rating aggregate, photo field, vehicle/plate, rendered into the active-job screen via a booking-scoped, party-and-accepted-only lookup.
 2. **Contact provider** — persisted phone + authorized/accepted-only lookup + `tel:` link. Separate PR: the privacy gate is the entire risk surface.
 3. **Simulated en-route feed** — ETA/distance state machine + the map/ETA section of the screen, explicitly marked as simulated.
 4. **Payment**: pricing table → payment-method storage → pre-job checkout endpoint → `/checkout` screen (`design/payment_checkout`).
 
 Tracking (1–3) goes first — cheaper, mostly already real.
 
-## 5. Noted, not chased
+## 6. Noted, not chased
 
 `design/review_rating` — the `reviews` backend module already exists and looks unexplored as its own screen; a plausible cheap win later, not part of this sequence.
 
