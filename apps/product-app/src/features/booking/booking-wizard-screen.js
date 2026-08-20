@@ -9,14 +9,12 @@ const URGENCY_OPTIONS = [
     label: 'Urgent',
     icon: '⚡',
     helper: 'Provider arrives within 60 mins. Premium rate applies.',
-    badge: 'Urgent Priority',
   },
   {
     id: 'scheduled',
     label: 'Scheduled',
     icon: '📅',
-    helper: 'Pick a specific time that works for your schedule.',
-    badge: 'Select time',
+    helper: "We'll coordinate a time with your provider after you submit.",
   },
 ];
 
