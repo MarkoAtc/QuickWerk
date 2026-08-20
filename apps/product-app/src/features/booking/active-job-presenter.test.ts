@@ -106,4 +106,24 @@ describe('presentActiveJob', () => {
 
     expect(model.providerIdentity).toBeUndefined();
   });
+
+  it('surfaces tracking for the customer viewer', () => {
+    const model = presentActiveJob({
+      viewerRole: 'customer',
+      booking: createBooking('accepted'),
+      tracking: { source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 },
+    });
+
+    expect(model.tracking).toEqual({ source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 });
+  });
+
+  it('omits tracking for the provider viewer even when supplied', () => {
+    const model = presentActiveJob({
+      viewerRole: 'provider',
+      booking: { ...createBooking('accepted'), customerUserId: 'cust-1' },
+      tracking: { source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 },
+    });
+
+    expect(model.tracking).toBeUndefined();
+  });
 });

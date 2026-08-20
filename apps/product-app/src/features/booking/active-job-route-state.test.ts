@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { resolveActiveJobRouteState, resolveBookingIdParam } from './active-job-route-state';
-import type { LoadBookingContinuationResult, ProviderIdentitySummary } from './active-job-screen-actions';
+import type { LoadBookingContinuationResult, ProviderIdentitySummary, TrackingSummary } from './active-job-screen-actions';
 
 describe('resolveBookingIdParam', () => {
   it('returns null for missing or blank param', () => {
@@ -203,5 +203,97 @@ describe('resolveActiveJobRouteState', () => {
     });
 
     expect(loadProviderIdentityImpl).not.toHaveBeenCalled();
+  });
+
+  it('fetches tracking for the customer viewer once the booking is accepted', async () => {
+    const loadImpl = async (): Promise<LoadBookingContinuationResult> => ({
+      booking: {
+        bookingId: 'bk-1',
+        createdAt: '2026-04-13T20:00:00.000Z',
+        customerUserId: 'cust-1',
+        providerUserId: 'prov-1',
+        requestedService: 'Fix sink',
+        status: 'accepted',
+        statusHistory: [],
+      },
+    });
+
+    const tracking: TrackingSummary = { source: 'simulated', status: 'en-route', etaSeconds: 300, distanceKm: 1.2 };
+    const loadProviderIdentityImpl = vi.fn().mockResolvedValue(null);
+    const loadTrackingImpl = vi.fn().mockResolvedValue(tracking);
+    const presentActiveJobImpl = vi.fn().mockReturnValue({
+      bookingId: 'bk-1',
+      status: 'accepted',
+      statusLabel: 'Accepted',
+      headline: 'Provider assigned',
+      subheadline: 'test',
+      requestedService: 'Fix sink',
+      counterpartLabel: 'Provider',
+      counterpartValue: 'prov-1',
+      canContactCounterpart: true,
+      paymentSummary: 'Payment details are not available yet.',
+      timeline: [],
+      statusHistory: [],
+      tracking,
+    });
+
+    const state = await resolveActiveJobRouteState({
+      sessionToken: 'tok',
+      bookingId: 'bk-1',
+      viewerRole: 'customer',
+      loadBookingContinuationImpl: loadImpl,
+      loadProviderIdentityImpl,
+      loadTrackingImpl,
+      presentActiveJobImpl,
+    });
+
+    expect(loadTrackingImpl).toHaveBeenCalledWith({ sessionToken: 'tok', bookingId: 'bk-1' });
+    expect(presentActiveJobImpl).toHaveBeenCalledWith(expect.objectContaining({ tracking }));
+    expect(state.status).toBe('loaded');
+    if (state.status === 'loaded') {
+      expect(state.viewModel.tracking).toEqual(tracking);
+    }
+  });
+
+  it('does not fetch tracking for a booking that is not yet accepted', async () => {
+    const loadImpl = async (): Promise<LoadBookingContinuationResult> => ({
+      booking: {
+        bookingId: 'bk-1',
+        createdAt: '2026-04-13T20:00:00.000Z',
+        customerUserId: 'cust-1',
+        requestedService: 'Fix sink',
+        status: 'submitted',
+        statusHistory: [],
+      },
+    });
+
+    const loadProviderIdentityImpl = vi.fn().mockResolvedValue(null);
+    const loadTrackingImpl = vi.fn();
+    const presentActiveJobImpl = vi.fn().mockReturnValue({
+      bookingId: 'bk-1',
+      status: 'submitted',
+      statusLabel: 'Submitted',
+      headline: 'Booking submitted',
+      subheadline: 'test',
+      requestedService: 'Fix sink',
+      counterpartLabel: 'Provider',
+      counterpartValue: 'Not assigned yet',
+      canContactCounterpart: false,
+      paymentSummary: 'Payment details are not available yet.',
+      timeline: [],
+      statusHistory: [],
+    });
+
+    await resolveActiveJobRouteState({
+      sessionToken: 'tok',
+      bookingId: 'bk-1',
+      viewerRole: 'customer',
+      loadBookingContinuationImpl: loadImpl,
+      loadProviderIdentityImpl,
+      loadTrackingImpl,
+      presentActiveJobImpl,
+    });
+
+    expect(loadTrackingImpl).not.toHaveBeenCalled();
   });
 });

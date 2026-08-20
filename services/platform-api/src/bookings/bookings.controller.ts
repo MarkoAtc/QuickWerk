@@ -321,6 +321,45 @@ export class BookingsController {
   }
 
   /**
+   * GET /api/v1/bookings/:bookingId/tracking
+   * Fetch simulated en-route ETA/distance for the active-job screen. Booking-scoped,
+   * same authorization as the sibling endpoints. Always tagged `source: 'simulated'` —
+   * there is no real GPS/location subsystem behind this.
+   */
+  @Get(':bookingId/tracking')
+  async getBookingTracking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to view tracking details.', 401);
+    }
+
+    const result = await this.bookingsService.getBookingTracking(session, bookingId);
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.tracking;
+  }
+
+  /**
    * POST /api/v1/bookings/:bookingId/decline
    * Provider declines a submitted booking.
    */

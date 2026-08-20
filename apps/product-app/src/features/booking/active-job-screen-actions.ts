@@ -3,6 +3,7 @@ import {
   createGetBookingPaymentRequest,
   createGetBookingProviderIdentityRequest,
   createGetBookingRequest,
+  createGetBookingTrackingRequest,
   createGetProviderReviewsRequest,
 } from '@quickwerk/api-client';
 
@@ -337,6 +338,68 @@ export async function loadProviderIdentity(
       reviewCount: ratings.length,
       phone,
     };
+  } catch {
+    return null;
+  }
+}
+
+export type TrackingSummary = {
+  source: 'simulated';
+  status: 'en-route' | 'arrived';
+  etaSeconds: number;
+  distanceKm: number;
+};
+
+function parseTracking(payload: unknown): TrackingSummary | null {
+  if (payload === null || typeof payload !== 'object') {
+    return null;
+  }
+
+  const tracking = payload as Record<string, unknown>;
+
+  if (
+    tracking['source'] !== 'simulated'
+    || (tracking['status'] !== 'en-route' && tracking['status'] !== 'arrived')
+    || typeof tracking['etaSeconds'] !== 'number'
+    || typeof tracking['distanceKm'] !== 'number'
+  ) {
+    return null;
+  }
+
+  return {
+    source: 'simulated',
+    status: tracking['status'],
+    etaSeconds: tracking['etaSeconds'],
+    distanceKm: tracking['distanceKm'],
+  };
+}
+
+type LoadTrackingInput = {
+  sessionToken: string;
+  bookingId: string;
+};
+
+/**
+ * Best-effort fetch: en-route tracking is a graceful enhancement, not a required part
+ * of the screen, so any failure (network, not-yet-accepted booking, malformed response)
+ * resolves to null rather than surfacing an error.
+ */
+export async function loadTracking(
+  input: LoadTrackingInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<TrackingSummary | null> {
+  try {
+    const trackingRequest = createGetBookingTrackingRequest(input.sessionToken, input.bookingId);
+    const trackingResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${trackingRequest.path}`, {
+      method: trackingRequest.method,
+      headers: trackingRequest.headers,
+    });
+
+    if (!trackingResponse.ok) {
+      return null;
+    }
+
+    return parseTracking(await trackingResponse.json());
   } catch {
     return null;
   }

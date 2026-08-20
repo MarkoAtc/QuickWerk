@@ -56,6 +56,7 @@ export const bookingApiRoutes = {
   payment: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/payment`,
   providerIdentity: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/provider-identity`,
   contact: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/contact`,
+  tracking: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/tracking`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -319,6 +320,16 @@ export const createGetBookingProviderIdentityRequest = (sessionToken: string, bo
 export const createGetBookingContactRequest = (sessionToken: string, bookingId: string) => ({
   method: 'GET',
   path: bookingApiRoutes.contact(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+/**
+ * Booking-scoped simulated en-route ETA/distance for the active-job screen. Always
+ * tagged `source: 'simulated'` — there is no real GPS/location subsystem behind this.
+ */
+export const createGetBookingTrackingRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.tracking(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 
