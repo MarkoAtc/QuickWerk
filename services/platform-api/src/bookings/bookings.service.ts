@@ -750,12 +750,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    // Validate access for both customer and provider
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -766,6 +761,17 @@ export class BookingsService {
     }
 
     return { ok: true, statusCode: 200, payment };
+  }
+
+  /**
+   * True only for the booking's own customer or its assigned provider. Deliberately
+   * NOT role-branching (`role === 'customer' && ...`) — that shape lets any role that
+   * isn't literally 'customer' or 'provider' (e.g. 'operator') fall through both checks
+   * and pass unauthorized. Found by CodeRabbit on TEC-98's getBookingTracking and fixed
+   * here for all three booking-scoped sensitive-data endpoints that shared the bug.
+   */
+  private isBookingParty(session: AuthSession, booking: BookingRecord): boolean {
+    return booking.customerUserId === session.userId || booking.providerUserId === session.userId;
   }
 
   /**
@@ -791,11 +797,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -829,11 +831,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
@@ -866,11 +864,7 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (session.role === 'customer' && booking.customerUserId !== session.userId) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
-    }
-
-    if (session.role === 'provider' && booking.providerUserId !== session.userId) {
+    if (!this.isBookingParty(session, booking)) {
       return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
     }
 
