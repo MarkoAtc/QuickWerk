@@ -125,4 +125,19 @@ describe('InMemoryAuthSessionRepository', () => {
       repository.verifyOtp({ phone: '+15550001234', code: devCode as string }),
     ).rejects.toThrow('Invalid or already-used verification code');
   });
+
+  it('resolves a phone-authenticated user\'s phone by userId', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    const { devCode } = await repository.requestOtp('+15550001234');
+    const session = await repository.verifyOtp({ phone: '+15550001234', code: devCode as string });
+
+    await expect(repository.getPhoneByUserId(session.userId)).resolves.toBe('+15550001234');
+  });
+
+  it('returns null for a userId with no phone on file', async () => {
+    const repository = new InMemoryAuthSessionRepository();
+
+    await expect(repository.getPhoneByUserId('unknown-user')).resolves.toBeNull();
+  });
 });

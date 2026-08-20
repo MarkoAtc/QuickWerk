@@ -1,4 +1,4 @@
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
@@ -307,6 +307,33 @@ function ProviderIdentityCard({ identity }) {
           </View>
         ) : null}
       </View>
+
+      {identity.phone ? (
+        <Pressable
+          accessibilityLabel={`Call ${identity.displayName}`}
+          accessibilityRole="button"
+          onPress={() => Linking.openURL(`tel:${identity.phone}`)}
+          style={{ marginTop: spacing.md }}
+          testID="active-job-call-provider"
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: spacing.xs,
+              borderRadius: radius.md,
+              paddingVertical: spacing.sm,
+              backgroundColor: colors.primaryContainer,
+            }}
+          >
+            <Text style={{ fontSize: 14 }}>📞</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              Call Provider
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

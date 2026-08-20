@@ -82,6 +82,8 @@ export interface AuthSessionRepository {
   deleteSession(token: string | null | undefined): Promise<boolean>;
   requestOtp(phone: string): Promise<RequestOtpResult>;
   verifyOtp(input: VerifyOtpInput): Promise<AuthSession>;
+  /** Null for accounts with no phone on file (e.g. email/password-only), not an error. */
+  getPhoneByUserId(userId: string): Promise<string | null>;
 }
 
 export const AUTH_SESSION_REPOSITORY = Symbol('AUTH_SESSION_REPOSITORY');

@@ -55,6 +55,7 @@ export const bookingApiRoutes = {
   complete: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/complete`,
   payment: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/payment`,
   providerIdentity: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/provider-identity`,
+  contact: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/contact`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -307,6 +308,17 @@ export const createGetBookingPaymentRequest = (sessionToken: string, bookingId: 
 export const createGetBookingProviderIdentityRequest = (sessionToken: string, bookingId: string) => ({
   method: 'GET',
   path: bookingApiRoutes.providerIdentity(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+/**
+ * Booking-scoped counterpart phone number for the "Call" affordance on active-job.
+ * The only endpoint in the API that returns a phone number — authorized per-booking
+ * on the server and only returns data once the booking is accepted.
+ */
+export const createGetBookingContactRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'GET',
+  path: bookingApiRoutes.contact(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 

@@ -1,4 +1,5 @@
 import {
+  createGetBookingContactRequest,
   createGetBookingPaymentRequest,
   createGetBookingProviderIdentityRequest,
   createGetBookingRequest,
@@ -227,6 +228,7 @@ export type ProviderIdentitySummary = {
   reviewCount: number;
   vehicleDescription?: string;
   licensePlate?: string;
+  phone?: string;
 };
 
 function parseBookingProviderIdentity(payload: unknown): Pick<ProviderIdentitySummary, 'displayName' | 'photoUrl' | 'vehicleDescription' | 'licensePlate'> | null {
@@ -307,6 +309,25 @@ export async function loadProviderIdentity(
       // Rating is a further enhancement on top of the identity fetch — omit it, don't fail the whole card.
     }
 
+    let phone: string | undefined;
+    try {
+      const contactRequest = createGetBookingContactRequest(input.sessionToken, input.bookingId);
+      const contactResponse = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${contactRequest.path}`, {
+        method: contactRequest.method,
+        headers: contactRequest.headers,
+      });
+
+      if (contactResponse.ok) {
+        const contactPayload = await contactResponse.json();
+        const rawPhone = contactPayload !== null && typeof contactPayload === 'object'
+          ? (contactPayload as Record<string, unknown>)['phone']
+          : null;
+        phone = typeof rawPhone === 'string' && rawPhone.trim() ? rawPhone : undefined;
+      }
+    } catch {
+      // Contact is a further enhancement on top of the identity fetch — omit it, don't fail the whole card.
+    }
+
     return {
       displayName: identity.displayName,
       photoUrl: identity.photoUrl,
@@ -314,6 +335,7 @@ export async function loadProviderIdentity(
       licensePlate: identity.licensePlate,
       averageRating: ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : undefined,
       reviewCount: ratings.length,
+      phone,
     };
   } catch {
     return null;

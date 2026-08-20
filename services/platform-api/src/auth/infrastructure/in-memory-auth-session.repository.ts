@@ -49,6 +49,7 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
   private readonly customersByEmail = new Map<string, RegisteredCustomer>();
   private readonly otpByPhone = new Map<string, OtpRecord>();
   private readonly usersByPhone = new Map<string, PhoneUser>();
+  private readonly phoneByUserId = new Map<string, string>();
   private readonly sessionTtlSeconds = resolveAuthSessionTtlSeconds();
 
   async createSession(input: CreateAuthSessionInput): Promise<AuthSession> {
@@ -191,6 +192,7 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     const role = existingUser?.role ?? 'customer';
     const userId = existingUser?.userId ?? `${role}-${randomUUID().slice(0, 8)}`;
     this.usersByPhone.set(input.phone, { userId, role });
+    this.phoneByUserId.set(userId, input.phone);
 
     const token = randomUUID();
     const now = new Date().toISOString();
@@ -206,6 +208,10 @@ export class InMemoryAuthSessionRepository implements AuthSessionRepository {
     this.sessions.set(token, session);
 
     return session;
+  }
+
+  async getPhoneByUserId(userId: string): Promise<string | null> {
+    return this.phoneByUserId.get(userId) ?? null;
   }
 }
 

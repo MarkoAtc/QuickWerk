@@ -361,6 +361,20 @@ export class PostgresAuthSessionRepository implements AuthSessionRepository {
       userId: sessionRow.user_id,
     };
   }
+
+  async getPhoneByUserId(userId: string): Promise<string | null> {
+    if (!isUuid(userId)) {
+      return null;
+    }
+
+    const result = await this.postgresClient.query<{ phone: string | null }>(
+      this.postgresConfig,
+      `SELECT phone FROM users WHERE id = $1::uuid LIMIT 1`,
+      [userId],
+    );
+
+    return result.rows[0]?.phone ?? null;
+  }
 }
 
 const OTP_TTL_MS = 5 * 60 * 1000;

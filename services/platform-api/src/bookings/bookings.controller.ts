@@ -282,6 +282,45 @@ export class BookingsController {
   }
 
   /**
+   * GET /api/v1/bookings/:bookingId/contact
+   * Fetch the counterpart's phone number for the "Call" affordance on active-job.
+   * Booking-scoped: only a party to this specific accepted booking can see it — the
+   * only endpoint anywhere in the API that returns a phone number.
+   */
+  @Get(':bookingId/contact')
+  async getBookingContact(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: {},
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required to view contact details.', 401);
+    }
+
+    const result = await this.bookingsService.getBookingContact(session, bookingId);
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return { phone: result.phone };
+  }
+
+  /**
    * POST /api/v1/bookings/:bookingId/decline
    * Provider declines a submitted booking.
    */
