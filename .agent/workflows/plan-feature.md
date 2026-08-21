@@ -22,6 +22,7 @@ If an Issue ID is provided and GitHub CLI is available, propose:
 ### 1) Understand the goal
 - Restate the goal in 1–2 sentences.
 - Extract Acceptance Criteria (AC). If missing, propose AC.
+- **Hybrid-Light spec gate (#176):** do not proceed to implementation planning until the issue/spec/AC are explicit enough that another agent can verify done vs not done.
 
 ### 2) Inspect the repo for conventions
 - Read `.agent/rules/00-core.md` (and any additional `.agent/rules/*`)
@@ -37,9 +38,29 @@ Your plan MUST include:
 - **Issue:** `#<id>` (or "Issue draft needed")
 - **Branch:** `feature/<id>-<slug>` or `fix/<id>-<slug>` (choose appropriately)
 - **Plan file path:** `.agent/plans/<id>-<slug>.md`
+- **Risk/TDD classification:** mark whether the change touches risky logic and, if yes, name the RED/GREEN proof to add first.
 - **Verification commands:** repo-appropriate (discover from package scripts / tooling)
 
-### 5) Produce an implementation plan
+### 5) Write the Validation Contract (REQUIRED — before implementation steps)
+
+Every plan MUST include a `## Validation Contract` section written **before** the implementation steps. This is what validators receive; they do not receive implementation history.
+
+```markdown
+## Validation Contract
+### Assertions (written before implementation)
+- [ ] <behavior X is observable at endpoint Y>
+- [ ] <edge case Z returns error code W>
+- [ ] Type-check passes with zero errors
+- [ ] Lint passes with zero warnings
+### Performance bounds
+- <e.g. p95 response < 200 ms under N concurrent users>
+### Interface contracts
+- <e.g. POST /api/foo accepts { bar: string } and returns { id: string }>
+```
+
+**DoD requirement:** A plan without a Validation Contract is incomplete and must not be handed to an executor.
+
+### 6) Produce an implementation plan
 Write a plan that includes:
 - Step-by-step tasks (small slices)
 - Data model changes (if any)

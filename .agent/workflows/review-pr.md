@@ -3,6 +3,13 @@ description: Monitor and resolve CodeRabbit + CI feedback after opening a PR
 argument-hint: [pr-number-or-url]
 ---
 
+<!-- ados-bootstrap-override (2026-08-22): intentionally diverged from the upstream
+     ados package baseline, which now runs a Tony PR Reviewer script
+     (`pwsh -File ./scripts/review-pr.ps1`) that does not exist in this repo.
+     This repo's actual, working review loop is gh CLI + CodeRabbit, as below.
+     Do not overwrite this file with an unmodified `ados bootstrap --force` pass
+     without re-verifying scripts/review-pr.ps1 exists first. -->
+
 # Review-PR: Post-Open PR Feedback Loop
 
 ## Purpose
@@ -108,17 +115,16 @@ For each actionable comment:
 
 After pushing fixes, wait for CI and CodeRabbit to re-run, then repeat Steps 1-4 until the stop condition is met.
 
-Timeout: if CI is still failing after 3 push-fix cycles on the same root cause, stop and escalate by updating the Paperclip issue to `blocked` with a clear description of the failure.
+Timeout: if CI is still failing after 3 push-fix cycles on the same root cause, stop and escalate by commenting on the PR (or the GitHub issue it closes) with a clear description of the failure and flag it to the user.
 
-## Step 6 — Declare Ready for Board
+## Step 6 — Declare Ready for Review
 
 When the stop condition is met:
 
-1. Post a comment on the Paperclip issue:
+1. Post a summary comment on the PR:
    - CI: passing
    - CodeRabbit: no remaining actionable feedback
-   - PR: link to the PR
-2. Update the Paperclip issue status to `in_review` (do not set to `done` — the Board merges).
+2. Leave the PR open for human review/merge.
 3. Exit.
 
 ## Common Pitfalls

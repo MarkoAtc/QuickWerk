@@ -6,7 +6,7 @@ Operational guide for AI execution agents working in this repository.
 
 1. Run `.agent/workflows/prime.md` to orient yourself.
 2. Read the relevant plan file from `.agent/plans/`.
-3. Check the active Paperclip issue for context and acceptance criteria.
+3. Check the active GitHub issue (if one exists) for context and acceptance criteria.
 
 ## 2. Workflow Files
 
@@ -29,16 +29,16 @@ Every PR in this repo is automatically reviewed by CodeRabbit after each push. C
 1. Run `.agent/workflows/review-pr.md`.
 2. Fix CI failures and address actionable CodeRabbit comments.
 3. Re-push until CI is green and no actionable feedback remains.
-4. Only then set the Paperclip issue to `in_review`.
+4. Leave the PR open for human review/merge — do not merge it yourself.
 
-Agents must **not** go idle in "in_review" while CI is failing or CodeRabbit has unresolved actionable comments.
+Agents must **not** go idle while CI is failing or CodeRabbit has unresolved actionable comments.
 
 ## 4. Stack Reference
 
 - **Runtime:** Node.js / TypeScript (pnpm workspaces + Turborepo)
 - **Frontend:** React (product-app + admin-web)
 - **Backend:** Express (platform-api service)
-- **Database:** PostgreSQL (Drizzle ORM)
+- **Database:** PostgreSQL, raw SQL repositories (no ORM — no Drizzle schema layer exists in this repo)
 - **Auth:** JWT-based sessions
 
 Key entry points:
@@ -62,14 +62,13 @@ pnpm build
 ```
 <type>(<scope>): <summary> (#<issue-number>)
 
-Co-Authored-By: Paperclip <noreply@paperclip.ing>
+Co-Authored-By: <executing agent/tool, per its own convention>
 ```
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
 ## 7. Key Rules
 
-- Do not change auth, payment, or data-retention controls without board approval.
+- Do not change auth, payment, or data-retention controls without explicit approval from the repo owner.
 - Do not expand scope beyond the assigned issue.
-- Do not mark a Paperclip issue `done` — set it to `in_review` and let the Board merge.
-- Always include `Co-Authored-By: Paperclip <noreply@paperclip.ing>` in commits.
+- Do not merge your own PRs — leave them open for human review/merge.

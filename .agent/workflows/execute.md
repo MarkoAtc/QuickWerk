@@ -17,9 +17,11 @@ If only one value is provided, treat it as the plan path and derive a branch nam
 - Track progress via GitHub Issue comments when possible; otherwise provide a concise progress log in your response.
 
 ## Step 1) Load context
-1) Read `.agent/rules/00-core.md` (canonical).
+1) Read `.agent/rules/00-core.md` (canonical) if it exists.
 2) Read the plan file.
 3) Identify the Issue ID and Acceptance Criteria from the plan.
+4) **Hybrid-Light spec gate (#176):** confirm the plan has enough spec/AC detail to prove completion. If not, stop and produce an issue draft or plan update before coding.
+5) **Hybrid-Light TDD gate (#176):** classify the selected slice as `risky-logic` or `low-risk/docs`. For `risky-logic`, identify the failing test/contract check to run before implementation.
 
 If the plan does not contain an Issue reference:
 - Output an Issue Draft first, then continue.
@@ -45,8 +47,10 @@ Each iteration starts with **fresh context loaded from files** — do not rely o
 2. **Select** — pick the highest-priority incomplete task from the plan
 3. **Investigate** — read relevant `/src` files for the selected task (never assume "already implemented")
 4. **Implement** — make the minimal change for the selected task only
+   - If slice is `risky-logic`: write/identify failing test or contract check first, run it, then implement RED-GREEN-REFACTOR.
+   - If slice is `low-risk/docs`: document the substitute proof (diff review, render smoke, asset parity, etc.).
 5. **Validate** — run repo-native checks (lint / type-check / tests) per `00-core.md`
-6. **Context Guard gate** — run `.agent/workflows/context-checkpoint.md` logic:
+6. **Context Guard gate** — run `.agent/workflows/context-checkpoint.md` logic if present:
    - L1 (>=55% pressure): summarize and continue
    - L2 (>=70% pressure): summarize + trim stale context
    - L3 (>=85% pressure): split task / pause / delegate
@@ -61,14 +65,17 @@ Stop when all tasks in `IMPLEMENTATION_PLAN.md` are marked done and validation p
 ### Backpressure
 If validation fails, fix before proceeding to the next task. Do not accumulate broken states across iterations.
 
-## Step 4) Verification (propose commands)
+## Step 4) Verification and Review Gate
 Propose the repo-appropriate validation commands (prefer existing scripts):
 - lint / format check
 - type-check
 - tests (unit/integration/e2e as needed)
 - build
 
-Record results (pass/fail + highlights).
+Record results (pass/fail + highlights), including:
+- Acceptance-criteria evidence.
+- TDD evidence for `risky-logic`, or why TDD did not apply.
+- **Hybrid-Light review gate (#176):** self-review for small low-risk changes; fresh review agent/subagent or explicit code-review workflow for risky/larger changes. Do not mark done/merge-ready until the review result is recorded.
 
 ## Step 5) Commit
 - Ensure commits reference the Issue.
@@ -89,6 +96,5 @@ After opening a PR, do **not** stop. Run `.agent/workflows/review-pr.md` to:
 1. Check CI status — fix any failures on the same branch.
 2. Read CodeRabbit feedback — address all actionable comments.
 3. Re-push until CI is green and no actionable CodeRabbit feedback remains.
-4. Only then update the Paperclip issue to `in_review` and stop.
 
-Rationale: Board should not be expected to merge PRs with unresolved CI failures or meaningful CodeRabbit feedback. Agents own the feedback loop through completion.
+Rationale: reviewers should not be expected to merge PRs with unresolved CI failures or meaningful CodeRabbit feedback. Agents own the feedback loop through completion.
