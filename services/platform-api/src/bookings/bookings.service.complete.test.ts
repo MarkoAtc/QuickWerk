@@ -19,6 +19,7 @@ import { PayoutsService } from '../payouts/payouts.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
+import { computeBookingPrice } from './pricing-table';
 
 const createSession = (role: AuthSession['role'], userId: string): AuthSession => {
   const createdAt = new Date();
@@ -135,6 +136,29 @@ describe('BookingsService.completeBooking', () => {
     expect(completedEvents).toHaveLength(1);
     expect(completedEvents[0]?.booking.status).toBe('completed');
     expect(paymentCapturedEvents).toHaveLength(1);
+  });
+
+  it('captures the computed itemized total (not a flat constant) for a booking with a known category', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, {
+      requestedService: 'Plumbing / Leaky faucet / scheduled',
+      serviceCategory: 'plumbing',
+      urgency: 'scheduled',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await service.acceptBooking(provider, created.booking.bookingId);
+    const result = await service.completeBooking(provider, created.booking.bookingId);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const expected = computeBookingPrice('plumbing', 'scheduled').totalCents;
+    expect(result.payment.amountCents).toBe(expected);
+    expect(result.payment.amountCents).not.toBe(12000);
   });
 
   it('idempotent: completing again by same provider returns 200 with replayed payment', async () => {

@@ -10,6 +10,8 @@ type BookingState = {
   customerUserId: string;
   providerUserId: string | null;
   requestedService: string;
+  serviceCategory: string | null;
+  urgency: string | null;
   customerLocation: string | null;
   status: BookingStatus;
   createdAt: string;
@@ -139,13 +141,22 @@ async function queryAgainstState<T>(
   values: readonly unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
   if (text.includes('INSERT INTO bookings')) {
-    const [id, customerUserId, requestedService, customerLocation, createdAt] =
-      values as [string, string, string, string | null, string];
+    const [id, customerUserId, requestedService, serviceCategory, urgency, customerLocation, createdAt] = values as [
+      string,
+      string,
+      string,
+      string | null,
+      string | null,
+      string | null,
+      string,
+    ];
     bookings.set(id, {
       id,
       customerUserId,
       providerUserId: null,
       requestedService,
+      serviceCategory,
+      urgency,
       customerLocation,
       status: 'submitted',
       createdAt,
@@ -215,6 +226,8 @@ async function queryAgainstState<T>(
           customer_user_id: booking.customerUserId,
           provider_user_id: booking.providerUserId,
           requested_service: booking.requestedService,
+          service_category: booking.serviceCategory,
+          urgency: booking.urgency,
           customer_location: booking.customerLocation,
           status: booking.status,
           created_at: booking.createdAt,

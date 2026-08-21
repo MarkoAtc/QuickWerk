@@ -45,6 +45,8 @@ describe('submitBooking', () => {
           headers: expect.objectContaining({ authorization: 'Bearer tok-123' }),
           body: JSON.stringify({
             requestedService: 'Plumbing / Leaky faucet / today',
+            serviceCategory: 'Plumbing',
+            urgency: 'today',
             customerLocation: 'Main St',
           }),
         }),

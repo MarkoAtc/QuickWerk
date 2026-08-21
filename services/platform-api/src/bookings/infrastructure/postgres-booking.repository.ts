@@ -24,6 +24,8 @@ type BookingRow = {
   customer_user_id: string;
   provider_user_id: string | null;
   requested_service: string;
+  service_category: string | null;
+  urgency: string | null;
   customer_location: string | null;
   status: BookingStatus;
   created_at: Date | string;
@@ -53,11 +55,21 @@ export class PostgresBookingRepository implements BookingRepository {
           id,
           customer_user_id,
           requested_service,
+          service_category,
+          urgency,
           customer_location,
           status,
           created_at
-        ) VALUES ($1::uuid, $2::uuid, $3, $4, 'submitted', $5::timestamptz)`,
-        [bookingId, input.customerUserId, input.requestedService, input.customerLocation ?? null, input.createdAt],
+        ) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, 'submitted', $7::timestamptz)`,
+        [
+          bookingId,
+          input.customerUserId,
+          input.requestedService,
+          input.serviceCategory ?? null,
+          input.urgency ?? null,
+          input.customerLocation ?? null,
+          input.createdAt,
+        ],
       );
 
       await this.insertStatusEvent(client, {
@@ -374,6 +386,8 @@ export class PostgresBookingRepository implements BookingRepository {
               customer_user_id::text,
               provider_user_id::text,
               requested_service,
+              service_category,
+              urgency,
               customer_location,
               status,
               created_at,
@@ -412,6 +426,8 @@ export class PostgresBookingRepository implements BookingRepository {
               customer_user_id::text,
               provider_user_id::text,
               requested_service,
+              service_category,
+              urgency,
               customer_location,
               status,
               created_at,
@@ -490,6 +506,8 @@ function mapBookingRecord(booking: BookingRow, historyRows: BookingStatusHistory
     customerUserId: booking.customer_user_id,
     providerUserId: booking.provider_user_id ?? undefined,
     requestedService: booking.requested_service,
+    serviceCategory: booking.service_category ?? undefined,
+    urgency: booking.urgency ?? undefined,
     customerLocation: booking.customer_location ?? undefined,
     status: booking.status,
     declineReason: booking.decline_reason ?? undefined,

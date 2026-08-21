@@ -20,6 +20,7 @@ import {
 import { PaymentsService } from '../payments/payments.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
+import { computeBookingPrice } from './pricing-table';
 import { computeSimulatedTracking, SimulatedTracking } from './simulated-tracking';
 
 @Injectable()
@@ -100,7 +101,7 @@ export class BookingsService {
 
   async createBooking(
     session: AuthSession,
-    input: { requestedService?: string; customerLocation?: string },
+    input: { requestedService?: string; serviceCategory?: string; urgency?: string; customerLocation?: string },
     context?: { correlationId?: string },
   ): Promise<
     | { ok: false; statusCode: 403; error: string }
@@ -131,6 +132,8 @@ export class BookingsService {
       createdAt: new Date().toISOString(),
       customerUserId: session.userId,
       requestedService: input.requestedService?.trim() || 'General handyman help',
+      serviceCategory: input.serviceCategory?.trim() || undefined,
+      urgency: input.urgency?.trim() || undefined,
       customerLocation: input.customerLocation?.trim() || undefined,
       actorRole: session.role,
       actorUserId: session.userId,
@@ -593,7 +596,7 @@ export class BookingsService {
         bookingId,
         customerUserId: bookingToComplete.customerUserId,
         providerUserId: bookingToComplete.providerUserId,
-        amountCents: this.estimatePaymentAmountCents(bookingToComplete.requestedService),
+        amountCents: computeBookingPrice(bookingToComplete.serviceCategory, bookingToComplete.urgency).totalCents,
         currency: 'EUR',
         capturedAt: completedAt,
         correlationId,
@@ -889,14 +892,12 @@ export class BookingsService {
       customerUserId: record.customerUserId,
       providerUserId: record.providerUserId,
       requestedService: record.requestedService,
+      serviceCategory: record.serviceCategory,
+      urgency: record.urgency,
       customerLocation: record.customerLocation,
       status: record.status,
       declineReason: record.declineReason,
       statusHistory: record.statusHistory,
     } as const;
-  }
-
-  private estimatePaymentAmountCents(_requestedService: string): number {
-    return 12000;
   }
 }

@@ -16,6 +16,8 @@ export type BookingRecord = {
   customerLocation?: string;
   providerUserId?: string;
   requestedService: string;
+  serviceCategory?: string;
+  urgency?: string;
   status: BookingStatus;
   declineReason?: string;
   statusHistory: readonly BookingStatusEvent[];
@@ -25,6 +27,8 @@ export type CreateSubmittedBookingInput = {
   createdAt: string;
   customerUserId: string;
   requestedService: string;
+  serviceCategory?: string;
+  urgency?: string;
   customerLocation?: string;
   actorRole: BookingActorRole;
   actorUserId: string;

@@ -19,7 +19,12 @@ export async function submitBooking({ issueType, urgency, address, category, pro
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ requestedService, customerLocation }),
+      body: JSON.stringify({
+        requestedService,
+        serviceCategory: category || undefined,
+        urgency: urgency || undefined,
+        customerLocation,
+      }),
     });
 
     if (!response.ok) {
