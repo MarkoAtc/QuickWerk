@@ -1,4 +1,4 @@
-# Webton-ADOS ASCII Artworks (Seperated by `---`)
+# Webton-ADOS ASCII Artworks (Separated by `---`)
 
 ## Webton Icon - ASCII-Art - 41 Chars
 
@@ -31,7 +31,7 @@
 ╚═════════════════════════════════════════╝
 
 ---
-## Full ASCII ART (Icon + Webton Ados Textmark)
+## Full ASCII ART (Icon + Webton ADOS Textmark)
 
 ╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                  ║

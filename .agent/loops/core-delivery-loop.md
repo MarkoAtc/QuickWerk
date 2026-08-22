@@ -41,7 +41,7 @@ Required before starting:
 | Trigger | Description |
 |---|---|
 | Manual | A user or orchestrator asks an agent to run the issue-first delivery loop. |
-| Issue | A GitHub/Paperclip issue is selected for implementation. |
+| Issue | A GitHub issue is selected for implementation. |
 | Resume | A new session resumes from a loop checkpoint or handoff artifact. |
 
 ## Workflow chain

@@ -53,9 +53,9 @@ Every plan MUST include a `## Validation Contract` section written **before** th
 - [ ] Type-check passes with zero errors
 - [ ] Lint passes with zero warnings
 ### Performance bounds
-- <e.g. p95 response < 200 ms under N concurrent users>
+- <concrete bound, e.g. p95 response < 200 ms under N concurrent users>, or `N/A — not applicable because ...`
 ### Interface contracts
-- <e.g. POST /api/foo accepts { bar: string } and returns { id: string }>
+- <concrete contract, e.g. POST /api/foo accepts { bar: string } and returns { id: string }>, or `N/A — not applicable because ...`
 ```
 
 **DoD requirement:** A plan without a Validation Contract is incomplete and must not be handed to an executor.

@@ -124,13 +124,12 @@ Do **not** save:
 If a reusable procedure was discovered after a difficult/iterative task, propose or create a skill instead of storing a long memory.
 
 ## Step 6) GBrain handoff
-Use GBrain only when GBrain MCP is configured and authorized for this workspace.
-For this workspace, GBrain MCP is configured via `~/.mcp.json` (installed by TEC-207). In other repos, discover the configured target from project docs or user instructions.
+Use GBrain only when GBrain MCP is configured and authorized for this workspace. Do not assume it is configured — verify by checking for available GBrain MCP tools, project docs, or explicit user instruction before writing. If no validated mapping exists for this repo, use the draft/blocked path below instead of guessing a slug.
 
 When GBrain is configured/authorized and the session produced durable changes, write one synthesized handoff block using GBrain MCP operations:
 
 **Target page slug:** `projects/<project>/handoffs`
-Use the repo slug as `<project>`. For this repo: `projects/webton-ados/handoffs`
+Derive `<project>` from *this* repo's own slug (e.g. the repo name) — never reuse another project's slug from an example or a different workspace's configuration.
 
 **Write procedure:**
 1. Call GBrain `get_page` (MCP) with `slug: "projects/<project>/handoffs"` to retrieve the current handoffs page (may not exist yet).
@@ -224,6 +223,7 @@ Session Wrap-Up
 - Handoff artifact: ...
 - Memory/GBrain: saved | draft provided | not needed
 - Next best action: ...
+- Blocked/Needs human: ... | none
 ```
 
 If any action remains unsafe or requires human credentials/approval, state it explicitly under `Blocked/Needs human`.

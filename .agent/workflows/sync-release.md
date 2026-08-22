@@ -19,7 +19,7 @@ Use this workflow to publish/update DAWC resources across target repos safely.
    - open PR with deterministic title:
      - `chore(agent-sync): update Webton ADOS bundle to <ref>`
 4. Ensure protected paths unchanged (`00-core.md`, plans/reports).
-5. Merge by rollout policy (pilot first, then broaden).
+5. Hand off to a human for merge (pilot repos first, then broaden) — agents open, monitor, and prepare rollback PRs, but do not merge them.
 
 ## Failure taxonomy + remediation
 
@@ -62,7 +62,7 @@ Use this workflow to publish/update DAWC resources across target repos safely.
 
 ## Safety rules
 - Never overwrite `.agent/rules/00-core.md`.
-- Never auto-merge if CI or protected-path guard fails.
+- Never merge these PRs yourself — leave them for human review/merge, per `AGENTS.md` §7.
 - Keep rollback path (revert PR or pin previous tag).
 
 ## Validation gate
