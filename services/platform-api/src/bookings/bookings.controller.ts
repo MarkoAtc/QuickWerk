@@ -16,6 +16,11 @@ type DeclineBookingRequestBody = {
   declineReason?: string;
 };
 
+type CheckoutBookingRequestBody = {
+  quoteId?: string;
+  paymentMethodId?: string;
+};
+
 type RequestLike = {
   method: string;
   path: string;
@@ -206,6 +211,95 @@ export class BookingsController {
     }
 
     return { booking: result.booking, payment: result.payment };
+  }
+
+  /**
+   * POST /api/v1/bookings/:bookingId/quote
+   * Requests an immutable, server-computed pre-job quote for an accepted booking.
+   * Idempotent within the quote's expiry window.
+   */
+  @Post(':bookingId/quote')
+  @HttpCode(200)
+  async requestBookingQuote(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: { bookingId },
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required before requesting a quote.', 401);
+    }
+
+    const result = await this.bookingsService.requestBookingQuote(session, bookingId, { correlationId });
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.quote;
+  }
+
+  /**
+   * POST /api/v1/bookings/:bookingId/checkout
+   * Pre-job checkout: captures payment for the booking using a previously issued
+   * quote's frozen total and a saved payment method. Body accepts only `quoteId` and
+   * `paymentMethodId` -- no amount or line items are ever accepted from the client.
+   */
+  @Post(':bookingId/checkout')
+  @HttpCode(200)
+  async checkoutBooking(
+    @Req() request: RequestLike,
+    @Res({ passthrough: true }) response: ResponseLike,
+    @Headers('authorization') authorizationHeader: string | undefined,
+    @Param('bookingId') bookingId: string,
+    @Body() body: CheckoutBookingRequestBody,
+  ) {
+    const token = extractBearerToken(authorizationHeader);
+    const correlationId = resolveCorrelationId({
+      headerValue: request.header(correlationIdHeaderName) ?? undefined,
+      method: request.method,
+      path: request.path,
+      token,
+      body: { bookingId },
+    });
+
+    response.setHeader(correlationIdHeaderName, correlationId);
+
+    const session = await this.authService.resolveSessionOrNull(token);
+
+    if (!session) {
+      throw new HttpException('Sign-in required before checking out.', 401);
+    }
+
+    if (typeof body?.quoteId !== 'string' || typeof body?.paymentMethodId !== 'string') {
+      throw new HttpException('quoteId and paymentMethodId are required.', 400);
+    }
+
+    const result = await this.bookingsService.checkoutBooking(
+      session,
+      bookingId,
+      { quoteId: body.quoteId, paymentMethodId: body.paymentMethodId },
+      { correlationId },
+    );
+
+    if (!result.ok) {
+      throw new HttpException(result.error, result.statusCode);
+    }
+
+    return result.payment;
   }
 
   /**

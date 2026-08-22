@@ -90,3 +90,33 @@ describe('PaymentMethodsService.listMyPaymentMethods', () => {
     expect(listB.map((m) => m.label)).toEqual(['B - only']);
   });
 });
+
+describe('PaymentMethodsService.getPaymentMethodOwnedByCustomer', () => {
+  it('returns the payment method when it belongs to the calling customer', async () => {
+    const { service } = createService();
+    const session = createSession('customer-1');
+
+    const added = await service.addPaymentMethod(session, { label: 'My Visa' });
+    if (!added.ok) throw new Error('setup failed');
+
+    const found = await service.getPaymentMethodOwnedByCustomer('customer-1', added.paymentMethod.paymentMethodId);
+    expect(found?.paymentMethodId).toBe(added.paymentMethod.paymentMethodId);
+  });
+
+  it('returns null for a payment method owned by a different customer', async () => {
+    const { service } = createService();
+    const owner = createSession('customer-1');
+
+    const added = await service.addPaymentMethod(owner, { label: 'My Visa' });
+    if (!added.ok) throw new Error('setup failed');
+
+    const found = await service.getPaymentMethodOwnedByCustomer('customer-2', added.paymentMethod.paymentMethodId);
+    expect(found).toBeNull();
+  });
+
+  it('returns null for a nonexistent payment method id', async () => {
+    const { service } = createService();
+    const found = await service.getPaymentMethodOwnedByCustomer('customer-1', 'does-not-exist');
+    expect(found).toBeNull();
+  });
+});

@@ -19,6 +19,7 @@ export type CreatePaymentMethodInput = {
 export interface PaymentMethodRepository {
   createPaymentMethod(input: CreatePaymentMethodInput): Promise<PaymentMethodRecord>;
   listPaymentMethodsForCustomer(customerUserId: string): Promise<PaymentMethodRecord[]>;
+  getPaymentMethodById(paymentMethodId: string): Promise<PaymentMethodRecord | null>;
 }
 
 export const PAYMENT_METHOD_REPOSITORY = Symbol('PAYMENT_METHOD_REPOSITORY');

@@ -89,4 +89,23 @@ export class PaymentMethodsService {
   async listMyPaymentMethods(session: AuthSession): Promise<PaymentMethodRecord[]> {
     return this.paymentMethods.listPaymentMethodsForCustomer(session.userId);
   }
+
+  /**
+   * Ownership-checked lookup for the checkout flow -- returns null (not the record)
+   * when the payment method exists but belongs to a different customer, so callers
+   * can't distinguish "not found" from "not yours" and leak existence of another
+   * customer's payment method.
+   */
+  async getPaymentMethodOwnedByCustomer(
+    customerUserId: string,
+    paymentMethodId: string,
+  ): Promise<PaymentMethodRecord | null> {
+    const paymentMethod = await this.paymentMethods.getPaymentMethodById(paymentMethodId);
+
+    if (!paymentMethod || paymentMethod.customerUserId !== customerUserId) {
+      return null;
+    }
+
+    return paymentMethod;
+  }
 }

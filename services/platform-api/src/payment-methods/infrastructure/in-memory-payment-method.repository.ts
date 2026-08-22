@@ -36,4 +36,8 @@ export class InMemoryPaymentMethodRepository implements PaymentMethodRepository 
       .filter((method) => method.customerUserId === customerUserId)
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
   }
+
+  async getPaymentMethodById(paymentMethodId: string): Promise<PaymentMethodRecord | null> {
+    return this.paymentMethods.get(paymentMethodId) ?? null;
+  }
 }
