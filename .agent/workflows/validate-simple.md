@@ -36,5 +36,10 @@ Report results:
 - Tests: pass/fail + counts
 - Build: pass/fail
 
+Also record Hybrid-Light evidence (#176):
+- Spec/AC proof: what requirement or issue acceptance criteria the validation covers.
+- Risk/TDD classification: `risky-logic` with RED-GREEN evidence, or `low-risk/docs` with substitute proof.
+- Review gate status: self-review completed or fresh review requested/completed before done/merge-ready.
+
 ## Step 3) Summary
 Provide a short summary + next recommended action (fix, deeper validate, PR).
