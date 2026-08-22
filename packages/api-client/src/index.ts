@@ -57,6 +57,8 @@ export const bookingApiRoutes = {
   providerIdentity: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/provider-identity`,
   contact: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/contact`,
   tracking: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/tracking`,
+  quote: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/quote`,
+  checkout: (bookingId: string) => `${apiRoutes.bookings}/${bookingId}/checkout`,
 } as const;
 
 export type SessionRole = 'customer' | 'provider';
@@ -331,6 +333,38 @@ export const createGetBookingTrackingRequest = (sessionToken: string, bookingId:
   method: 'GET',
   path: bookingApiRoutes.tracking(bookingId),
   headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+/**
+ * Pre-job checkout, step 1: requests an immutable, server-computed quote for an
+ * accepted booking. Idempotent — a repeat call within the quote's expiry window
+ * returns the same quote.
+ */
+export const createRequestBookingQuoteRequest = (sessionToken: string, bookingId: string) => ({
+  method: 'POST',
+  path: bookingApiRoutes.quote(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
+export type CheckoutBookingRequestBody = {
+  quoteId: string;
+  paymentMethodId: string;
+};
+
+/**
+ * Pre-job checkout, step 2: captures payment for a booking using a previously
+ * issued quote's frozen total and a saved payment method. No amount or line items
+ * are ever sent from the client — the server looks up the total from the quote.
+ */
+export const createCheckoutBookingRequest = (
+  sessionToken: string,
+  bookingId: string,
+  body: CheckoutBookingRequestBody,
+) => ({
+  method: 'POST',
+  path: bookingApiRoutes.checkout(bookingId),
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
 }) as const;
 
 // --- Provider Upload URL ---

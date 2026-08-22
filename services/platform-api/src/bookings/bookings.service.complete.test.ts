@@ -19,6 +19,9 @@ import { PayoutsService } from '../payouts/payouts.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
+import { InMemoryQuoteRepository } from './infrastructure/in-memory-quote.repository';
+import { InMemoryPaymentMethodRepository } from '../payment-methods/infrastructure/in-memory-payment-method.repository';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 
 const createSession = (role: AuthSession['role'], userId: string): AuthSession => {
   const createdAt = new Date();
@@ -65,6 +68,8 @@ const createService = () => {
       paymentsService,
       providersService,
       authService,
+      new PaymentMethodsService(new InMemoryPaymentMethodRepository()),
+      new InMemoryQuoteRepository(),
     ),
     paymentsService,
     createdEvents,

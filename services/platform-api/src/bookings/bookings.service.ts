@@ -18,10 +18,14 @@ import {
   BookingDomainEventPublisher,
 } from '../orchestration/domain-event.publisher';
 import { PaymentsService } from '../payments/payments.service';
+import { PaymentMethodsService } from '../payment-methods/payment-methods.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BOOKING_REPOSITORY, BookingRecord, BookingRepository, BookingSummary } from './domain/booking.repository';
+import { QUOTE_REPOSITORY, QuoteRecord, QuoteRepository } from './domain/quote.repository';
 import { computeBookingPrice } from './pricing-table';
 import { computeSimulatedTracking, SimulatedTracking } from './simulated-tracking';
+
+const QUOTE_EXPIRY_MINUTES = 15;
 
 @Injectable()
 export class BookingsService {
@@ -33,6 +37,9 @@ export class BookingsService {
     private readonly paymentsService: PaymentsService,
     private readonly providersService: ProvidersService,
     private readonly authService: AuthService,
+    private readonly paymentMethodsService: PaymentMethodsService,
+    @Inject(QUOTE_REPOSITORY)
+    private readonly quotes: QuoteRepository,
   ) {}
 
   getMarketplacePreview() {
@@ -764,6 +771,161 @@ export class BookingsService {
     }
 
     return { ok: true, statusCode: 200, payment };
+  }
+
+  /**
+   * Pre-job checkout, step 1: an immutable, server-computed quote for an accepted
+   * booking. Idempotent -- a repeat request within the expiry window returns the same
+   * quote rather than minting a new one, so a client can safely re-request without
+   * risking two "active" totals for the same booking.
+   */
+  async requestBookingQuote(
+    session: AuthSession,
+    bookingId: string,
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: true; statusCode: 200; quote: QuoteRecord }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Quote/checkout initiate a charge against the customer's payment method -- unlike
+    // the read-only sibling endpoints (tracking/contact/provider-identity), this is
+    // deliberately customer-only, not party-based: the assigned provider must never be
+    // able to trigger a capture themselves, even though they already can via
+    // completeBooking (which does not accept a client-supplied payment method id).
+    if (session.userId !== booking.customerUserId) {
+      return { ok: false, statusCode: 403, error: 'Only the booking customer can request a quote.' };
+    }
+
+    if (booking.status !== 'accepted') {
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot be quoted while in status ${booking.status}.`,
+      };
+    }
+
+    const now = new Date();
+    const priced = computeBookingPrice(booking.serviceCategory, booking.urgency);
+    const createdAt = now.toISOString();
+    const expiresAt = new Date(now.getTime() + QUOTE_EXPIRY_MINUTES * 60 * 1000).toISOString();
+
+    const quote = await this.quotes.getOrCreateActiveQuote(
+      bookingId,
+      {
+        bookingId,
+        customerUserId: booking.customerUserId,
+        lineItems: priced.lineItems,
+        calloutFeeCents: priced.calloutFeeCents,
+        laborCents: priced.laborCents,
+        platformFeeCents: priced.platformFeeCents,
+        totalCents: priced.totalCents,
+        currency: 'EUR',
+        pricingTableVersion: priced.pricingTableVersion,
+        createdAt,
+        expiresAt,
+      },
+      now,
+    );
+
+    logStructuredBreadcrumb({
+      event: 'booking.quote.write',
+      correlationId,
+      status: 'succeeded',
+      details: { bookingId, quoteId: quote.quoteId, totalCents: quote.totalCents, actorUserId: session.userId },
+    });
+
+    return { ok: true, statusCode: 200, quote };
+  }
+
+  /**
+   * Pre-job checkout, step 2: captures payment using the quote's frozen total via the
+   * same `capturePaymentForBooking` that `completeBooking` already calls. That method
+   * (and its downstream payout/invoice writes) is independently idempotent by
+   * `bookingId`, so whichever of checkout/completeBooking runs first "wins" and the
+   * other becomes a no-op replay -- there is exactly one payment write path, not two.
+   * `completeBooking` itself is unchanged.
+   */
+  async checkoutBooking(
+    session: AuthSession,
+    bookingId: string,
+    input: { quoteId: string; paymentMethodId: string },
+    context?: { correlationId?: string },
+  ): Promise<
+    | { ok: false; statusCode: 403 | 404 | 409; error: string }
+    | { ok: true; statusCode: 200; payment: PaymentRecord }
+  > {
+    const correlationId = context?.correlationId ?? 'corr-missing';
+    const booking = await this.bookings.getBooking(bookingId);
+
+    if (!booking) {
+      return { ok: false, statusCode: 404, error: 'Booking not found.' };
+    }
+
+    // Customer-only, same reasoning as requestBookingQuote -- checkout must never be
+    // triggerable by the assigned provider.
+    if (session.userId !== booking.customerUserId) {
+      return { ok: false, statusCode: 403, error: 'Only the booking customer can check out.' };
+    }
+
+    if (booking.status !== 'accepted') {
+      return {
+        ok: false,
+        statusCode: 409,
+        error: `Booking cannot be checked out while in status ${booking.status}.`,
+      };
+    }
+
+    const quote = await this.quotes.getQuoteById(input.quoteId);
+
+    if (!quote || quote.bookingId !== bookingId || Date.parse(quote.expiresAt) <= Date.now()) {
+      return { ok: false, statusCode: 409, error: 'Quote not found, does not match this booking, or has expired.' };
+    }
+
+    const paymentMethod = await this.paymentMethodsService.getPaymentMethodOwnedByCustomer(
+      session.userId,
+      input.paymentMethodId,
+    );
+
+    if (!paymentMethod) {
+      return { ok: false, statusCode: 403, error: 'Payment method not found for this customer.' };
+    }
+
+    if (!booking.providerUserId) {
+      throw new Error(`Cannot checkout booking ${bookingId}: missing persisted providerUserId on booking record`);
+    }
+
+    const captureResult = await this.paymentsService.capturePaymentForBooking({
+      bookingId,
+      customerUserId: booking.customerUserId,
+      providerUserId: booking.providerUserId,
+      amountCents: quote.totalCents,
+      currency: quote.currency,
+      capturedAt: new Date().toISOString(),
+      correlationId,
+      requestedService: booking.requestedService,
+    });
+
+    logStructuredBreadcrumb({
+      event: 'booking.checkout.write',
+      correlationId,
+      status: 'succeeded',
+      details: {
+        bookingId,
+        quoteId: quote.quoteId,
+        paymentId: captureResult.payment.paymentId,
+        replayed: captureResult.replayed,
+        actorUserId: session.userId,
+      },
+    });
+
+    return { ok: true, statusCode: 200, payment: captureResult.payment };
   }
 
   /**
