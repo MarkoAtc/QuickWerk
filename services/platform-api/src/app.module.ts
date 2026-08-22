@@ -6,6 +6,7 @@ import { DisputesModule } from './disputes/disputes.module';
 import { HealthController } from './health/health.controller';
 import { InvoicesModule } from './invoices/invoices.module';
 import { RelayQueueOperatorController } from './operators/relay-queue.controller';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { PayoutsModule } from './payouts/payouts.module';
 import { PersistenceModule } from './persistence/persistence.module';
 import { ProvidersModule } from './providers/providers.module';
@@ -17,6 +18,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     AuthModule,
     BookingsModule,
     ProvidersModule,
+    PaymentMethodsModule,
     PayoutsModule,
     InvoicesModule,
     DisputesModule,
