@@ -68,6 +68,11 @@ export function ProviderDetailScreen() {
 
     loadProviderDetail(providerUserId)
       .then((result) => {
+        if (result.notFound) {
+          setState({ status: 'error', errorMessage: 'This provider profile could not be found.' });
+          return;
+        }
+
         if (result.errorMessage) {
           setState({ status: 'error', errorMessage: result.errorMessage });
           return;
