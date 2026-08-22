@@ -137,6 +137,31 @@ describe('BookingsService.completeBooking', () => {
     expect(paymentCapturedEvents).toHaveLength(1);
   });
 
+  it('captures the computed itemized total (not a flat constant) for a booking with a known category', async () => {
+    const { service } = createService();
+    const customer = createSession('customer', 'customer-1');
+    const provider = createSession('provider', 'provider-1');
+
+    const created = await service.createBooking(customer, {
+      requestedService: 'Plumbing / Leaky faucet / scheduled',
+      serviceCategory: 'plumbing',
+      urgency: 'scheduled',
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await service.acceptBooking(provider, created.booking.bookingId);
+    const result = await service.completeBooking(provider, created.booking.bookingId);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // Known cent value for plumbing/scheduled (matches design/payment_checkout's reference
+    // total exactly: $45 callout + $170 labor + $12.50 platform fee = $227.50). Hardcoded
+    // rather than calling computeBookingPrice here so a pricing-table regression can't move
+    // both sides of this assertion together -- pricing-table.test.ts owns formula coverage.
+    expect(result.payment.amountCents).toBe(22750);
+  });
+
   it('idempotent: completing again by same provider returns 200 with replayed payment', async () => {
     const { service } = createService();
     const customer = createSession('customer', 'customer-1');

@@ -35,6 +35,8 @@ export class InMemoryBookingRepository implements BookingRepository {
       customerUserId: input.customerUserId,
       customerLocation: input.customerLocation,
       requestedService: input.requestedService,
+      serviceCategory: input.serviceCategory,
+      urgency: input.urgency,
       status: 'submitted',
       statusHistory: [initialEvent],
     };

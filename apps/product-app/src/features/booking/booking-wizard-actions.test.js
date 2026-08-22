@@ -10,7 +10,7 @@ describe('submitBooking', () => {
 
     try {
       const result = await submitBooking(
-        { issueType: 'Leaky faucet', urgency: 'today', address: 'Main St', category: 'Plumbing' },
+        { issueType: 'Leaky faucet', urgency: 'urgent', address: 'Main St', category: 'plumbing' },
         null,
         'http://localhost:3000',
       );
@@ -33,7 +33,7 @@ describe('submitBooking', () => {
 
     try {
       const result = await submitBooking(
-        { issueType: 'Leaky faucet', urgency: 'today', address: 'Main St', category: 'Plumbing' },
+        { issueType: 'Leaky faucet', urgency: 'urgent', address: 'Main St', category: 'plumbing' },
         'tok-123',
         'http://localhost:3000',
       );
@@ -44,7 +44,9 @@ describe('submitBooking', () => {
           method: 'POST',
           headers: expect.objectContaining({ authorization: 'Bearer tok-123' }),
           body: JSON.stringify({
-            requestedService: 'Plumbing / Leaky faucet / today',
+            requestedService: 'plumbing / Leaky faucet / urgent',
+            serviceCategory: 'plumbing',
+            urgency: 'urgent',
             customerLocation: 'Main St',
           }),
         }),

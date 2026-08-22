@@ -10,6 +10,8 @@ type BookingState = {
   customerUserId: string;
   providerUserId: string | null;
   requestedService: string;
+  serviceCategory: string | null;
+  urgency: string | null;
   customerLocation: string | null;
   status: BookingStatus;
   createdAt: string;
@@ -54,12 +56,16 @@ describe('PostgresBookingRepository', () => {
       createdAt: '2026-03-20T12:00:00.000Z',
       customerUserId: '22222222-2222-4222-8222-222222222222',
       requestedService: 'Plumbing',
+      serviceCategory: 'plumbing',
+      urgency: 'scheduled',
       actorRole: 'customer',
       actorUserId: '22222222-2222-4222-8222-222222222222',
     });
 
     expect(created.status).toBe('submitted');
     expect(created.statusHistory).toHaveLength(1);
+    expect(created.serviceCategory).toBe('plumbing');
+    expect(created.urgency).toBe('scheduled');
 
     const accepted = await repository.acceptSubmittedBooking({
       bookingId: created.bookingId,
@@ -139,13 +145,22 @@ async function queryAgainstState<T>(
   values: readonly unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
   if (text.includes('INSERT INTO bookings')) {
-    const [id, customerUserId, requestedService, customerLocation, createdAt] =
-      values as [string, string, string, string | null, string];
+    const [id, customerUserId, requestedService, serviceCategory, urgency, customerLocation, createdAt] = values as [
+      string,
+      string,
+      string,
+      string | null,
+      string | null,
+      string | null,
+      string,
+    ];
     bookings.set(id, {
       id,
       customerUserId,
       providerUserId: null,
       requestedService,
+      serviceCategory,
+      urgency,
       customerLocation,
       status: 'submitted',
       createdAt,
@@ -215,6 +230,8 @@ async function queryAgainstState<T>(
           customer_user_id: booking.customerUserId,
           provider_user_id: booking.providerUserId,
           requested_service: booking.requestedService,
+          service_category: booking.serviceCategory,
+          urgency: booking.urgency,
           customer_location: booking.customerLocation,
           status: booking.status,
           created_at: booking.createdAt,
