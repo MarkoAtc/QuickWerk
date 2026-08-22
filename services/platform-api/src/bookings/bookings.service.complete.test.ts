@@ -19,7 +19,6 @@ import { PayoutsService } from '../payouts/payouts.service';
 import { ProvidersService } from '../providers/providers.service';
 import { BookingsService } from './bookings.service';
 import { InMemoryBookingRepository } from './infrastructure/in-memory-booking.repository';
-import { computeBookingPrice } from './pricing-table';
 
 const createSession = (role: AuthSession['role'], userId: string): AuthSession => {
   const createdAt = new Date();
@@ -156,9 +155,11 @@ describe('BookingsService.completeBooking', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    const expected = computeBookingPrice('plumbing', 'scheduled').totalCents;
-    expect(result.payment.amountCents).toBe(expected);
-    expect(result.payment.amountCents).not.toBe(12000);
+    // Known cent value for plumbing/scheduled (matches design/payment_checkout's reference
+    // total exactly: $45 callout + $170 labor + $12.50 platform fee = $227.50). Hardcoded
+    // rather than calling computeBookingPrice here so a pricing-table regression can't move
+    // both sides of this assertion together -- pricing-table.test.ts owns formula coverage.
+    expect(result.payment.amountCents).toBe(22750);
   });
 
   it('idempotent: completing again by same provider returns 200 with replayed payment', async () => {

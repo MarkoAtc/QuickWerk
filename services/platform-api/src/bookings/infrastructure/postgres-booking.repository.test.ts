@@ -56,12 +56,16 @@ describe('PostgresBookingRepository', () => {
       createdAt: '2026-03-20T12:00:00.000Z',
       customerUserId: '22222222-2222-4222-8222-222222222222',
       requestedService: 'Plumbing',
+      serviceCategory: 'plumbing',
+      urgency: 'scheduled',
       actorRole: 'customer',
       actorUserId: '22222222-2222-4222-8222-222222222222',
     });
 
     expect(created.status).toBe('submitted');
     expect(created.statusHistory).toHaveLength(1);
+    expect(created.serviceCategory).toBe('plumbing');
+    expect(created.urgency).toBe('scheduled');
 
     const accepted = await repository.acceptSubmittedBooking({
       bookingId: created.bookingId,
