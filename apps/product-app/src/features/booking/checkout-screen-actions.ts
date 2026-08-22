@@ -178,7 +178,7 @@ export async function loadCheckoutData(
   }
 
   try {
-    const [quoteResult, paymentMethods] = await Promise.all([
+    const [quoteResult, paymentMethodsResult] = await Promise.all([
       requestQuote(input, fetchImpl),
       listPaymentMethods(input, fetchImpl),
     ]);
@@ -191,11 +191,15 @@ export async function loadCheckoutData(
       return { status: 'error', message: quoteResult.message };
     }
 
+    if (paymentMethodsResult.status === 'error') {
+      return { status: 'error', message: paymentMethodsResult.message };
+    }
+
     return {
       status: 'loaded',
       requestedService: continuation.booking.requestedService,
       quote: quoteResult.quote,
-      paymentMethods,
+      paymentMethods: paymentMethodsResult.paymentMethods,
     };
   } catch (error) {
     return {
@@ -234,7 +238,21 @@ async function requestQuote(input: LoadCheckoutDataInput, fetchImpl: typeof fetc
   return { status: 'ok', quote };
 }
 
-async function listPaymentMethods(input: LoadCheckoutDataInput, fetchImpl: typeof fetch): Promise<PaymentMethod[]> {
+type ListPaymentMethodsResult =
+  | { status: 'ok'; paymentMethods: PaymentMethod[] }
+  | { status: 'error'; message: string };
+
+/**
+ * A failed list here must not be treated as "no cards yet" -- that empty state would
+ * point the customer at "Add new card" when they may already have one, silently
+ * hiding the real failure. Distinct from parse leniency elsewhere (e.g. a malformed
+ * individual payment method is dropped, not fatal): a failed *request* for the whole
+ * list is surfaced as a load error so the existing retry state renders instead.
+ */
+async function listPaymentMethods(
+  input: LoadCheckoutDataInput,
+  fetchImpl: typeof fetch,
+): Promise<ListPaymentMethodsResult> {
   const request = createListMyPaymentMethodsRequest(input.sessionToken);
   const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
     method: request.method,
@@ -242,10 +260,10 @@ async function listPaymentMethods(input: LoadCheckoutDataInput, fetchImpl: typeo
   });
 
   if (!response.ok) {
-    return [];
+    return { status: 'error', message: `Failed to load payment methods with HTTP ${response.status}.` };
   }
 
-  return parsePaymentMethodList(await response.json());
+  return { status: 'ok', paymentMethods: parsePaymentMethodList(await response.json()) };
 }
 
 export type AddPaymentMethodResult =

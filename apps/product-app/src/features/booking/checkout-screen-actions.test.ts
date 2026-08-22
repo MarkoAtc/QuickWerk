@@ -115,6 +115,23 @@ describe('loadCheckoutData', () => {
     expect(result.paymentMethods).toHaveLength(1);
     expect(result.paymentMethods[0]?.last4).toBe('4242');
   });
+
+  it('surfaces a load error (not a silent empty list) when the payment-methods request fails', async () => {
+    const fetchMock: typeof fetch = async (url) => {
+      const href = url.toString();
+      if (href.includes('/payment-methods')) return { ok: false, status: 500 } as Response;
+      if (href.includes('/payment')) return { ok: false, status: 404 } as Response;
+      if (href.includes('/quote')) return { ok: true, status: 200, json: async () => quoteResponse() } as Response;
+      return { ok: true, status: 200, json: async () => bookingResponse('accepted') } as Response;
+    };
+
+    const result = await loadCheckoutData({ sessionToken: 'tok', bookingId: 'bk-1' }, fetchMock);
+
+    // Must not resolve to 'loaded' with paymentMethods: [] -- that would look identical
+    // to "you have no cards yet" and point the customer at "Add new card" when they may
+    // already have one and the request simply failed.
+    expect(result.status).toBe('error');
+  });
 });
 
 describe('addPaymentMethodForCheckout', () => {
