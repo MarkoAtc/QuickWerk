@@ -25,6 +25,7 @@ export type ActiveJobViewModel = {
   counterpartValue: string;
   canContactCounterpart: boolean;
   paymentSummary: string;
+  showPayNowCta: boolean;
   timeline: ActiveJobTimelineStep[];
   statusHistory: string[];
   providerIdentity?: ProviderIdentitySummary;
@@ -163,6 +164,7 @@ export function presentActiveJob(input: PresentActiveJobInput): ActiveJobViewMod
     counterpartValue: counterpart.counterpartValue,
     canContactCounterpart,
     paymentSummary: resolvePaymentSummary(input.payment, input.warningMessage),
+    showPayNowCta: input.viewerRole === 'customer' && input.booking.status === 'accepted' && !input.payment,
     timeline: resolveTimeline(input.booking.status),
     statusHistory: resolveStatusHistory(input.booking),
     providerIdentity: input.viewerRole === 'customer' && input.providerIdentity ? input.providerIdentity : undefined,

@@ -54,6 +54,8 @@ describe('presentActiveJob', () => {
     expect(model.paymentSummary).toContain('EUR 123.45');
     expect(model.timeline[0]?.state).toBe('done');
     expect(model.timeline[1]?.state).toBe('active');
+    // Already paid -- no "Pay now" CTA even though the booking is accepted.
+    expect(model.showPayNowCta).toBe(false);
   });
 
   it('builds declined timeline variant', () => {
@@ -125,5 +127,39 @@ describe('presentActiveJob', () => {
     });
 
     expect(model.tracking).toBeUndefined();
+  });
+});
+
+describe('presentActiveJob showPayNowCta', () => {
+  it('is true for a customer viewing their own accepted, unpaid booking', () => {
+    const model = presentActiveJob({ viewerRole: 'customer', booking: createBooking('accepted') });
+    expect(model.showPayNowCta).toBe(true);
+  });
+
+  it('is false for the provider viewer, even on an accepted, unpaid booking', () => {
+    const model = presentActiveJob({
+      viewerRole: 'provider',
+      booking: { ...createBooking('accepted'), customerUserId: 'cust-1' },
+    });
+    expect(model.showPayNowCta).toBe(false);
+  });
+
+  it('is false for a submitted booking (not yet accepted)', () => {
+    const model = presentActiveJob({ viewerRole: 'customer', booking: createBooking('submitted') });
+    expect(model.showPayNowCta).toBe(false);
+  });
+
+  it('is false for a completed booking', () => {
+    const model = presentActiveJob({ viewerRole: 'customer', booking: createBooking('completed') });
+    expect(model.showPayNowCta).toBe(false);
+  });
+
+  it('is false for an accepted booking that already has a captured payment', () => {
+    const model = presentActiveJob({
+      viewerRole: 'customer',
+      booking: createBooking('accepted'),
+      payment: { paymentId: 'pay-1', bookingId: 'bk-1', amountCents: 22750, currency: 'EUR', status: 'captured' },
+    });
+    expect(model.showPayNowCta).toBe(false);
   });
 });
