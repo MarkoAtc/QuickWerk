@@ -117,6 +117,7 @@ export default function ActiveJobRoute() {
         });
       }}
       onRefresh={load}
+      onPayNow={() => router.push({ pathname: '/checkout', params: { bookingId: screenState.viewModel.bookingId } })}
     />
   );
 }

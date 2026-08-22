@@ -189,66 +189,22 @@ function UrgencySection({ urgency, onSelectUrgency }) {
   );
 }
 
-function PaymentRow({ icon, title, subtitle, selected, onPress, testID }) {
+function PaymentSection() {
   return (
-    <Pressable accessibilityRole="radio" accessibilityState={{ selected }} onPress={onPress} testID={testID}>
+    <View style={{ marginBottom: spacing.xl }} testID="booking-wizard-payment-note">
+      <SectionHeading index={3} title="Payment Method" />
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           borderRadius: radius.lg,
-          borderWidth: selected ? 1.5 : 1,
-          borderColor: selected ? colors.secondaryBright : colors.outlineVariant,
-          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.outlineVariant,
+          backgroundColor: colors.surfaceContainer,
           padding: spacing.md,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: radius.md,
-              backgroundColor: colors.surfaceContainer,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 18 }}>{icon}</Text>
-          </View>
-          <View>
-            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>{title}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>{subtitle}</Text>
-          </View>
-        </View>
-        <Text style={{ fontSize: 18, color: selected ? colors.secondaryBright : colors.outlineVariant }}>{selected ? '✓' : '○'}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function PaymentSection({ paymentMethod, onSelectPaymentMethod }) {
-  return (
-    <View style={{ marginBottom: spacing.xl }}>
-      <SectionHeading index={3} title="Payment Method" />
-      <View style={{ gap: spacing.sm }}>
-        <PaymentRow
-          icon=""
-          onPress={() => onSelectPaymentMethod('apple-pay')}
-          selected={paymentMethod === 'apple-pay'}
-          subtitle="Fast & secure"
-          testID="booking-wizard-payment-apple-pay"
-          title="Apple Pay"
-        />
-        <PaymentRow
-          icon="＋"
-          onPress={() => onSelectPaymentMethod('add-card')}
-          selected={paymentMethod === 'add-card'}
-          subtitle="No card on file yet"
-          testID="booking-wizard-payment-add-card"
-          title="Add a payment method"
-        />
+        <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+          You'll choose how to pay once a provider accepts this job — nothing to set up now.
+        </Text>
       </View>
     </View>
   );
@@ -279,7 +235,6 @@ function SummaryCard() {
 export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete, onBack, onEdit, isSubmitting = false }) {
   const [description, setDescription] = useState('');
   const [urgency, setUrgency] = useState(URGENCY_OPTIONS[0].id);
-  const [paymentMethod, setPaymentMethod] = useState('add-card');
 
   const canConfirm = description.trim().length > 0 && !isSubmitting;
 
@@ -303,7 +258,7 @@ export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete,
         <LocationRow address={address} onEdit={onEdit} />
         <DescriptionSection description={description} onChangeDescription={setDescription} />
         <UrgencySection onSelectUrgency={setUrgency} urgency={urgency} />
-        <PaymentSection onSelectPaymentMethod={setPaymentMethod} paymentMethod={paymentMethod} />
+        <PaymentSection />
         <SummaryCard />
       </ScrollView>
 

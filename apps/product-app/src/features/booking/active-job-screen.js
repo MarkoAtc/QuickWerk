@@ -407,7 +407,7 @@ function InfoCard({ title, value, accent }) {
   );
 }
 
-export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMessageCounterpart }) {
+export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMessageCounterpart, onPayNow }) {
   const tone = resolveStatusTone(model.status);
 
   return (
@@ -523,6 +523,16 @@ export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMess
           {model.paymentSummary}
         </Text>
       </View>
+
+      {model.showPayNowCta ? (
+        <Pressable accessibilityRole="button" onPress={onPayNow} testID="active-job-pay-now" style={{ marginTop: spacing.md }}>
+          <View style={componentStyles.button.primary}>
+            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+              Pay now
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
         {model.canContactCounterpart ? (

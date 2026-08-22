@@ -363,7 +363,7 @@ export const createCheckoutBookingRequest = (
 ) => ({
   method: 'POST',
   path: bookingApiRoutes.checkout(bookingId),
-  headers: { authorization: `Bearer ${sessionToken}` },
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
   body,
 }) as const;
 
@@ -449,7 +449,7 @@ export type AddPaymentMethodBody = {
 export const createAddPaymentMethodRequest = (sessionToken: string, body: AddPaymentMethodBody) => ({
   method: 'POST' as const,
   path: paymentMethodApiRoutes.add(),
-  headers: { authorization: `Bearer ${sessionToken}` },
+  headers: { authorization: `Bearer ${sessionToken}`, 'content-type': 'application/json' },
   body,
 }) as const;
 
