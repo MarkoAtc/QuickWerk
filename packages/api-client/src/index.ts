@@ -400,6 +400,31 @@ export const createGetBookingInvoiceRequest = (sessionToken: string, bookingId: 
   headers: { authorization: `Bearer ${sessionToken}` },
 }) as const;
 
+// --- Payment Methods ---
+
+export const paymentMethodApiRoutes = {
+  list: () => '/api/v1/customers/me/payment-methods',
+  add: () => '/api/v1/customers/me/payment-methods',
+} as const;
+
+export type AddPaymentMethodBody = {
+  label?: string;
+  brand?: string;
+};
+
+export const createAddPaymentMethodRequest = (sessionToken: string, body: AddPaymentMethodBody) => ({
+  method: 'POST' as const,
+  path: paymentMethodApiRoutes.add(),
+  headers: { authorization: `Bearer ${sessionToken}` },
+  body,
+}) as const;
+
+export const createListMyPaymentMethodsRequest = (sessionToken: string) => ({
+  method: 'GET',
+  path: paymentMethodApiRoutes.list(),
+  headers: { authorization: `Bearer ${sessionToken}` },
+}) as const;
+
 // --- Disputes ---
 
 export const disputeApiRoutes = {
