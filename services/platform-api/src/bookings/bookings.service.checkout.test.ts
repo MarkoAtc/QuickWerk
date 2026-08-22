@@ -122,6 +122,15 @@ describe('BookingsService.requestBookingQuote', () => {
     expect(second.quote.quoteId).toBe(first.quote.quoteId);
   });
 
+  it('returns 403 when the assigned provider requests a quote (customer-only, not party-based)', async () => {
+    const { service, paymentMethodsService } = createService();
+    const { provider, bookingId } = await setUpAcceptedBooking(service, paymentMethodsService);
+
+    const result = await service.requestBookingQuote(provider, bookingId);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.statusCode).toBe(403);
+  });
+
   it('returns 409 when the booking is not yet accepted', async () => {
     const { service, paymentMethodsService } = createService();
     const customer = createSession('customer', 'customer-1');
@@ -132,6 +141,24 @@ describe('BookingsService.requestBookingQuote', () => {
     const result = await service.requestBookingQuote(customer, created.booking.bookingId);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.statusCode).toBe(409);
+  });
+
+  it('stays atomic under concurrent requests: two simultaneous quote requests return the same quoteId', async () => {
+    const { service, paymentMethodsService } = createService();
+    const { customer, bookingId } = await setUpAcceptedBooking(service, paymentMethodsService);
+
+    // getOrCreateActiveQuote returns exactly what it found-or-wrote, with no `await`
+    // between the check and the write (see in-memory-quote.repository.ts) -- so two
+    // concurrent calls returning the same quoteId is only possible if exactly one
+    // quote was ever created for this booking, not two "active" quotes racing.
+    const [first, second] = await Promise.all([
+      service.requestBookingQuote(customer, bookingId),
+      service.requestBookingQuote(customer, bookingId),
+    ]);
+
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(second.quote.quoteId).toBe(first.quote.quoteId);
   });
 
   it('does not resurrect an expired quote: a new request after expiry creates a fresh quote', async () => {
@@ -180,6 +207,28 @@ describe('BookingsService.checkoutBooking', () => {
 
     const payment = await paymentsService.getPaymentByBookingId(bookingId);
     expect(payment?.paymentId).toBe(result.payment.paymentId);
+  });
+
+  it('returns 403 when the assigned provider attempts checkout (customer-only, not party-based)', async () => {
+    const { service, paymentsService, paymentMethodsService } = createService();
+    const { customer, provider, bookingId, paymentMethodId } = await setUpAcceptedBooking(
+      service,
+      paymentMethodsService,
+    );
+
+    const quote = await service.requestBookingQuote(customer, bookingId);
+    if (!quote.ok) throw new Error('setup failed');
+
+    const result = await service.checkoutBooking(provider, bookingId, {
+      quoteId: quote.quote.quoteId,
+      paymentMethodId,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.statusCode).toBe(403);
+
+    const payment = await paymentsService.getPaymentByBookingId(bookingId);
+    expect(payment).toBeNull();
   });
 
   it('rejects a nonexistent quoteId with 409 and does not capture payment', async () => {

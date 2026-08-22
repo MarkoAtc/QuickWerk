@@ -794,8 +794,13 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (!this.isBookingParty(session, booking)) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    // Quote/checkout initiate a charge against the customer's payment method -- unlike
+    // the read-only sibling endpoints (tracking/contact/provider-identity), this is
+    // deliberately customer-only, not party-based: the assigned provider must never be
+    // able to trigger a capture themselves, even though they already can via
+    // completeBooking (which does not accept a client-supplied payment method id).
+    if (session.userId !== booking.customerUserId) {
+      return { ok: false, statusCode: 403, error: 'Only the booking customer can request a quote.' };
     }
 
     if (booking.status !== 'accepted') {
@@ -807,29 +812,27 @@ export class BookingsService {
     }
 
     const now = new Date();
-    const existingQuote = await this.quotes.getActiveQuoteForBooking(bookingId, now);
-
-    if (existingQuote) {
-      return { ok: true, statusCode: 200, quote: existingQuote };
-    }
-
     const priced = computeBookingPrice(booking.serviceCategory, booking.urgency);
     const createdAt = now.toISOString();
     const expiresAt = new Date(now.getTime() + QUOTE_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
-    const quote = await this.quotes.createQuote({
+    const quote = await this.quotes.getOrCreateActiveQuote(
       bookingId,
-      customerUserId: booking.customerUserId,
-      lineItems: priced.lineItems,
-      calloutFeeCents: priced.calloutFeeCents,
-      laborCents: priced.laborCents,
-      platformFeeCents: priced.platformFeeCents,
-      totalCents: priced.totalCents,
-      currency: 'EUR',
-      pricingTableVersion: priced.pricingTableVersion,
-      createdAt,
-      expiresAt,
-    });
+      {
+        bookingId,
+        customerUserId: booking.customerUserId,
+        lineItems: priced.lineItems,
+        calloutFeeCents: priced.calloutFeeCents,
+        laborCents: priced.laborCents,
+        platformFeeCents: priced.platformFeeCents,
+        totalCents: priced.totalCents,
+        currency: 'EUR',
+        pricingTableVersion: priced.pricingTableVersion,
+        createdAt,
+        expiresAt,
+      },
+      now,
+    );
 
     logStructuredBreadcrumb({
       event: 'booking.quote.write',
@@ -865,8 +868,10 @@ export class BookingsService {
       return { ok: false, statusCode: 404, error: 'Booking not found.' };
     }
 
-    if (!this.isBookingParty(session, booking)) {
-      return { ok: false, statusCode: 403, error: 'You do not have access to this booking.' };
+    // Customer-only, same reasoning as requestBookingQuote -- checkout must never be
+    // triggerable by the assigned provider.
+    if (session.userId !== booking.customerUserId) {
+      return { ok: false, statusCode: 403, error: 'Only the booking customer can check out.' };
     }
 
     if (booking.status !== 'accepted') {
@@ -884,7 +889,7 @@ export class BookingsService {
     }
 
     const paymentMethod = await this.paymentMethodsService.getPaymentMethodOwnedByCustomer(
-      booking.customerUserId,
+      session.userId,
       input.paymentMethodId,
     );
 
