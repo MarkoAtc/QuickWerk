@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { loadBookingReviews, submitReview } from './review-screen-actions';
+import { loadBookingReviews, loadReviewScreenData, submitReview } from './review-screen-actions';
 
 const mockFetch =
   (status: number, body: unknown): typeof fetch =>
@@ -79,6 +79,24 @@ describe('submitReview', () => {
       expect(result.message).toContain('Network failure');
     }
   });
+
+  it('sends the bearer token, JSON content type, and existing review body contract', async () => {
+    const fetch = vi.fn(mockFetch(201, makeReviewRecord()));
+
+    await submitReview('customer-token', 'booking-1', 4, 'Highlights: Punctual', fetch);
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/bookings/booking-1/reviews'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer customer-token',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ rating: 4, comment: 'Highlights: Punctual' }),
+      }),
+    );
+  });
 });
 
 describe('loadBookingReviews', () => {
@@ -136,5 +154,110 @@ describe('loadBookingReviews', () => {
     if (result.status === 'error') {
       expect(result.message).toContain('Network failure');
     }
+  });
+});
+
+describe('loadReviewScreenData', () => {
+  const completedBooking = {
+    bookingId: 'booking-1',
+    requestedService: 'Electrical installation',
+    status: 'completed',
+    providerUserId: 'provider-1',
+  };
+
+  const provider = {
+    providerUserId: 'provider-1',
+    displayName: 'Marcus Weber',
+    photoUrl: 'https://example.test/marcus.jpg',
+  };
+
+  it('loads authenticated booking/reviews and optional public provider context', async () => {
+    const fetchImpl: typeof globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/v1/bookings/booking-1')) {
+        return Promise.resolve(mockFetch(200, completedBooking)(input, init));
+      }
+      if (url.endsWith('/api/v1/bookings/booking-1/reviews')) {
+        return Promise.resolve(mockFetch(200, [makeReviewRecord()])(input, init));
+      }
+      if (url.endsWith('/api/v1/providers/provider-1')) {
+        return Promise.resolve(mockFetch(200, provider)(input, init));
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    }) as unknown as typeof globalThis.fetch;
+
+    const result = await loadReviewScreenData('customer-token', 'booking-1', fetchImpl);
+
+    expect(result).toEqual({
+      status: 'loaded',
+      booking: completedBooking,
+      provider,
+      reviews: [makeReviewRecord()],
+    });
+
+    const calls = vi.mocked(fetchImpl).mock.calls;
+    const bookingCall = calls.find(([url]) => String(url).endsWith('/api/v1/bookings/booking-1'));
+    const reviewsCall = calls.find(([url]) => String(url).endsWith('/api/v1/bookings/booking-1/reviews'));
+    expect(bookingCall?.[1]?.headers).toEqual({ authorization: 'Bearer customer-token' });
+    expect(reviewsCall?.[1]?.headers).toEqual({ authorization: 'Bearer customer-token' });
+  });
+
+  it('rejects a booking that is not completed before loading review data', async () => {
+    const fetch = vi.fn(mockFetch(200, { ...completedBooking, status: 'accepted' }));
+
+    const result = await loadReviewScreenData('customer-token', 'booking-1', fetch);
+
+    expect(result).toEqual({
+      status: 'error',
+      message: 'Reviews are available after the booking is completed.',
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns an error for malformed required booking or review payloads', async () => {
+    const malformedBooking = await loadReviewScreenData(
+      'customer-token',
+      'booking-1',
+      mockFetch(200, { bookingId: 'booking-1', status: 'completed' }),
+    );
+    expect(malformedBooking).toEqual({ status: 'error', message: 'Booking response missing required review fields.' });
+
+    const fetchImpl: typeof globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/v1/bookings/booking-1')) {
+        return Promise.resolve(mockFetch(200, completedBooking)(input, init));
+      }
+      if (url.endsWith('/reviews')) {
+        return Promise.resolve(mockFetch(200, [{ reviewId: 'incomplete' }])(input, init));
+      }
+      return Promise.resolve(mockFetch(404, {})(input, init));
+    }) as unknown as typeof globalThis.fetch;
+
+    const malformedReviews = await loadReviewScreenData('customer-token', 'booking-1', fetchImpl);
+    expect(malformedReviews).toEqual({ status: 'error', message: 'Reviews response missing required fields.' });
+  });
+
+  it('uses a safe provider fallback when the public profile is unavailable', async () => {
+    const fetchImpl: typeof globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/v1/bookings/booking-1')) {
+        return Promise.resolve(mockFetch(200, completedBooking)(input, init));
+      }
+      if (url.endsWith('/reviews')) {
+        return Promise.resolve(mockFetch(200, [])(input, init));
+      }
+      return Promise.resolve(mockFetch(404, {})(input, init));
+    }) as unknown as typeof globalThis.fetch;
+
+    const result = await loadReviewScreenData('customer-token', 'booking-1', fetchImpl);
+
+    expect(result).toEqual({
+      status: 'loaded',
+      booking: completedBooking,
+      provider: undefined,
+      reviews: [],
+    });
   });
 });

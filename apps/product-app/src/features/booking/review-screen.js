@@ -1,248 +1,395 @@
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
+import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-function SectionCard({ children }) {
+import { reviewHighlightOptions } from './review-screen-presenter';
+
+const orange = colors.cta;
+
+function ProviderAvatar({ provider }) {
+  const initial = provider?.displayName?.trim()?.charAt(0)?.toUpperCase() || 'Q';
+
   return (
-    <View
-      style={{
-        backgroundColor: colors.surface,
-        borderRadius: 28,
-        padding: spacing.xl,
-        borderWidth: 1,
-        borderColor: colors.outlineVariant,
-        ...shadow.card,
-      }}
-    >
-      {children}
+    <View style={{ position: 'relative' }}>
+      {provider?.photoUrl ? (
+        <Image
+          accessibilityLabel={`${provider.displayName} profile photo`}
+          source={{ uri: provider.photoUrl }}
+          style={{
+            backgroundColor: colors.surfaceContainerHigh,
+            borderColor: colors.surface,
+            borderRadius: radius.full,
+            borderWidth: 4,
+            height: 96,
+            width: 96,
+            ...shadow.card,
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: colors.primaryContainer,
+            borderColor: colors.surface,
+            borderRadius: radius.full,
+            borderWidth: 4,
+            height: 96,
+            justifyContent: 'center',
+            width: 96,
+            ...shadow.card,
+          }}
+        >
+          <Text style={{ color: colors.textInverse, fontSize: 34, fontWeight: typography.fontWeight.bold }}>
+            {initial}
+          </Text>
+        </View>
+      )}
+      <View
+        accessibilityLabel="Provider active"
+        style={{
+          backgroundColor: colors.success,
+          borderColor: colors.surface,
+          borderRadius: radius.full,
+          borderWidth: 4,
+          bottom: 2,
+          height: 24,
+          position: 'absolute',
+          right: 2,
+          width: 24,
+        }}
+      />
     </View>
   );
 }
 
-function ReviewChip({ value, active, onPress }) {
+function StarRating({ rating, onRatingChange, disabled }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Set rating ${value}`} onPress={() => onPress(value)}>
-      <View
+    <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', gap: spacing.sm, justifyContent: 'center' }}>
+      {[1, 2, 3, 4, 5].map((value) => {
+        const selected = value <= rating;
+        return (
+          <Pressable
+            accessibilityLabel={`${value} star${value === 1 ? '' : 's'}`}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: value === rating, disabled }}
+            disabled={disabled}
+            key={value}
+            onPress={() => onRatingChange(value)}
+            testID={`review-rating-${value}`}
+            style={{ alignItems: 'center', height: 52, justifyContent: 'center', width: 52 }}
+          >
+            <Text style={{ color: selected ? orange : colors.outlineVariant, fontSize: 46, lineHeight: 52 }}>
+              {selected ? '★' : '☆'}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function HighlightChip({ active, disabled, label, onPress }) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: active, disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      testID={`review-highlight-${label.toLowerCase().replaceAll(' ', '-')}`}
+      style={{
+        backgroundColor: active ? colors.secondaryBright : colors.surfaceContainerHigh,
+        borderColor: active ? colors.secondaryBright : 'rgba(148, 163, 184, 0.16)',
+        borderRadius: radius.full,
+        borderWidth: 1,
+        paddingHorizontal: spacing.md,
+        paddingVertical: 12,
+      }}
+    >
+      <Text
         style={{
-          width: 48,
-          height: 48,
-          borderRadius: radius.full,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: active ? colors.cta : colors.surfaceContainerHigh,
+          color: active ? colors.onSecondary : colors.text,
+          fontSize: typography.fontSize.bodySm,
+          fontWeight: typography.fontWeight.medium,
         }}
       >
-        <Text style={{ color: active ? '#FFFFFF' : colors.text, fontWeight: typography.fontWeight.bold }}>{value}</Text>
-      </View>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
-function ExistingReviewCard({ review }) {
+function SuccessCard({ existing, onClose }) {
   return (
     <View
       style={{
-        borderRadius: 24,
-        padding: spacing.lg,
-        backgroundColor: colors.surfaceContainerLow,
-        borderWidth: 1,
+        alignItems: 'center',
+        backgroundColor: colors.surface,
         borderColor: colors.outlineVariant,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        padding: spacing.xl,
+        ...shadow.elevated,
       }}
+      testID="review-success"
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>
-          {review.authorName ?? 'Anonymous'}
-        </Text>
-        <Text style={{ color: '#8A6500', fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>
-          ★ {review.rating}
-        </Text>
-      </View>
-      <Text
+      <View
         style={{
-          marginTop: spacing.sm,
-          color: colors.textSoft,
-          fontSize: typography.fontSize.bodySm,
-          lineHeight: typography.lineHeight.bodySm,
+          alignItems: 'center',
+          backgroundColor: colors.successSoft,
+          borderRadius: radius.full,
+          height: 72,
+          justifyContent: 'center',
+          width: 72,
         }}
       >
-        {review.comment || 'No written feedback provided.'}
+        <Text style={{ color: colors.success, fontSize: 36 }}>✓</Text>
+      </View>
+      <Text style={{ color: colors.text, fontSize: 24, fontWeight: typography.fontWeight.bold, marginTop: spacing.md }}>
+        {existing ? 'Review already submitted' : 'Great Job!'}
       </Text>
+      <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodyMd, marginTop: spacing.sm, textAlign: 'center' }}>
+        {existing
+          ? 'Your feedback for this booking is already on record.'
+          : 'Your feedback has been shared with the provider and the community.'}
+      </Text>
+      <Pressable accessibilityRole="button" onPress={onClose} style={{ marginTop: spacing.lg }} testID="review-success-close">
+        <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>
+          Back to booking
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
 export function ReviewScreen({
-  headline,
-  subheadline,
+  booking,
+  provider,
   rating,
+  ratingLabel,
   comment,
+  selectedHighlights,
+  photoAttached,
+  submitState,
+  onClose,
   onRatingChange,
   onCommentChange,
+  onToggleHighlight,
+  onTogglePhoto,
   onSubmit,
-  onRefresh,
-  submitState,
-  loadState,
 }) {
+  const submitted = submitState.status === 'submitted';
+  const submitting = submitState.status === 'submitting';
+  const providerName = provider?.displayName || 'your provider';
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{
-        paddingHorizontal: spacing.container,
-        paddingTop: spacing.xl,
-        paddingBottom: spacing.xl,
-        gap: spacing.xl,
-      }}
-      testID="review-screen"
-    >
+    <View style={{ backgroundColor: colors.surfaceBright, flex: 1 }} testID="review-screen">
       <View
         style={{
-          borderRadius: 32,
-          padding: spacing.xl,
-          backgroundColor: colors.primaryContainer,
-          ...shadow.elevated,
+          backgroundColor: colors.glassStrong,
+          borderBottomColor: 'rgba(199, 198, 204, 0.28)',
+          borderBottomWidth: 1,
+          paddingHorizontal: spacing.container,
+          paddingVertical: spacing.md,
+          ...shadow.card,
         }}
       >
-        <Text
-          style={{
-            color: '#FFFFFF',
-            fontSize: 42,
-            lineHeight: 46,
-            fontWeight: typography.fontWeight.bold,
-            letterSpacing: -0.8,
-          }}
-        >
-          {headline}
-        </Text>
-        <Text
-          style={{
-            marginTop: spacing.md,
-            color: colors.onPrimaryContainer,
-            fontSize: typography.fontSize.bodyLg,
-            lineHeight: typography.lineHeight.bodyLg,
-            maxWidth: 720,
-          }}
-        >
-          {subheadline}
-        </Text>
+        <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 'auto', maxWidth: 560, width: '100%' }}>
+          <Pressable
+            accessibilityLabel="Close review"
+            accessibilityRole="button"
+            onPress={onClose}
+            style={{ alignItems: 'center', height: 40, justifyContent: 'center', width: 40 }}
+            testID="review-close"
+          >
+            <Text style={{ color: colors.text, fontSize: 34, fontWeight: typography.fontWeight.regular, lineHeight: 36 }}>×</Text>
+          </Pressable>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: typography.fontWeight.bold }}>Handwerker</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      </View>
+      <View style={{ backgroundColor: colors.secondaryContainer, height: 4 }}>
+        <View style={{ backgroundColor: colors.secondaryBright, height: 4, width: '75%' }} />
       </View>
 
-      <SectionCard>
-        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
-          Leave a structured review
-        </Text>
-        <Text
-          style={{
-            marginTop: spacing.sm,
-            color: colors.textSoft,
-            fontSize: typography.fontSize.bodyMd,
-            lineHeight: typography.lineHeight.bodyMd,
-          }}
-        >
-          Rate the completed job and add short feedback so service quality is easier to track later.
-        </Text>
-
-        <Text style={{ marginTop: spacing.lg, color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
-          Rating: {rating}/5
-        </Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-          {[1, 2, 3, 4, 5].map((value) => (
-            <ReviewChip key={value} value={value} active={value <= rating} onPress={onRatingChange} />
-          ))}
+      <ScrollView
+        contentContainerStyle={{
+          alignSelf: 'center',
+          maxWidth: 560,
+          paddingBottom: 56,
+          paddingHorizontal: spacing.container,
+          paddingTop: 72,
+          width: '100%',
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ alignItems: 'center' }}>
+          <ProviderAvatar provider={provider} />
+          <Text style={{ color: colors.text, fontSize: 30, fontWeight: typography.fontWeight.bold, marginTop: spacing.xl, textAlign: 'center' }}>
+            Rate your Repair
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodyLg, lineHeight: typography.lineHeight.bodyLg, marginTop: spacing.sm, textAlign: 'center' }}>
+            How was your {booking.requestedService} with{' '}
+            <Text style={{ color: colors.text, fontWeight: typography.fontWeight.bold }}>{providerName}</Text>?
+          </Text>
         </View>
 
-        <TextInput
-          value={comment}
-          onChangeText={onCommentChange}
-          placeholder="Describe the experience in a few sentences"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          numberOfLines={5}
-          testID="review-comment-input"
-          style={{
-            minHeight: 128,
-            marginTop: spacing.lg,
-            borderWidth: 1,
-            borderColor: colors.outlineVariant,
-            borderRadius: radius.lg,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.md,
-            textAlignVertical: 'top',
-            color: colors.text,
-            backgroundColor: colors.surfaceContainerLow,
-          }}
-        />
-
-        <Pressable accessibilityRole="button" onPress={onSubmit} testID="review-submit-button">
-          <View
-            style={{
-              ...componentStyles.button.primary,
-              marginTop: spacing.lg,
-              opacity: submitState.status === 'submitting' ? 0.6 : 1,
-            }}
-          >
-            <Text
-              style={{
-                color: '#FFFFFF',
-                fontSize: typography.fontSize.labelMd,
-                fontWeight: typography.fontWeight.bold,
-                textTransform: 'uppercase',
-                letterSpacing: 0.8,
-              }}
-            >
-              {submitState.status === 'submitting' ? 'Submitting review…' : 'Submit review'}
-            </Text>
+        {submitted ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <SuccessCard existing={submitState.existing === true} onClose={onClose} />
           </View>
-        </Pressable>
-
-        {submitState.status === 'error' ? (
-          <Text style={{ marginTop: spacing.md, color: colors.error, fontSize: typography.fontSize.bodySm }}>{submitState.message}</Text>
-        ) : null}
-
-        {submitState.status === 'submitted' ? (
-          <Text style={{ marginTop: spacing.md, color: colors.success, fontSize: typography.fontSize.bodySm }}>
-            Review submitted successfully.
-          </Text>
-        ) : null}
-      </SectionCard>
-
-      <SectionCard>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
-            <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
-              Existing reviews
-            </Text>
-            <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd }}>
-              Keep the feedback history visible for trust and quality control.
-            </Text>
-          </View>
-          <Pressable accessibilityRole="button" onPress={onRefresh} testID="review-refresh-button">
-            <View style={componentStyles.button.ghost}>
-              <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-                Refresh
+        ) : (
+          <>
+            <View style={{ marginTop: spacing.xl }}>
+              <StarRating disabled={submitting} onRatingChange={onRatingChange} rating={rating} />
+              <Text
+                style={{
+                  color: orange,
+                  fontSize: typography.fontSize.labelMd,
+                  fontWeight: typography.fontWeight.semibold,
+                  letterSpacing: 2,
+                  marginTop: spacing.sm,
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {ratingLabel}
               </Text>
             </View>
-          </Pressable>
-        </View>
 
-        <View style={{ marginTop: spacing.lg, gap: spacing.md }}>
-          {loadState.status === 'loading' ? (
-            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>Loading reviews…</Text>
-          ) : null}
+            <View style={{ marginTop: spacing.xl }}>
+              <Text
+                style={{
+                  color: colors.textMuted,
+                  fontSize: typography.fontSize.labelMd,
+                  letterSpacing: 1.6,
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                }}
+              >
+                What stood out?
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center', marginTop: spacing.md }}>
+                {reviewHighlightOptions.map((highlight) => (
+                  <HighlightChip
+                    active={selectedHighlights.includes(highlight)}
+                    disabled={submitting}
+                    key={highlight}
+                    label={highlight}
+                    onPress={() => onToggleHighlight(highlight)}
+                  />
+                ))}
+              </View>
+            </View>
 
-          {loadState.status === 'error' ? (
-            <Text style={{ color: colors.error, fontSize: typography.fontSize.bodySm }}>{loadState.message}</Text>
-          ) : null}
+            <View style={{ marginTop: spacing.xl }}>
+              <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                Tell us more about the service
+              </Text>
+              <View style={{ marginTop: spacing.sm, position: 'relative' }}>
+                <TextInput
+                  editable={!submitting}
+                  maxLength={500}
+                  multiline
+                  numberOfLines={5}
+                  onChangeText={onCommentChange}
+                  placeholder={`${providerName === 'your provider' ? 'The provider' : providerName} was efficient and explained the whole process…`}
+                  placeholderTextColor={colors.outline}
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderColor: colors.outlineVariant,
+                    borderRadius: radius.lg,
+                    borderWidth: 1,
+                    color: colors.text,
+                    fontSize: typography.fontSize.bodyMd,
+                    lineHeight: typography.lineHeight.bodyMd,
+                    minHeight: 152,
+                    paddingBottom: 36,
+                    paddingHorizontal: spacing.md,
+                    paddingTop: spacing.md,
+                    textAlignVertical: 'top',
+                  }}
+                  testID="review-comment-input"
+                  value={comment}
+                />
+                <Text style={{ bottom: 12, color: colors.textMuted, fontSize: typography.fontSize.bodySm, position: 'absolute', right: 14 }}>
+                  {comment.length} / 500
+                </Text>
+              </View>
+            </View>
 
-          {loadState.status === 'loaded' && loadState.reviews.length === 0 ? (
-            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>No reviews available yet.</Text>
-          ) : null}
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: photoAttached, disabled: submitting }}
+              disabled={submitting}
+              onPress={onTogglePhoto}
+              style={{
+                alignItems: 'center',
+                backgroundColor: colors.surfaceContainerLow,
+                borderColor: colors.outlineVariant,
+                borderRadius: radius.lg,
+                borderStyle: 'dashed',
+                borderWidth: 1,
+                flexDirection: 'row',
+                gap: spacing.md,
+                marginTop: spacing.xl,
+                padding: spacing.md,
+              }}
+              testID="review-photo-toggle"
+            >
+              <View style={{ alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, height: 48, justifyContent: 'center', width: 48 }}>
+                <Text style={{ color: colors.text, fontSize: 24 }}>{photoAttached ? '✓' : '▣'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
+                  {photoAttached ? 'Demo photo attached' : 'Add Photos'}
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, marginTop: 2 }}>
+                  Preview only — photos are not uploaded
+                </Text>
+              </View>
+              <View style={{ alignItems: 'center', backgroundColor: colors.secondaryBright, borderRadius: radius.full, height: 36, justifyContent: 'center', width: 36 }}>
+                <Text style={{ color: colors.onSecondary, fontSize: 24 }}>{photoAttached ? '−' : '+'}</Text>
+              </View>
+            </Pressable>
 
-          {loadState.status === 'loaded'
-            ? loadState.reviews.map((review, index) => <ExistingReviewCard key={`${review.authorName}-${index}`} review={review} />)
-            : null}
-        </View>
-      </SectionCard>
-    </ScrollView>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: submitting }}
+              disabled={submitting}
+              onPress={onSubmit}
+              style={{
+                alignItems: 'center',
+                backgroundColor: orange,
+                borderRadius: radius.lg,
+                flexDirection: 'row',
+                justifyContent: 'center',
+                marginTop: spacing.xl,
+                opacity: submitting ? 0.65 : 1,
+                paddingHorizontal: spacing.lg,
+                paddingVertical: 18,
+                ...shadow.cta,
+              }}
+              testID="review-submit-button"
+            >
+              <Text style={{ color: colors.onPrimary, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.semibold }}>
+                {submitting ? 'Submitting Review…' : 'Submit Review'}
+              </Text>
+              {!submitting ? <Text style={{ color: colors.onPrimary, fontSize: 28, marginLeft: spacing.sm }}>→</Text> : null}
+            </Pressable>
+
+            {submitState.status === 'error' ? (
+              <Text style={{ color: colors.error, fontSize: typography.fontSize.bodySm, marginTop: spacing.md, textAlign: 'center' }} testID="review-submit-error">
+                {submitState.message}
+              </Text>
+            ) : null}
+
+            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm, marginTop: spacing.md, textAlign: 'center' }}>
+              Your review helps maintain our 5-star standard.
+            </Text>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
