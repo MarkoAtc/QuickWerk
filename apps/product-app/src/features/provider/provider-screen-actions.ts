@@ -1,5 +1,6 @@
 import {
   createAcceptBookingRequest,
+  createDeclineBookingRequest,
   createGetMyProviderProfileRequest,
   createListBookingsRequest,
   createRequestUploadUrlRequest,
@@ -8,12 +9,19 @@ import {
   UpsertProviderProfileBody,
 } from '@quickwerk/api-client';
 
+import type { ProviderOnboardingState } from './onboarding-state';
+import { loadOnboardingStatus } from './onboarding-screen-actions';
+import {
+  isProviderBookingAccessApproved,
+  resolveProviderBookingGateMessage,
+} from './provider-onboarding-workspace-state';
 import { runtimeConfig } from '../../shared/runtime-config';
 
 export type BookingSummaryItem = {
   bookingId: string;
-  status: string;
+  status: 'submitted';
   requestedService: string;
+  customerLocation?: string;
   createdAt: string;
   customerUserId: string;
 };
@@ -29,7 +37,7 @@ type AcceptBookingInput = {
 
 type AcceptedBooking = {
   bookingId: string;
-  status: string;
+  status: 'accepted';
   requestedService?: string;
   customerUserId?: string;
   providerUserId?: string;
@@ -38,6 +46,59 @@ type AcceptedBooking = {
 type AcceptBookingResult =
   | { booking: AcceptedBooking; errorMessage?: undefined }
   | { booking?: undefined; errorMessage: string };
+
+type BookingTransitionInput = {
+  sessionToken: string;
+  bookingId: string;
+};
+
+type DeclinedBooking = {
+  bookingId: string;
+  status: 'declined';
+  requestedService?: string;
+  customerUserId?: string;
+};
+
+type DeclineBookingResult =
+  | { booking: DeclinedBooking; errorMessage?: undefined }
+  | { booking?: undefined; errorMessage: string };
+
+const knownBookingStatuses = ['submitted', 'accepted', 'declined', 'completed'] as const;
+
+function parseBookingSummaryItem(payload: unknown): (Omit<BookingSummaryItem, 'status'> & { status: typeof knownBookingStatuses[number] }) | null {
+  if (payload === null || typeof payload !== 'object') {
+    return null;
+  }
+
+  const booking = payload as Record<string, unknown>;
+  const status = booking['status'];
+
+  if (
+    typeof booking['bookingId'] !== 'string'
+    || !booking['bookingId'].trim()
+    || typeof booking['requestedService'] !== 'string'
+    || !booking['requestedService'].trim()
+    || typeof booking['createdAt'] !== 'string'
+    || !booking['createdAt'].trim()
+    || typeof booking['customerUserId'] !== 'string'
+    || !booking['customerUserId'].trim()
+    || typeof status !== 'string'
+    || !(knownBookingStatuses as readonly string[]).includes(status)
+  ) {
+    return null;
+  }
+
+  return {
+    bookingId: booking['bookingId'],
+    status: status as typeof knownBookingStatuses[number],
+    requestedService: booking['requestedService'],
+    customerLocation: typeof booking['customerLocation'] === 'string' && booking['customerLocation'].trim()
+      ? booking['customerLocation']
+      : undefined,
+    createdAt: booking['createdAt'],
+    customerUserId: booking['customerUserId'],
+  };
+}
 
 export async function listBookingsRequest(
   sessionToken: string,
@@ -61,21 +122,68 @@ export async function listBookingsRequest(
       return { errorMessage: 'List bookings response was not an array.' };
     }
 
-    const bookings: BookingSummaryItem[] = payload.map((item: unknown) => {
-      const b = item as Record<string, unknown>;
-      return {
-        bookingId: typeof b['bookingId'] === 'string' ? b['bookingId'] : '',
-        status: typeof b['status'] === 'string' ? b['status'] : '',
-        requestedService: typeof b['requestedService'] === 'string' ? b['requestedService'] : '',
-        createdAt: typeof b['createdAt'] === 'string' ? b['createdAt'] : '',
-        customerUserId: typeof b['customerUserId'] === 'string' ? b['customerUserId'] : '',
-      };
-    });
+    const parsedBookings = payload.map(parseBookingSummaryItem);
+    if (parsedBookings.some((booking) => booking === null)) {
+      return { errorMessage: 'Booking list response missing required fields.' };
+    }
+
+    const bookings = parsedBookings
+      .filter((booking): booking is NonNullable<typeof booking> => booking !== null && booking.status === 'submitted')
+      .map((booking): BookingSummaryItem => ({ ...booking, status: 'submitted' }));
 
     return { bookings };
   } catch (error) {
     return {
       errorMessage: error instanceof Error ? error.message : 'Unknown list bookings failure.',
+    };
+  }
+}
+
+export async function declineProviderBookingRequest(
+  input: BookingTransitionInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<DeclineBookingResult> {
+  const request = createDeclineBookingRequest(input.sessionToken, input.bookingId);
+
+  try {
+    const response = await fetchImpl(`${runtimeConfig.platformApiBaseUrl}${request.path}`, {
+      method: request.method,
+      headers: { ...request.headers, 'content-type': 'application/json' },
+      body: JSON.stringify(request.body),
+    });
+
+    if (!response.ok) {
+      return { errorMessage: `Decline booking failed with HTTP ${response.status}.` };
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+    if (
+      typeof payload['bookingId'] !== 'string'
+      || !payload['bookingId'].trim()
+      || typeof payload['status'] !== 'string'
+    ) {
+      return { errorMessage: 'Decline booking response missing required fields.' };
+    }
+
+    if (payload['bookingId'] !== input.bookingId) {
+      return { errorMessage: 'Decline booking response did not match the requested booking.' };
+    }
+
+    if (payload['status'] !== 'declined') {
+      return { errorMessage: `Expected status 'declined' but received '${payload['status']}'.` };
+    }
+
+    return {
+      booking: {
+        bookingId: payload['bookingId'],
+        status: 'declined',
+        requestedService: typeof payload['requestedService'] === 'string' ? payload['requestedService'] : undefined,
+        customerUserId: typeof payload['customerUserId'] === 'string' ? payload['customerUserId'] : undefined,
+      },
+    };
+  } catch (error) {
+    return {
+      errorMessage: error instanceof Error ? error.message : 'Unknown decline booking failure.',
     };
   }
 }
@@ -110,14 +218,22 @@ export async function acceptBookingRequest(
       return { errorMessage: payload.error ?? 'Booking accept was rejected by server.' };
     }
 
-    if (!payload.bookingId || !payload.status) {
+    if (!payload.bookingId?.trim() || !payload.status) {
       return { errorMessage: 'Accept booking response missing required fields.' };
+    }
+
+    if (payload.bookingId !== input.bookingId) {
+      return { errorMessage: 'Accept booking response did not match the requested booking.' };
+    }
+
+    if (payload.status !== 'accepted') {
+      return { errorMessage: `Expected status 'accepted' but received '${payload.status}'.` };
     }
 
     return {
       booking: {
         bookingId: payload.bookingId,
-        status: payload.status,
+        status: 'accepted',
         requestedService: payload.requestedService,
         customerUserId: payload.customerUserId,
         providerUserId: payload.providerUserId,
@@ -138,6 +254,7 @@ export type ProviderProfilePayload = {
   bio?: string;
   tradeCategories: string[];
   serviceArea?: string;
+  photoUrl?: string;
   isPublic: boolean;
   createdAt: string;
   updatedAt: string;
@@ -174,9 +291,67 @@ function parseProviderProfilePayload(payload: Record<string, unknown>): Provider
       ? (payload['tradeCategories'] as string[])
       : [],
     serviceArea: typeof payload['serviceArea'] === 'string' ? payload['serviceArea'] : undefined,
+    photoUrl: typeof payload['photoUrl'] === 'string' ? payload['photoUrl'] : undefined,
     isPublic: Boolean(payload['isPublic']),
     createdAt,
     updatedAt,
+  };
+}
+
+type ProviderDashboardContext = {
+  onboardingState: ProviderOnboardingState;
+  profile: ProviderProfilePayload | null;
+  profileWarning?: string;
+};
+
+export type ProviderDashboardLoadResult =
+  | (ProviderDashboardContext & { status: 'loaded'; bookings: BookingSummaryItem[] })
+  | (ProviderDashboardContext & { status: 'blocked'; bookings: []; accessMessage: string })
+  | { status: 'error'; message: string; profile: ProviderProfilePayload | null; profileWarning?: string };
+
+export async function loadProviderDashboardData(
+  sessionToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ProviderDashboardLoadResult> {
+  const [onboardingState, profileResult] = await Promise.all([
+    loadOnboardingStatus(sessionToken, fetchImpl),
+    loadMyProviderProfile(sessionToken, fetchImpl),
+  ]);
+
+  let profile: ProviderProfilePayload | null = null;
+  let profileWarning: string | undefined;
+  if (profileResult.profile === undefined) {
+    profileWarning = profileResult.errorMessage;
+  } else {
+    profile = profileResult.profile;
+  }
+
+  if (onboardingState.status === 'error') {
+    return { status: 'error', message: onboardingState.errorMessage, profile, profileWarning };
+  }
+
+  if (!isProviderBookingAccessApproved(onboardingState)) {
+    return {
+      status: 'blocked',
+      bookings: [],
+      onboardingState,
+      profile,
+      profileWarning,
+      accessMessage: resolveProviderBookingGateMessage(onboardingState) ?? 'Booking access is currently unavailable.',
+    };
+  }
+
+  const bookingsResult = await listBookingsRequest(sessionToken, fetchImpl);
+  if (bookingsResult.bookings === undefined) {
+    return { status: 'error', message: bookingsResult.errorMessage, profile, profileWarning };
+  }
+
+  return {
+    status: 'loaded',
+    bookings: bookingsResult.bookings,
+    onboardingState,
+    profile,
+    profileWarning,
   };
 }
 
