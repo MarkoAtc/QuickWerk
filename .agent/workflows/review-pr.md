@@ -61,6 +61,8 @@ Classify each check:
 gh pr view <PR_NUMBER> --comments
 ```
 
+If no CodeRabbit review appears after CI starts, inspect the PR timeline. This repository may skip automatic review; request it manually with an `@coderabbitai review` PR comment, then wait for the resulting review before classifying the gate. Do not use an empty commit to trigger review.
+
 Filter for CodeRabbit comments. Classify each:
 
 | Type | Action |
@@ -86,8 +88,13 @@ For each failing check:
 3. Fix the minimum code needed to resolve it.
 4. Run the check locally to confirm the fix:
    ```sh
-   # Example — adjust per repo tooling
-   pnpm lint && pnpm typecheck && pnpm test:run
+   pnpm check
+   pnpm --filter @quickwerk/background-workers build
+   pnpm --filter @quickwerk/platform-api test
+   pnpm --filter @quickwerk/admin-web test
+   pnpm --filter @quickwerk/product-app test
+   pnpm --filter @quickwerk/admin-web build
+   pnpm --filter @quickwerk/platform-api build
    ```
 5. Commit and push:
    ```sh
