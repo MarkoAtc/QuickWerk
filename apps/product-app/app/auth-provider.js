@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { AuthEntryScreen } from '../src/features/auth/auth-entry-screen';
 import { signInWithCredentials, signUpWithCredentials } from '../src/features/auth/auth-entry-actions';
+import { authEntryRouteDefaults } from '../src/features/auth/auth-entry-role';
 import { useSession } from '../src/shared/session-provider';
 
 // Legacy email/password entry, kept as the sign-in path for providers until
@@ -72,7 +73,12 @@ export default function ProductAuthProviderScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AuthEntryScreen onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} isSigningIn={loading} />
+      <AuthEntryScreen
+        initialRole={authEntryRouteDefaults.provider}
+        isSigningIn={loading}
+        onCreateAccount={handleCreateAccount}
+        onSignIn={handleSignIn}
+      />
       {error ? (
         <View
           style={{
