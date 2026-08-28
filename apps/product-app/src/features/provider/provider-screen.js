@@ -1,502 +1,693 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Image, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
+import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-import { loadOnboardingStatus } from './onboarding-screen-actions';
 import {
-  isProviderBookingAccessApproved,
-  resolveProviderBookingGateMessage,
-} from './provider-onboarding-workspace-state';
-import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
+  formatProviderRequestTimestamp,
+  getProviderDisplayName,
+  getProviderInitial,
+  getProviderProfileLabel,
+} from './provider-dashboard-presenter';
+import {
+  acceptBookingRequest,
+  declineProviderBookingRequest,
+  loadProviderDashboardData,
+} from './provider-screen-actions';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
 
-function StatusBadge({ text, tone = 'default' }) {
-  const styles =
-    tone === 'warning'
-      ? { backgroundColor: 'rgba(255, 138, 0, 0.14)', color: colors.cta }
-      : tone === 'success'
-        ? { backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#047857' }
-        : { backgroundColor: colors.surfaceContainer, color: colors.textMuted };
+const initialDashboardState = { status: 'loading', profile: null };
+const initialActionState = { status: 'idle' };
+
+function ProviderAvatar({ profile }) {
+  if (profile?.photoUrl) {
+    return (
+      <Image
+        accessibilityLabel={`${getProviderDisplayName(profile)} profile photo`}
+        source={{ uri: profile.photoUrl }}
+        style={{
+          backgroundColor: colors.surfaceContainerHigh,
+          borderColor: colors.secondaryBright,
+          borderRadius: radius.full,
+          borderWidth: 2,
+          height: 44,
+          width: 44,
+        }}
+      />
+    );
+  }
 
   return (
     <View
       style={{
-        alignSelf: 'flex-start',
-        borderRadius: radius.pill,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        backgroundColor: styles.backgroundColor,
+        alignItems: 'center',
+        backgroundColor: colors.primaryContainer,
+        borderColor: colors.secondaryBright,
+        borderRadius: radius.full,
+        borderWidth: 2,
+        height: 44,
+        justifyContent: 'center',
+        width: 44,
       }}
     >
-      <Text
-        style={{
-          color: styles.color,
-          fontSize: typography.fontSize.labelMd,
-          fontWeight: typography.fontWeight.bold,
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
-        }}
-      >
-        {text}
+      <Text style={{ color: colors.textInverse, fontSize: 17, fontWeight: typography.fontWeight.bold }}>
+        {getProviderInitial(profile)}
       </Text>
     </View>
   );
 }
 
-function MetricCard({ label, value, accent = colors.secondaryBright }) {
+function DashboardHeader({ profile, onOpenProfile, topInset }) {
   return (
     <View
       style={{
-        flex: 1,
-        borderRadius: 24,
-        padding: spacing.lg,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.10)',
-      }}
-    >
-      <Text
-        style={{
-          color: colors.onPrimaryContainer,
-          fontSize: typography.fontSize.labelMd,
-          fontWeight: typography.fontWeight.semibold,
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          marginTop: spacing.sm,
-          color: accent,
-          fontSize: 32,
-          lineHeight: 36,
-          fontWeight: typography.fontWeight.bold,
-          letterSpacing: -0.5,
-        }}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function BookingShowcaseCard({ booking, onAccept, isAccepting }) {
-  return (
-    <View
-      testID={`provider-booking-row-${booking.bookingId}`}
-      style={{
-        borderRadius: 32,
-        padding: spacing.xl,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.outlineVariant,
+        alignItems: 'center',
+        backgroundColor: colors.glassStrong,
+        borderBottomColor: colors.outlineVariant,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: spacing.container,
+        paddingBottom: spacing.md,
+        paddingTop: topInset + spacing.md,
         ...shadow.card,
       }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.lg }}>
+      <Pressable
+        accessibilityLabel="Manage provider profile"
+        accessibilityRole="button"
+        onPress={onOpenProfile}
+        style={{ alignItems: 'center', height: 44, justifyContent: 'center', width: 44 }}
+        testID="provider-open-onboarding-header"
+      >
+        <Text style={{ color: colors.text, fontSize: 26 }}>☰</Text>
+      </Pressable>
+
+      <View style={{ alignItems: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: 24, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+          Handwerker
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelSm }} numberOfLines={1}>
+          {getProviderDisplayName(profile)}
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityLabel="Open provider profile"
+        accessibilityRole="button"
+        onPress={onOpenProfile}
+        testID="provider-profile-avatar"
+      >
+        <ProviderAvatar profile={profile} />
+      </Pressable>
+    </View>
+  );
+}
+
+function MetricCard({ eyebrow, value, detail, tone = 'light', badge }) {
+  const dark = tone === 'dark';
+  const accent = tone === 'accent';
+  const backgroundColor = dark
+    ? colors.primaryContainer
+    : accent
+      ? 'rgba(2, 102, 255, 0.08)'
+      : colors.surface;
+  const valueColor = dark ? colors.textInverse : colors.text;
+  const detailColor = dark ? colors.onPrimaryContainer : colors.textMuted;
+
+  return (
+    <View
+      style={{
+        backgroundColor,
+        borderColor: dark ? colors.primaryContainer : colors.outlineVariant,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        minHeight: 128,
+        overflow: 'hidden',
+        padding: spacing.lg,
+        ...shadow.card,
+      }}
+    >
+      <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text
+          style={{
+            color: detailColor,
+            fontSize: typography.fontSize.labelSm,
+            fontWeight: typography.fontWeight.semibold,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+          }}
+        >
+          {eyebrow}
+        </Text>
+        {badge ? (
+          <View style={{ backgroundColor: colors.secondaryContainer, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+            <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>
+              {badge}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Text style={{ color: valueColor, fontSize: 40, fontWeight: typography.fontWeight.bold, letterSpacing: -1, marginTop: spacing.sm }}>
+        {value}
+      </Text>
+      <Text style={{ color: detailColor, fontSize: typography.fontSize.bodySm, marginTop: spacing.xs }}>
+        {detail}
+      </Text>
+
+      {dark ? (
+        <Text
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ bottom: -16, color: 'rgba(255,255,255,0.10)', fontSize: 86, position: 'absolute', right: 8 }}
+        >
+          ⚒
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function getBookingActionAnnouncement(notice) {
+  if (!notice) {
+    return '';
+  }
+
+  return `${notice.action === 'accept' ? 'Booking accepted' : 'Request declined'}: ${notice.service}`;
+}
+
+function StatusNotice({ notice, onOpenActiveJob }) {
+  const announcement = getBookingActionAnnouncement(notice);
+  const liveRegion = (
+    <Text
+      accessibilityLiveRegion="polite"
+      style={{ height: 1, left: -10000, overflow: 'hidden', position: 'absolute', width: 1 }}
+    >
+      {announcement}
+    </Text>
+  );
+
+  if (!notice) {
+    return liveRegion;
+  }
+
+  const accepted = notice.action === 'accept';
+  return (
+    <>
+      {liveRegion}
+      <View
+        style={{
+          backgroundColor: accepted ? colors.successSoft : colors.surfaceContainerLow,
+          borderColor: accepted ? colors.success : colors.outlineVariant,
+          borderRadius: radius.lg,
+          borderWidth: 1,
+          padding: spacing.md,
+        }}
+        testID="provider-booking-action-success"
+      >
+        <Text style={{ color: accepted ? colors.success : colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>
+          {accepted ? 'Booking accepted' : 'Request declined'}
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, marginTop: spacing.xs }}>
+          {notice.service}
+        </Text>
+        {accepted ? (
+          <Pressable accessibilityRole="button" onPress={() => onOpenActiveJob(notice.bookingId)} style={{ marginTop: spacing.sm }}>
+            <Text style={{ color: colors.secondaryBright, fontWeight: typography.fontWeight.bold }}>Open active job →</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </>
+  );
+}
+
+function RequestCard({ booking, actionState, onAccept, onDecline }) {
+  const busy = actionState.status === 'submitting' && actionState.bookingId === booking.bookingId;
+  const actionError = actionState.status === 'error' && actionState.bookingId === booking.bookingId
+    ? actionState.message
+    : null;
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.surface,
+        borderColor: colors.outlineVariant,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        padding: spacing.md,
+        ...shadow.card,
+      }}
+      testID={`provider-booking-row-${booking.bookingId}`}
+    >
+      <View style={{ alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm }}>
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: colors.secondaryContainer,
+            borderRadius: radius.full,
+            height: 40,
+            justifyContent: 'center',
+            width: 40,
+          }}
+        >
+          <Text style={{ color: colors.secondaryBright, fontSize: 20 }}>⚡</Text>
+        </View>
         <View style={{ flex: 1 }}>
           <Text
-            style={{
-              color: colors.text,
-              fontSize: 32,
-              lineHeight: 36,
-              fontWeight: typography.fontWeight.bold,
-              letterSpacing: -0.4,
-            }}
+            style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}
             testID={`provider-booking-service-${booking.bookingId}`}
           >
             {booking.requestedService}
           </Text>
-          <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-            {booking.locationSummary}
+          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, marginTop: 3 }}>
+            {formatProviderRequestTimestamp(booking.createdAt)}
           </Text>
         </View>
+        <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold, textTransform: 'uppercase' }}>
+          New
+        </Text>
+      </View>
 
-        <View
-          style={{
-            borderRadius: radius.pill,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            backgroundColor: 'rgba(2,102,255,0.10)',
+      <View
+        style={{
+          alignItems: 'center',
+          backgroundColor: colors.surfaceContainerLow,
+          borderRadius: radius.md,
+          flexDirection: 'row',
+          gap: spacing.sm,
+          marginTop: spacing.md,
+          paddingHorizontal: spacing.md,
+          paddingVertical: 11,
+        }}
+      >
+        <Text style={{ fontSize: 16 }}>⌖</Text>
+        <Text style={{ color: colors.text, flex: 1, fontSize: typography.fontSize.bodySm }} numberOfLines={2}>
+          {booking.customerLocation || 'Location not provided'}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{
+            busy: busy && actionState.action === 'accept',
+            disabled: actionState.status === 'submitting',
           }}
+          disabled={actionState.status === 'submitting'}
+          onPress={() => onAccept(booking)}
+          style={{
+            alignItems: 'center',
+            backgroundColor: colors.secondaryBright,
+            borderRadius: radius.md,
+            flex: 1,
+            opacity: busy ? 0.65 : 1,
+            paddingVertical: 12,
+          }}
+          testID={`provider-booking-accept-${booking.bookingId}`}
         >
-          <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-            {booking.urgencyLabel}
+          <Text style={{ color: colors.onSecondary, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+            {busy && actionState.action === 'accept' ? 'Accepting…' : 'Accept'}
           </Text>
-        </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{
+            busy: busy && actionState.action === 'decline',
+            disabled: actionState.status === 'submitting',
+          }}
+          disabled={actionState.status === 'submitting'}
+          onPress={() => onDecline(booking)}
+          style={{
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+            borderColor: colors.outline,
+            borderRadius: radius.md,
+            borderWidth: 1,
+            flex: 1,
+            opacity: busy ? 0.65 : 1,
+            paddingVertical: 11,
+          }}
+          testID={`provider-booking-decline-${booking.bookingId}`}
+        >
+          <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold }}>
+            {busy && actionState.action === 'decline' ? 'Declining…' : 'Decline'}
+          </Text>
+        </Pressable>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-            Budget
-          </Text>
-          <Text style={{ marginTop: spacing.sm, color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
-            {booking.budgetSummary}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-            Requested by
-          </Text>
-          <Text style={{ marginTop: spacing.sm, color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
-            {booking.requesterLabel}
-          </Text>
-        </View>
-      </View>
+      {actionError ? (
+        <Text
+          accessibilityLiveRegion="assertive"
+          accessibilityRole="alert"
+          style={{ color: colors.error, fontSize: typography.fontSize.bodySm, marginTop: spacing.sm }}
+          testID={`provider-booking-error-${booking.bookingId}`}
+        >
+          {actionError}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
-      <Text style={{ marginTop: spacing.xl, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-        {booking.scopeSummary}
+function DashboardError({ message, onRetry }) {
+  return (
+    <View
+      style={{
+        backgroundColor: colors.errorContainer,
+        borderColor: colors.error,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        padding: spacing.lg,
+      }}
+      testID="provider-dashboard-error"
+    >
+      <Text
+        accessibilityLabel={`Dashboard unavailable: ${message}`}
+        accessibilityLiveRegion="assertive"
+        accessibilityRole="alert"
+        style={{ color: colors.onErrorContainer, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}
+      >
+        Dashboard unavailable
       </Text>
-
-      <Pressable accessibilityRole="button" onPress={() => onAccept(booking.bookingId)} disabled={isAccepting} testID={`provider-booking-accept-${booking.bookingId}`}>
-        <View style={{ ...componentStyles.button.primary, marginTop: spacing.xl, opacity: isAccepting ? 0.7 : 1 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-            {isAccepting ? 'Accepting…' : 'Accept booking request'}
-          </Text>
-        </View>
+      <Text style={{ color: colors.onErrorContainer, fontSize: typography.fontSize.bodySm, marginTop: spacing.sm }}>
+        {message}
+      </Text>
+      <Pressable accessibilityRole="button" onPress={onRetry} style={{ marginTop: spacing.md }} testID="provider-dashboard-retry">
+        <Text style={{ color: colors.error, fontWeight: typography.fontWeight.bold }}>Try again</Text>
       </Pressable>
+    </View>
+  );
+}
+
+function ProviderNavigation({ bottomInset, homeDisabled, onHome, onPayouts, onProfile, onSignOut }) {
+  const items = [
+    { label: 'Home', icon: '⌂', onPress: onHome, active: true, disabled: homeDisabled, testID: 'provider-nav-home' },
+    { label: 'Payouts', icon: '▣', onPress: onPayouts, testID: 'provider-open-payouts' },
+    { label: 'Profile', icon: '♙', onPress: onProfile, testID: 'provider-open-onboarding' },
+    { label: 'Sign out', icon: '↪', onPress: onSignOut, testID: 'provider-sign-out' },
+  ];
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.glassStrong,
+        borderTopColor: colors.outlineVariant,
+        borderTopWidth: 1,
+        flexDirection: 'row',
+        paddingHorizontal: spacing.sm,
+        paddingBottom: Math.max(spacing.sm, bottomInset),
+        paddingTop: spacing.sm,
+      }}
+    >
+      {items.map((item) => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: Boolean(item.disabled), selected: Boolean(item.active) }}
+          disabled={item.disabled}
+          key={item.label}
+          onPress={item.onPress}
+          style={{ alignItems: 'center', flex: 1, gap: 2, opacity: item.disabled ? 0.55 : 1, paddingVertical: 5 }}
+          testID={item.testID}
+        >
+          <Text style={{ color: item.active ? colors.secondaryBright : colors.textMuted, fontSize: 20 }}>{item.icon}</Text>
+          <Text style={{ color: item.active ? colors.secondaryBright : colors.textMuted, fontSize: typography.fontSize.labelSm, fontWeight: item.active ? typography.fontWeight.bold : typography.fontWeight.medium }}>
+            {item.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
 
 export function ProviderScreen() {
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
   const { session, signOut } = useSession();
+  const bookingActionInFlight = useRef(false);
+  const [dashboardState, setDashboardState] = useState(initialDashboardState);
+  const [actionState, setActionState] = useState(initialActionState);
+  const [notice, setNotice] = useState();
 
-  const [accessGateStatus, setAccessGateStatus] = useState('checking');
-  const [accessGateMessage, setAccessGateMessage] = useState();
-  const [bookings, setBookings] = useState();
-  const [isLoading, setIsLoading] = useState(false);
-  const [listError, setListError] = useState();
-  const [acceptingId, setAcceptingId] = useState();
-  const [acceptError, setAcceptError] = useState();
-  const [acceptedBooking, setAcceptedBooking] = useState();
-
-  const loadOpenBookings = () => {
-    const sessionToken = resolveSessionToken(session);
-    if (!sessionToken) {
-      setListError('Your session has expired. Please sign in again.');
-      signOut();
-      router.replace('/auth');
-      return;
-    }
-
-    setIsLoading(true);
-    setListError(undefined);
-
-    listBookingsRequest({ sessionToken })
-      .then((result) => {
-        if (result.errorMessage) {
-          setListError(result.errorMessage);
-          return;
-        }
-
-        setBookings(result.bookings);
-      })
-      .catch((err) => {
-        setListError(err instanceof Error ? err.message : 'Unexpected provider bookings error.');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
-
-  const checkBookingAccess = () => {
-    const sessionToken = resolveSessionToken(session);
-    if (!sessionToken) {
-      setListError('Your session has expired. Please sign in again.');
-      signOut();
-      router.replace('/auth');
-      return;
-    }
-
-    setAccessGateStatus('checking');
-    setAccessGateMessage(undefined);
-    setListError(undefined);
-
-    loadOnboardingStatus(sessionToken)
-      .then((onboardingState) => {
-        if (isProviderBookingAccessApproved(onboardingState)) {
-          setAccessGateStatus('approved');
-          return;
-        }
-
-        setAccessGateStatus('blocked');
-        setAccessGateMessage(
-          resolveProviderBookingGateMessage(onboardingState) ?? 'Complete onboarding to unlock bookings.',
-        );
-      })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : 'Unexpected verification status error.';
-        setAccessGateStatus('error');
-        setAccessGateMessage(message);
-        setListError(message);
-      });
-  };
-
-  useEffect(() => {
-    checkBookingAccess();
-  }, []);
-
-  useEffect(() => {
-    if (accessGateStatus === 'approved') {
-      loadOpenBookings();
-    }
-  }, [accessGateStatus]);
-
-  const handleAccept = (bookingId) => {
-    if (acceptingId) return;
-
-    setAcceptError(undefined);
-    setAcceptingId(bookingId);
-
-    const sessionToken = resolveSessionToken(session);
-
-    if (!sessionToken) {
-      setAcceptError('Your session has expired. Please sign in again.');
-      setAcceptingId(undefined);
-      signOut();
-      router.replace('/auth');
-      return;
-    }
-
-    acceptBookingRequest({ sessionToken, bookingId })
-      .then((result) => {
-        if (result.errorMessage) {
-          setAcceptError(result.errorMessage);
-          return;
-        }
-        setAcceptedBooking(result.booking);
-        setBookings((previous) => (previous ? previous.filter((entry) => entry.bookingId !== bookingId) : previous));
-      })
-      .catch((err) => {
-        setAcceptError(err instanceof Error ? err.message : 'Unexpected accept failure.');
-      })
-      .finally(() => {
-        setAcceptingId(undefined);
-      });
-  };
-
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     signOut();
     router.replace('/auth');
+  }, [router, signOut]);
+
+  const loadDashboard = useCallback(async () => {
+    if (session.status !== 'authenticated') {
+      return;
+    }
+
+    const sessionToken = resolveSessionToken(session);
+    if (!sessionToken) {
+      handleSignOut();
+      return;
+    }
+
+    if (bookingActionInFlight.current) {
+      return;
+    }
+
+    setDashboardState((current) => ({ status: 'loading', profile: current.profile ?? null }));
+    setActionState(initialActionState);
+
+    const result = await loadProviderDashboardData(sessionToken);
+    setDashboardState(result);
+  }, [handleSignOut, session]);
+
+  useEffect(() => {
+    if (session.status !== 'authenticated') {
+      router.replace('/auth');
+      return;
+    }
+
+    loadDashboard().catch((error) => {
+      setDashboardState({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Unexpected provider dashboard error.',
+        profile: null,
+      });
+    });
+  }, [loadDashboard, router, session.status]);
+
+  useEffect(() => {
+    if (notice && Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility(getBookingActionAnnouncement(notice));
+    }
+  }, [notice]);
+
+  const handleBookingAction = async (action, booking) => {
+    if (bookingActionInFlight.current || actionState.status === 'submitting') {
+      return;
+    }
+
+    const sessionToken = resolveSessionToken(session);
+    if (!sessionToken) {
+      handleSignOut();
+      return;
+    }
+
+    bookingActionInFlight.current = true;
+    setActionState({ status: 'submitting', action, bookingId: booking.bookingId });
+    setNotice(undefined);
+
+    try {
+      const result = action === 'accept'
+        ? await acceptBookingRequest({ sessionToken, bookingId: booking.bookingId })
+        : await declineProviderBookingRequest({ sessionToken, bookingId: booking.bookingId });
+
+      if (result.errorMessage) {
+        setActionState({ status: 'error', action, bookingId: booking.bookingId, message: result.errorMessage });
+        return;
+      }
+
+      setDashboardState((current) => {
+        if (current.status !== 'loaded') {
+          return current;
+        }
+
+        return {
+          ...current,
+          bookings: current.bookings.filter((candidate) => candidate.bookingId !== booking.bookingId),
+        };
+      });
+      setActionState(initialActionState);
+      setNotice({ action, bookingId: booking.bookingId, service: booking.requestedService });
+    } catch (error) {
+      setActionState({
+        status: 'error',
+        action,
+        bookingId: booking.bookingId,
+        message: error instanceof Error ? error.message : 'Unexpected booking action failure.',
+      });
+    } finally {
+      bookingActionInFlight.current = false;
+    }
   };
 
-  const handleReset = () => {
-    setAcceptedBooking(undefined);
-    setAcceptError(undefined);
-    loadOpenBookings();
-  };
+  const profile = dashboardState.profile ?? null;
+  const bookings = dashboardState.status === 'loaded' ? dashboardState.bookings : [];
+  const accessValue = dashboardState.status === 'loaded'
+    ? 'Live'
+    : dashboardState.status === 'blocked'
+      ? 'Blocked'
+      : dashboardState.status === 'loading'
+        ? 'Checking'
+        : 'Unavailable';
 
   return (
-    <ScrollView
-      contentContainerStyle={{
-        paddingHorizontal: spacing.container,
-        paddingTop: spacing.xl,
-        paddingBottom: spacing.xl,
-        gap: spacing.xl,
-      }}
-      style={{ flex: 1, backgroundColor: colors.background }}
-      testID="provider-screen"
-    >
-      <View
-        style={{
-          borderRadius: 36,
-          padding: spacing.xl,
-          backgroundColor: colors.primaryContainer,
-          ...shadow.elevated,
+    <View style={{ backgroundColor: colors.surfaceBright, flex: 1 }} testID="provider-screen">
+      <DashboardHeader
+        onOpenProfile={() => router.push('/provider-onboarding')}
+        profile={profile}
+        topInset={safeAreaInsets.top}
+      />
+
+      <ScrollView
+        contentContainerStyle={{
+          alignSelf: 'center',
+          gap: spacing.lg,
+          maxWidth: 560,
+          paddingBottom: 40,
+          paddingHorizontal: spacing.container,
+          paddingTop: spacing.lg,
+          width: '100%',
         }}
+        style={{ flex: 1 }}
       >
-        <StatusBadge text={accessGateStatus === 'approved' ? 'Verified access' : 'Review required'} tone={accessGateStatus === 'approved' ? 'success' : 'warning'} />
-
-        <Text
-          style={{
-            marginTop: spacing.lg,
-            color: '#FFFFFF',
-            fontSize: 48,
-            lineHeight: 52,
-            fontWeight: typography.fontWeight.bold,
-            letterSpacing: -1,
-            maxWidth: 760,
-          }}
-        >
-          Provider workspace built to impress before the backend is even fully finished.
-        </Text>
-        <Text
-          style={{
-            marginTop: spacing.md,
-            color: colors.onPrimaryContainer,
-            fontSize: typography.fontSize.bodyLg,
-            lineHeight: typography.lineHeight.bodyLg,
-            maxWidth: 720,
-          }}
-        >
-          This area should feel like a premium provider cockpit. It needs to communicate demand, readiness, trust, and next actions in seconds.
-        </Text>
-
-        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
-          <MetricCard label="Open requests" value={bookings ? String(bookings.length) : '—'} />
-          <MetricCard label="Access" value={accessGateStatus === 'approved' ? 'Live' : 'Blocked'} accent={accessGateStatus === 'approved' ? colors.success : colors.cta} />
-          <MetricCard label="Profile" value={acceptedBooking ? 'Active' : 'Draft'} accent={colors.warning} />
+        <View style={{ gap: spacing.md }}>
+          <MetricCard
+            badge={dashboardState.status === 'loaded' && bookings.length > 0 ? `${bookings.length} NEW` : undefined}
+            detail="Submitted jobs available to review"
+            eyebrow="Open requests"
+            tone="accent"
+            value={dashboardState.status === 'loaded' || dashboardState.status === 'blocked'
+              ? String(bookings.length).padStart(2, '0')
+              : '—'}
+          />
+          <MetricCard
+            detail={dashboardState.status === 'loaded' ? 'Verified providers can accept new work' : 'Verification protects customer bookings'}
+            eyebrow="Booking access"
+            tone="dark"
+            value={accessValue}
+          />
+          <MetricCard
+            detail={profile ? 'Provider identity is available' : 'Complete your provider identity'}
+            eyebrow="Provider profile"
+            value={getProviderProfileLabel(profile)}
+          />
         </View>
-      </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/provider-onboarding')} testID="provider-open-onboarding" style={{ flex: 1 }}>
-          <View style={{ ...componentStyles.button.dark, minHeight: 60 }}>
-            <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              Manage profile & verification
+        {dashboardState.profileWarning ? (
+          <View style={{ backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, borderRadius: radius.md, borderWidth: 1, padding: spacing.md }}>
+            <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>
+              Profile details are temporarily unavailable. Request access is unaffected.
             </Text>
           </View>
-        </Pressable>
+        ) : null}
 
-        <Pressable accessibilityRole="button" onPress={() => router.push('/payouts')} testID="provider-open-payouts" style={{ flex: 1 }}>
-          <View style={{ ...componentStyles.button.ghost, minHeight: 60 }}>
-            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              View payouts
-            </Text>
+        {dashboardState.status === 'loading' ? (
+          <View style={{ alignItems: 'center', paddingVertical: spacing.xl }} testID="provider-dashboard-loading">
+            <ActivityIndicator color={colors.secondaryBright} size="small" />
+            <Text style={{ color: colors.textMuted, marginTop: spacing.sm }}>Loading provider workspace…</Text>
           </View>
-        </Pressable>
+        ) : null}
 
-        <Pressable accessibilityRole="button" onPress={handleSignOut} testID="provider-sign-out" style={{ width: 180 }}>
-          <View style={{ ...componentStyles.button.ghost, minHeight: 60 }}>
-            <Text style={{ color: colors.text, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              Sign out
+        {dashboardState.status === 'error' ? (
+          <DashboardError message={dashboardState.message} onRetry={loadDashboard} />
+        ) : null}
+
+        {dashboardState.status === 'blocked' ? (
+          <View
+            style={{
+              backgroundColor: '#FFF7ED',
+              borderColor: '#FED7AA',
+              borderRadius: radius.lg,
+              borderWidth: 1,
+              padding: spacing.lg,
+            }}
+            testID="provider-booking-access-gated"
+          >
+            <Text style={{ color: '#9A3412', fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
+              Verification required
             </Text>
+            <Text style={{ color: '#9A3412', fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm, marginTop: spacing.sm }}>
+              {dashboardState.accessMessage}
+            </Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/provider-onboarding')} style={{ marginTop: spacing.md }}>
+              <Text style={{ color: colors.cta, fontWeight: typography.fontWeight.bold }}>Manage verification →</Text>
+            </Pressable>
           </View>
-        </Pressable>
-      </View>
+        ) : null}
 
-      {accessGateStatus !== 'approved' ? (
-        <View
-          style={{
-            borderRadius: 28,
-            padding: spacing.xl,
-            backgroundColor: '#FFF7ED',
-            borderWidth: 1,
-            borderColor: '#FED7AA',
-          }}
-          testID="provider-booking-access-gated"
-        >
-          <Text style={{ color: '#C2410C', fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
-            Booking access is currently gated.
-          </Text>
-          {accessGateMessage ? (
-            <Text style={{ marginTop: spacing.sm, color: '#9A3412', fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-              {accessGateMessage}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-
-      {acceptedBooking ? (
-        <View
-          style={{
-            borderRadius: 32,
-            padding: spacing.xl,
-            backgroundColor: '#ECFDF5',
-            borderWidth: 1,
-            borderColor: '#BBF7D0',
-          }}
-          testID="provider-accept-confirmation"
-        >
-          <Text style={{ color: '#15803D', fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
-            Booking accepted ✓
-          </Text>
-          <Text style={{ marginTop: spacing.sm, color: '#166534', fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
-            {acceptedBooking.requestedService} is now part of your active pipeline.
-          </Text>
-          <Pressable accessibilityRole="button" onPress={handleReset} style={{ marginTop: spacing.lg }}>
-            <View style={{ ...componentStyles.button.dark }}>
-              <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-                Back to open requests
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <View>
-        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
-          Open demand
-        </Text>
-        <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 760 }}>
-          Even as a showcase UI, this screen should instantly communicate that providers can evaluate serious work and take action with confidence.
-        </Text>
-      </View>
-
-      {isLoading ? (
-        <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.secondaryBright} size="small" />
-          <Text style={{ marginTop: spacing.md, color: colors.textMuted }}>Loading booking opportunities…</Text>
-        </View>
-      ) : null}
-
-      {acceptError ? (
-        <View
-          style={{
-            borderRadius: 24,
-            padding: spacing.lg,
-            backgroundColor: colors.errorContainer,
-            borderWidth: 1,
-            borderColor: '#FECACA',
-          }}
-        >
-          <Text style={{ color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>{acceptError}</Text>
-        </View>
-      ) : null}
-
-      {listError ? (
-        <View
-          style={{
-            borderRadius: 24,
-            padding: spacing.lg,
-            backgroundColor: colors.errorContainer,
-            borderWidth: 1,
-            borderColor: '#FECACA',
-          }}
-        >
-          <Text style={{ color: colors.onErrorContainer, fontWeight: typography.fontWeight.bold }}>{listError}</Text>
-        </View>
-      ) : null}
-
-      {bookings && bookings.length > 0 ? (
-        <View style={{ gap: spacing.lg }}>
-          {bookings.map((booking) => (
-            <BookingShowcaseCard
-              key={booking.bookingId}
-              booking={booking}
-              onAccept={handleAccept}
-              isAccepting={acceptingId === booking.bookingId}
+        {dashboardState.status === 'loaded' ? (
+          <>
+            <StatusNotice
+              notice={notice}
+              onOpenActiveJob={(bookingId) => router.push({ pathname: '/active-job', params: { bookingId } })}
             />
-          ))}
-        </View>
-      ) : !isLoading && accessGateStatus === 'approved' ? (
-        <View
-          style={{
-            borderRadius: 32,
-            padding: spacing.xl,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.outlineVariant,
-            alignItems: 'center',
-            ...shadow.card,
-          }}
-        >
-          <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
-            No live booking requests right now.
-          </Text>
-          <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 680, textAlign: 'center' }}>
-            That is okay for the demo. This empty state is now visually strong enough to still feel like a real product, not a missing feature.
-          </Text>
-        </View>
-      ) : null}
-    </ScrollView>
+
+            <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: typography.fontWeight.bold }}>Live Requests</Text>
+              <View style={{ backgroundColor: colors.secondaryContainer, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>
+                  {bookings.length} OPEN
+                </Text>
+              </View>
+            </View>
+
+            {bookings.length > 0 ? (
+              <View style={{ gap: spacing.md }}>
+                {bookings.map((booking) => (
+                  <RequestCard
+                    actionState={actionState}
+                    booking={booking}
+                    key={booking.bookingId}
+                    onAccept={(selected) => handleBookingAction('accept', selected)}
+                    onDecline={(selected) => handleBookingAction('decline', selected)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View
+                style={{
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outlineVariant,
+                  borderRadius: radius.lg,
+                  borderWidth: 1,
+                  padding: spacing.xl,
+                  ...shadow.card,
+                }}
+                testID="provider-booking-empty"
+              >
+                <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyLg, fontWeight: typography.fontWeight.bold }}>
+                  No open requests
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, marginTop: spacing.sm, textAlign: 'center' }}>
+                  New submitted bookings will appear here when they are available.
+                </Text>
+                <Pressable accessibilityRole="button" onPress={loadDashboard} style={{ marginTop: spacing.md }} testID="provider-booking-refresh">
+                  <Text style={{ color: colors.secondaryBright, fontWeight: typography.fontWeight.bold }}>Refresh requests</Text>
+                </Pressable>
+              </View>
+            )}
+          </>
+        ) : null}
+      </ScrollView>
+
+      <ProviderNavigation
+        bottomInset={safeAreaInsets.bottom}
+        homeDisabled={actionState.status === 'submitting' || dashboardState.status === 'loading'}
+        onHome={loadDashboard}
+        onPayouts={() => router.push('/payouts')}
+        onProfile={() => router.push('/provider-onboarding')}
+        onSignOut={handleSignOut}
+      />
+    </View>
   );
 }
 

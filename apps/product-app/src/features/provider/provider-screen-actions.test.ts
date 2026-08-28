@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { acceptBookingRequest, listBookingsRequest } from './provider-screen-actions';
+import {
+  acceptBookingRequest,
+  declineProviderBookingRequest,
+  listBookingsRequest,
+  loadProviderDashboardData,
+} from './provider-screen-actions';
 
 describe('listBookingsRequest', () => {
   it('returns array of booking summaries on success', async () => {
@@ -12,6 +17,7 @@ describe('listBookingsRequest', () => {
             bookingId: 'bk-001',
             status: 'submitted',
             requestedService: 'Fix the boiler',
+            customerLocation: '1010 Vienna, AT',
             createdAt: '2026-03-20T10:00:00.000Z',
             customerUserId: 'usr-001',
           },
@@ -33,7 +39,22 @@ describe('listBookingsRequest', () => {
       bookingId: 'bk-001',
       status: 'submitted',
       requestedService: 'Fix the boiler',
+      customerLocation: '1010 Vienna, AT',
     });
+  });
+
+  it('sends the resolved provider token as a bearer header', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => [] }) as Response);
+
+    await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/bookings'),
+      expect.objectContaining({
+        method: 'GET',
+        headers: { authorization: 'Bearer tok-provider' },
+      }),
+    );
   });
 
   it('returns empty array when no bookings exist', async () => {
@@ -75,6 +96,26 @@ describe('listBookingsRequest', () => {
     expect(result.bookings).toBeUndefined();
   });
 
+  it('rejects malformed booking rows instead of rendering blank actions', async () => {
+    const fetchMock = async () =>
+      ({
+        ok: true,
+        json: async () => [
+          {
+            bookingId: '',
+            status: 'submitted',
+            requestedService: 'Fix the boiler',
+            createdAt: '2026-03-20T10:00:00.000Z',
+            customerUserId: 'usr-001',
+          },
+        ],
+      }) as Response;
+
+    const result = await listBookingsRequest('tok-provider', fetchMock as typeof fetch);
+
+    expect(result).toEqual({ errorMessage: 'Booking list response missing required fields.' });
+  });
+
   it('returns error when fetch throws', async () => {
     const fetchMock = async () => {
       throw new Error('Network failure');
@@ -84,6 +125,184 @@ describe('listBookingsRequest', () => {
 
     expect(result.errorMessage).toBe('Network failure');
     expect(result.bookings).toBeUndefined();
+  });
+});
+
+describe('declineProviderBookingRequest', () => {
+  it('sends the existing authenticated JSON decline contract', async () => {
+    const fetchMock = vi.fn(async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          bookingId: 'bk-001',
+          status: 'declined',
+          requestedService: 'Fix the boiler',
+          customerUserId: 'usr-001',
+        }),
+      }) as Response);
+
+    const result = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      fetchMock as typeof fetch,
+    );
+
+    expect(result.booking).toMatchObject({ bookingId: 'bk-001', status: 'declined' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/bookings/bk-001/decline'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer tok-provider',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      }),
+    );
+  });
+
+  it('rejects non-declined and malformed responses', async () => {
+    const wrongStatus = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ bookingId: 'bk-001', status: 'accepted' }),
+        }) as Response,
+    );
+    expect(wrongStatus.errorMessage).toContain("Expected status 'declined'");
+
+    const malformed = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () => ({ ok: true, json: async () => ({ status: 'declined' }) }) as Response,
+    );
+    expect(malformed).toEqual({ errorMessage: 'Decline booking response missing required fields.' });
+  });
+
+  it('rejects a declined response for a different booking', async () => {
+    const result = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ bookingId: 'bk-other', status: 'declined' }),
+        }) as Response,
+    );
+
+    expect(result).toEqual({ errorMessage: 'Decline booking response did not match the requested booking.' });
+  });
+
+  it('surfaces HTTP and network failures', async () => {
+    const httpFailure = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () => ({ ok: false, status: 409 }) as Response,
+    );
+    expect(httpFailure).toEqual({ errorMessage: 'Decline booking failed with HTTP 409.' });
+
+    const networkFailure = await declineProviderBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () => {
+        throw new Error('Network request failed');
+      },
+    );
+    expect(networkFailure).toEqual({ errorMessage: 'Network request failed' });
+  });
+});
+
+describe('loadProviderDashboardData', () => {
+  const approvedVerification = {
+    verificationId: 'verification-1',
+    status: 'approved',
+    submittedAt: '2026-03-20T09:00:00.000Z',
+    tradeCategories: ['electrical'],
+    documents: [],
+  };
+
+  const providerProfile = {
+    providerUserId: 'provider-1',
+    displayName: 'Marcus Weber',
+    tradeCategories: ['electrical'],
+    isPublic: true,
+    photoUrl: 'https://example.test/marcus.jpg',
+    createdAt: '2026-03-20T08:00:00.000Z',
+    updatedAt: '2026-03-20T08:30:00.000Z',
+  };
+
+  const booking = {
+    bookingId: 'bk-001',
+    status: 'submitted',
+    requestedService: 'Short circuit repair',
+    customerLocation: '1010 Vienna, AT',
+    createdAt: '2026-03-20T10:00:00.000Z',
+    customerUserId: 'customer-1',
+  };
+
+  it('loads verification/profile context before the approved request queue', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/v1/providers/me/verification')) {
+        return { ok: true, json: async () => approvedVerification } as Response;
+      }
+      if (url.endsWith('/api/v1/providers/me/profile')) {
+        return { ok: true, status: 200, json: async () => providerProfile } as Response;
+      }
+      if (url.endsWith('/api/v1/bookings')) {
+        return { ok: true, json: async () => [booking] } as Response;
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const result = await loadProviderDashboardData('tok-provider', fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      status: 'loaded',
+      profile: providerProfile,
+      bookings: [booking],
+    });
+    const bookingCall = fetchMock.mock.calls.find(([input]) => String(input).endsWith('/api/v1/bookings'));
+    expect(bookingCall?.[1]).toMatchObject({ headers: { authorization: 'Bearer tok-provider' } });
+  });
+
+  it('keeps unapproved providers gated without loading bookings', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/api/v1/providers/me/verification')) {
+        return { ok: true, json: async () => ({ status: 'not-submitted' }) } as Response;
+      }
+      if (url.endsWith('/api/v1/providers/me/profile')) {
+        return { ok: true, status: 200, json: async () => providerProfile } as Response;
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const result = await loadProviderDashboardData('tok-provider', fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({ status: 'blocked', profile: providerProfile });
+    expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/api/v1/bookings'))).toBe(false);
+  });
+
+  it('degrades a profile failure without suppressing an approved request queue', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/api/v1/providers/me/verification')) {
+        return { ok: true, json: async () => approvedVerification } as Response;
+      }
+      if (url.endsWith('/api/v1/providers/me/profile')) {
+        return { ok: false, status: 503 } as Response;
+      }
+      if (url.endsWith('/api/v1/bookings')) {
+        return { ok: true, json: async () => [booking] } as Response;
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+
+    const result = await loadProviderDashboardData('tok-provider', fetchMock as typeof fetch);
+
+    expect(result).toMatchObject({
+      status: 'loaded',
+      profile: null,
+      profileWarning: 'Load profile failed with HTTP 503.',
+      bookings: [booking],
+    });
   });
 });
 
@@ -161,6 +380,28 @@ describe('acceptBookingRequest', () => {
 
     expect(result).toMatchObject({ errorMessage: 'Accept booking response missing required fields.' });
     expect(result.booking).toBeUndefined();
+  });
+
+  it('rejects a response with the wrong booking or transition status', async () => {
+    const wrongBooking = await acceptBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ bookingId: 'bk-other', status: 'accepted' }),
+        }) as Response,
+    );
+    expect(wrongBooking).toEqual({ errorMessage: 'Accept booking response did not match the requested booking.' });
+
+    const wrongStatus = await acceptBookingRequest(
+      { sessionToken: 'tok-provider', bookingId: 'bk-001' },
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ bookingId: 'bk-001', status: 'submitted' }),
+        }) as Response,
+    );
+    expect(wrongStatus).toEqual({ errorMessage: "Expected status 'accepted' but received 'submitted'." });
   });
 
   it('returns error when fetch throws', async () => {
