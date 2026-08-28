@@ -3,6 +3,8 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, componentStyles, layout, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { resolveAuthEntryInitialRole } from './auth-entry-role';
+
 function RoleCard({ role, selected, onPress }) {
   const isCustomer = role === 'customer';
   const icon = isCustomer ? '⌂' : '⚒';
@@ -122,18 +124,25 @@ function AuthField({ label, ...props }) {
   );
 }
 
-export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false }) {
-  const [role, setRole] = useState('customer');
+export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false, initialRole }) {
+  const [role, setRole] = useState(() => resolveAuthEntryInitialRole(initialRole));
   const [mode, setMode] = useState('sign-in');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const title = mode === 'sign-in' ? 'Welcome back.' : 'Create your account.';
-  const subtitle =
-    mode === 'sign-in'
-      ? 'Sign in to book trusted professionals or manage incoming work.'
+  const subtitle = useMemo(() => {
+    if (role === 'provider') {
+      return mode === 'sign-in'
+        ? 'Sign in to manage incoming work and your provider profile.'
+        : 'Create a provider account and start offering trusted local services.';
+    }
+
+    return mode === 'sign-in'
+      ? 'Sign in to book trusted professionals.'
       : 'Join QuickWerk and get access to verified local service professionals.';
+  }, [mode, role]);
 
   const isSignInDisabled = isSigningIn || !email.trim() || !password;
   const isCreateDisabled = isSigningIn || !fullName.trim() || !email.trim() || !password;

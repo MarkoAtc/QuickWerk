@@ -18,6 +18,9 @@ describe('auth-entry-actions', () => {
         'http://localhost:3100',
       );
       expect(result).toMatchObject({ ok: true, sessionToken: 'tok-sign-in', role: 'provider' });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(requestBody.role).toBe('provider');
     } finally {
       globalThis.fetch = originalFetch;
     }
