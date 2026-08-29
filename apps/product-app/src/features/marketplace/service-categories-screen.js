@@ -2,6 +2,9 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveCustomerDiscoveryLayout } from '../../shared/customer-discovery-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
 const CATEGORIES = [
   { id: 'emergency', label: 'Emergency', description: 'Immediate help', icon: '🚨', emphasis: true },
   { id: 'plumbing', label: 'Plumbing', description: 'Pipes, water, heating', icon: '🔧' },
@@ -13,19 +16,19 @@ const CATEGORIES = [
   { id: 'handyman', label: 'Handyman', description: 'Small repairs', icon: '🛠️' },
 ];
 
-function CategoryTile({ category, onPress }) {
+function CategoryTile({ category, layout, onPress }) {
   return (
     <Pressable
       accessibilityLabel={`${category.label}. ${category.description}.`}
       accessibilityRole="button"
       onPress={() => onPress(category.id)}
-      style={{ width: '48.8%' }}
+      style={{ width: layout.categoryTileWidth }}
       testID={`categories-tile-${category.id}`}
     >
       <View
         style={{
           borderRadius: radius.lg,
-          padding: spacing.lg,
+          padding: layout.isPhone ? spacing.md : spacing.lg,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: category.emphasis ? colors.error : colors.outlineVariant,
@@ -70,29 +73,31 @@ function CategoryTile({ category, onPress }) {
 }
 
 export function ServiceCategories({ onSelectCategory, onBack }) {
+  const layout = deriveCustomerDiscoveryLayout(useResponsiveLayout());
+
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
       }}
       style={{ flex: 1, backgroundColor: colors.background }}
       testID="categories-screen"
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg }}>
         <Pressable accessibilityRole="button" onPress={onBack} testID="categories-back">
           <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>← Back</Text>
         </Pressable>
 
-        <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ flex: 1, textAlign: 'center', color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>
           Choose a service
         </Text>
 
         <View
           style={{
-            width: 40,
-            height: 40,
+            width: layout.isPhone ? 36 : 40,
+            height: layout.isPhone ? 36 : 40,
             borderRadius: radius.full,
             backgroundColor: colors.primaryContainer,
             alignItems: 'center',
@@ -138,7 +143,7 @@ export function ServiceCategories({ onSelectCategory, onBack }) {
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md, marginTop: spacing.xl }}>
         {CATEGORIES.map((category) => (
-          <CategoryTile key={category.id} category={category} onPress={onSelectCategory ?? (() => {})} />
+          <CategoryTile key={category.id} category={category} layout={layout} onPress={onSelectCategory ?? (() => {})} />
         ))}
       </View>
 
@@ -146,7 +151,7 @@ export function ServiceCategories({ onSelectCategory, onBack }) {
         style={{
           marginTop: spacing.xl,
           borderRadius: 24,
-          padding: spacing.xl,
+          padding: layout.sectionPadding,
           backgroundColor: colors.primaryContainer,
           ...shadow.elevated,
         }}

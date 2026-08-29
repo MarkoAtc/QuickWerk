@@ -3,6 +3,9 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveCustomerDiscoveryLayout } from '../../shared/customer-discovery-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
 const CATEGORY_CHIPS = [
   { id: 'plumbing', label: 'Plumber', icon: '🔧' },
   { id: 'electrical', label: 'Electrician', icon: '⚡' },
@@ -46,7 +49,9 @@ const CURATED_MATCHES = [
   },
 ];
 
-function Header({ address, onChangeAddress }) {
+function Header({ address, layout, onChangeAddress }) {
+  const avatarSize = layout.isPhone ? 36 : 40;
+
   return (
     <View
       style={{
@@ -58,7 +63,8 @@ function Header({ address, onChangeAddress }) {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: spacing.container,
+        gap: spacing.sm,
+        paddingHorizontal: layout.contentGutter,
         paddingVertical: spacing.md,
         backgroundColor: 'rgba(255,255,255,0.85)',
         borderBottomWidth: 1,
@@ -70,20 +76,20 @@ function Header({ address, onChangeAddress }) {
         accessibilityRole="button"
         onPress={onChangeAddress}
         testID="home-triage-address-pill"
-        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}
+        style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}
       >
-        <Text style={{ color: colors.text, fontSize: 20, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+        <Text style={{ color: colors.text, fontSize: layout.isPhone ? 18 : 20, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
           QuickWerk
         </Text>
-        <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }} numberOfLines={1}>
+        <Text style={{ flex: 1, color: colors.textMuted, fontSize: typography.fontSize.bodySm }} numberOfLines={1}>
           · {address}
         </Text>
       </Pressable>
 
       <View
         style={{
-          width: 40,
-          height: 40,
+          width: avatarSize,
+          height: avatarSize,
           borderRadius: radius.full,
           backgroundColor: colors.primaryContainer,
           alignItems: 'center',
@@ -98,7 +104,7 @@ function Header({ address, onChangeAddress }) {
   );
 }
 
-function MapMarker({ marker }) {
+function MapMarker({ layout, marker }) {
   return (
     <View style={{ position: 'absolute', top: marker.top, left: marker.left, alignItems: 'center' }}>
       <View
@@ -108,10 +114,14 @@ function MapMarker({ marker }) {
           paddingVertical: spacing.xs,
           backgroundColor: colors.secondaryBright,
           marginBottom: spacing.xs,
+          maxWidth: layout.mapMarkerLabelMaxWidth,
           ...shadow.card,
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold, whiteSpace: 'nowrap' }}>
+        <Text
+          numberOfLines={1}
+          style={{ color: '#FFFFFF', fontSize: layout.isPhone ? 10 : typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}
+        >
           {marker.label}
         </Text>
       </View>
@@ -120,7 +130,7 @@ function MapMarker({ marker }) {
   );
 }
 
-function SearchBar({ onOpenCategories }) {
+function SearchBar({ layout, onOpenCategories }) {
   return (
     <View
       style={{
@@ -128,7 +138,7 @@ function SearchBar({ onOpenCategories }) {
         alignItems: 'center',
         gap: spacing.sm,
         borderRadius: radius.lg,
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: layout.isPhone ? spacing.sm : spacing.md,
         paddingVertical: spacing.sm,
         backgroundColor: 'rgba(255,255,255,0.85)',
         borderWidth: 1,
@@ -141,7 +151,7 @@ function SearchBar({ onOpenCategories }) {
         editable={false}
         placeholder="Search for professionals..."
         placeholderTextColor={colors.textMuted}
-        style={{ flex: 1, fontSize: typography.fontSize.bodyMd, color: colors.text }}
+        style={{ flex: 1, minWidth: 0, fontSize: layout.isPhone ? typography.fontSize.bodySm : typography.fontSize.bodyMd, color: colors.text }}
         testID="home-triage-search-input"
       />
       <Pressable accessibilityLabel="Browse service categories" accessibilityRole="button" onPress={onOpenCategories} testID="home-triage-open-categories">
@@ -199,19 +209,21 @@ function CategoryChip({ chip, isSelected, onPress }) {
   );
 }
 
-function SosButton({ onPress }) {
+function SosButton({ layout, onPress }) {
+  const size = layout.isPhone ? 56 : 64;
+
   return (
     <Pressable
       accessibilityLabel="Request emergency help"
       accessibilityRole="button"
       onPress={onPress}
       testID="home-triage-sos"
-      style={{ position: 'absolute', right: spacing.container, top: '50%', marginTop: -32, zIndex: 30 }}
+      style={{ position: 'absolute', right: layout.contentGutter, top: '50%', marginTop: -(size / 2), zIndex: 30 }}
     >
       <View
         style={{
-          width: 64,
-          height: 64,
+          width: size,
+          height: size,
           borderRadius: radius.full,
           backgroundColor: colors.cta,
           alignItems: 'center',
@@ -228,9 +240,9 @@ function SosButton({ onPress }) {
   );
 }
 
-function MatchCard({ match, onPress }) {
+function MatchCard({ layout, match, onPress }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} testID={`home-triage-match-${match.id}`} style={{ width: 260 }}>
+    <Pressable accessibilityRole="button" onPress={onPress} testID={`home-triage-match-${match.id}`} style={{ width: layout.matchCardWidth }}>
       <View
         style={{
           borderRadius: 24,
@@ -303,6 +315,7 @@ function MatchCard({ match, onPress }) {
 }
 
 export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onChangeAddress, onBrowseProviders, onOpenCategories }) {
+  const layout = deriveCustomerDiscoveryLayout(useResponsiveLayout());
   const [selectedChip, setSelectedChip] = useState(CATEGORY_CHIPS[0].id);
 
   const handleSelectCategory = (categoryId) => {
@@ -314,7 +327,7 @@ export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onCh
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }} testID="home-triage-screen">
-      <Header address={address} onChangeAddress={onChangeAddress} />
+      <Header address={address} layout={layout} onChangeAddress={onChangeAddress} />
 
       <View style={{ flex: 1, position: 'relative', overflow: 'hidden', backgroundColor: '#E5E7EB', paddingTop: 64 }}>
         <View
@@ -328,12 +341,12 @@ export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onCh
           }}
         >
           {MAP_MARKERS.map((marker) => (
-            <MapMarker key={marker.id} marker={marker} />
+            <MapMarker key={marker.id} layout={layout} marker={marker} />
           ))}
         </View>
 
-        <View style={{ zIndex: 20, paddingHorizontal: spacing.container, paddingTop: spacing.md, gap: spacing.sm }}>
-          <SearchBar onOpenCategories={onOpenCategories ?? (() => {})} />
+        <View style={{ zIndex: 20, paddingHorizontal: layout.contentGutter, paddingTop: spacing.md, gap: spacing.sm }}>
+          <SearchBar layout={layout} onOpenCategories={onOpenCategories ?? (() => {})} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
             {CATEGORY_CHIPS.map((chip) => (
               <CategoryChip key={chip.id} chip={chip} isSelected={selectedChip === chip.id} onPress={handleSelectCategory} />
@@ -341,16 +354,16 @@ export function HomeTriage({ address = '1010 Vienna, AT', onSelectCategory, onCh
           </ScrollView>
         </View>
 
-        <SosButton onPress={() => handleSelectCategory('emergency')} />
+        <SosButton layout={layout} onPress={() => handleSelectCategory('emergency')} />
 
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: spacing.xl, zIndex: 20 }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: layout.isPhone ? spacing.md : spacing.xl, zIndex: 20 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: spacing.container }}
+            contentContainerStyle={{ gap: spacing.md, paddingHorizontal: layout.contentGutter }}
           >
             {CURATED_MATCHES.map((match) => (
-              <MatchCard key={match.id} match={match} onPress={handleMatchPress} />
+              <MatchCard key={match.id} layout={layout} match={match} onPress={handleMatchPress} />
             ))}
           </ScrollView>
         </View>
