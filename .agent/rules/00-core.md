@@ -97,7 +97,7 @@ For product-app route or UI changes, also run an Expo web export and perform foc
 
 ## 9. Session handoff contract
 
-Meaningful handoffs must be stored under `.agent/reports/` and contain all five sections:
+New meaningful handoffs must be stored under `.agent/reports/` and contain all five sections. Historical handoff artifacts may retain their original path and format; link to them from the current report when they remain relevant.
 
 ```markdown
 # Session Handoff — <date> — <topic>

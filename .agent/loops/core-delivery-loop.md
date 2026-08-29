@@ -64,9 +64,11 @@ Required before starting:
    - Prepare close evidence or mark the issue blocked/in-review when appropriate.
 8. `create-pr`
    - Open or update the PR with summary, test evidence, and issue linkage.
-9. Retrospective / system review when triggered
+9. `review-pr <PR number-or-url>`
+   - Monitor CI and CodeRabbit after the PR opens, address actionable feedback, and repeat until the review gate is clean or explicitly blocked.
+10. Retrospective / system review when triggered
    - Capture process improvements for medium/high-risk or failed-loop work under `.agent/reports/system-reviews/`; a standalone workflow file is optional.
-10. `wrap-up` / `session-wrap-up`
+11. `wrap-up` / `session-wrap-up`
    - Clean resources and leave a structured handoff if work continues.
 
 ## Gate rules

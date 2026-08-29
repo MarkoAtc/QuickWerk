@@ -37,6 +37,12 @@ The locally installed ADOS CLI was also still at 0.1.0 although the repository w
 
 `low-risk/docs` — no runtime, authentication, payment, database, or retention behavior changes. Substitute proof consists of ADOS bootstrap/doctor output, source-path/reference checks, native WSL Git inspection, and the repository's existing CI-equivalent validation commands.
 
+## Validation Contract
+
+- Assertions: every acceptance criterion above is supported by repository artifacts or recorded command evidence; the core rules, delivery loop, and required workflow paths exist and agree on the post-PR review sequence.
+- Performance bounds: N/A — documentation-only recovery with no runtime behavior or performance-sensitive path.
+- Interface boundaries: changes are limited to ADOS rules, workflow/loop contracts, planning and handoff documentation, and repository-local tooling metadata; application, API, authentication, payment, persistence, and deployment interfaces remain unchanged.
+
 ## Delivery
 
 - Branch: `codex/chore/53-ados-operational-recovery`
