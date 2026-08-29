@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
+
+import {
+  deriveCustomerBookingLayout,
+  resolveCustomerBookingBottomPadding,
+} from '../../shared/customer-booking-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 
 const URGENCY_OPTIONS = [
   {
@@ -35,42 +42,59 @@ function SectionHeading({ index, title }) {
       >
         <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelSm, fontWeight: typography.fontWeight.bold }}>{index}</Text>
       </View>
-      <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>{title}</Text>
+      <Text
+        style={{ color: colors.text, flex: 1, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}
+      >
+        {title}
+      </Text>
     </View>
   );
 }
 
-function Header({ onClose }) {
+function Header({ layout, onClose, topInset }) {
   return (
     <View
       style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: spacing.container,
-        paddingVertical: spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.outlineVariant,
         backgroundColor: 'rgba(255,255,255,0.9)',
+        paddingHorizontal: layout.contentGutter,
+        paddingTop: Math.max(spacing.md, topInset + 4),
+        paddingBottom: spacing.md,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Pressable accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} testID="booking-wizard-close">
-          <Text style={{ color: colors.text, fontSize: 20 }}>✕</Text>
-        </Pressable>
-        <Text style={{ color: colors.text, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}>New Request</Text>
-      </View>
       <View
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: radius.full,
-          backgroundColor: colors.primaryContainer,
+          width: '100%',
+          maxWidth: layout.contentMaxWidth,
+          alignSelf: 'center',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          justifyContent: 'center',
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontSize: 14 }}>👤</Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingRight: spacing.sm }}>
+          <Pressable accessibilityLabel="Close" accessibilityRole="button" onPress={onClose} testID="booking-wizard-close">
+            <Text style={{ color: colors.text, fontSize: 20 }}>✕</Text>
+          </Pressable>
+          <Text
+            style={{ color: colors.text, flexShrink: 1, fontSize: typography.fontSize.headlineSm, fontWeight: typography.fontWeight.bold }}
+          >
+            New Request
+          </Text>
+        </View>
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: radius.full,
+            backgroundColor: colors.primaryContainer,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#FFFFFF', fontSize: 14 }}>👤</Text>
+        </View>
       </View>
     </View>
   );
@@ -78,18 +102,18 @@ function Header({ onClose }) {
 
 function LocationRow({ address, onEdit }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg }}>
-      <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, flexShrink: 1 }} numberOfLines={1}>
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+      <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, flex: 1, lineHeight: typography.lineHeight.bodySm }}>
         📍 {address}
       </Text>
-      <Pressable accessibilityRole="button" onPress={onEdit} testID="booking-wizard-edit-location">
+      <Pressable accessibilityRole="button" onPress={onEdit} style={{ marginLeft: spacing.md }} testID="booking-wizard-edit-location">
         <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodySm, fontWeight: typography.fontWeight.bold }}>Edit</Text>
       </Pressable>
     </View>
   );
 }
 
-function DescriptionSection({ description, onChangeDescription }) {
+function DescriptionSection({ description, layout, onChangeDescription }) {
   return (
     <View style={{ marginBottom: spacing.xl }}>
       <SectionHeading index={1} title="Describe the issue" />
@@ -99,7 +123,7 @@ function DescriptionSection({ description, onChangeDescription }) {
           borderWidth: 1,
           borderColor: colors.outlineVariant,
           backgroundColor: colors.surface,
-          padding: spacing.md,
+          padding: layout.cardPadding,
           ...shadow.card,
         }}
       >
@@ -134,14 +158,14 @@ function DescriptionSection({ description, onChangeDescription }) {
   );
 }
 
-function UrgencyCard({ option, selected, onPress }) {
+function UrgencyCard({ layout, option, selected, onPress }) {
   return (
     <Pressable
       accessibilityLabel={option.label}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       onPress={() => onPress(option.id)}
-      style={{ flex: 1 }}
+      style={{ flex: layout.urgencyDirection === 'row' ? 1 : undefined }}
       testID={`booking-wizard-urgency-${option.id}`}
     >
       <View
@@ -150,7 +174,7 @@ function UrgencyCard({ option, selected, onPress }) {
           borderWidth: selected ? 1.5 : 1,
           borderColor: selected ? colors.secondaryBright : colors.outlineVariant,
           backgroundColor: colors.surface,
-          padding: spacing.lg,
+          padding: layout.cardPadding,
           ...shadow.card,
         }}
       >
@@ -176,20 +200,20 @@ function UrgencyCard({ option, selected, onPress }) {
   );
 }
 
-function UrgencySection({ urgency, onSelectUrgency }) {
+function UrgencySection({ layout, urgency, onSelectUrgency }) {
   return (
     <View style={{ marginBottom: spacing.xl }}>
       <SectionHeading index={2} title="Select Urgency" />
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      <View style={{ flexDirection: layout.urgencyDirection, gap: spacing.md }}>
         {URGENCY_OPTIONS.map((option) => (
-          <UrgencyCard key={option.id} onPress={onSelectUrgency} option={option} selected={urgency === option.id} />
+          <UrgencyCard key={option.id} layout={layout} onPress={onSelectUrgency} option={option} selected={urgency === option.id} />
         ))}
       </View>
     </View>
   );
 }
 
-function PaymentSection() {
+function PaymentSection({ layout }) {
   return (
     <View style={{ marginBottom: spacing.xl }} testID="booking-wizard-payment-note">
       <SectionHeading index={3} title="Payment Method" />
@@ -199,7 +223,7 @@ function PaymentSection() {
           borderWidth: 1,
           borderColor: colors.outlineVariant,
           backgroundColor: colors.surfaceContainer,
-          padding: spacing.md,
+          padding: layout.cardPadding,
         }}
       >
         <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
@@ -210,13 +234,13 @@ function PaymentSection() {
   );
 }
 
-function SummaryCard() {
+function SummaryCard({ layout }) {
   return (
     <View
       style={{
         borderRadius: radius.lg,
         backgroundColor: colors.primaryContainer,
-        padding: spacing.lg,
+        padding: layout.cardPadding,
         marginBottom: spacing.xl,
       }}
       testID="booking-wizard-summary"
@@ -232,7 +256,17 @@ function SummaryCard() {
   );
 }
 
-export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete, onBack, onEdit, isSubmitting = false }) {
+export function BookingWizard({
+  category,
+  address = DEFAULT_ADDRESS,
+  onComplete,
+  onBack,
+  onEdit,
+  isSubmitting = false,
+  errorMessage,
+}) {
+  const safeAreaInsets = useSafeAreaInsets();
+  const layout = deriveCustomerBookingLayout(useResponsiveLayout());
   const [description, setDescription] = useState('');
   const [urgency, setUrgency] = useState(URGENCY_OPTIONS[0].id);
 
@@ -249,17 +283,20 @@ export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete,
         <View style={{ width: '66%', height: '100%', backgroundColor: colors.secondaryBright }} />
       </View>
 
-      <Header onClose={onBack} />
+      <Header layout={layout} onClose={onBack} topInset={safeAreaInsets.top} />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.container, paddingTop: spacing.xl, paddingBottom: spacing.xl }}
+        contentContainerStyle={{ paddingHorizontal: layout.contentGutter, paddingTop: spacing.xl, paddingBottom: spacing.xl }}
+        keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
       >
-        <LocationRow address={address} onEdit={onEdit} />
-        <DescriptionSection description={description} onChangeDescription={setDescription} />
-        <UrgencySection onSelectUrgency={setUrgency} urgency={urgency} />
-        <PaymentSection />
-        <SummaryCard />
+        <View style={{ width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' }}>
+          <LocationRow address={address} onEdit={onEdit} />
+          <DescriptionSection description={description} layout={layout} onChangeDescription={setDescription} />
+          <UrgencySection layout={layout} onSelectUrgency={setUrgency} urgency={urgency} />
+          <PaymentSection layout={layout} />
+          <SummaryCard layout={layout} />
+        </View>
       </ScrollView>
 
       <View
@@ -267,28 +304,54 @@ export function BookingWizard({ category, address = DEFAULT_ADDRESS, onComplete,
           borderTopWidth: 1,
           borderTopColor: colors.outlineVariant,
           backgroundColor: 'rgba(255,255,255,0.95)',
-          paddingHorizontal: spacing.container,
+          paddingHorizontal: layout.contentGutter,
           paddingTop: spacing.md,
-          paddingBottom: spacing.xl,
+          paddingBottom: resolveCustomerBookingBottomPadding(layout, safeAreaInsets.bottom),
         }}
       >
-        <Pressable
-          accessibilityLabel={isSubmitting ? 'Sending booking request' : 'Confirm booking request'}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canConfirm, busy: isSubmitting }}
-          disabled={!canConfirm}
-          onPress={handleConfirm}
-          testID="booking-wizard-confirm"
-        >
-          <View style={{ ...componentStyles.button.primary, backgroundColor: colors.cta, opacity: canConfirm ? 1 : 0.5 }}>
-            <Text style={{ color: colors.onPrimary, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
-              {isSubmitting ? 'Sending request…' : 'Confirm Booking →'}
-            </Text>
-          </View>
-        </Pressable>
-        <Text style={{ marginTop: spacing.sm, textAlign: 'center', color: colors.textMuted, fontSize: typography.fontSize.labelSm }}>
-          By confirming, you agree to our Service Terms
-        </Text>
+        <View style={{ width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' }}>
+          {errorMessage ? (
+            <View
+              style={{
+                backgroundColor: 'rgba(186, 26, 26, 0.08)',
+                borderColor: 'rgba(186, 26, 26, 0.2)',
+                borderRadius: radius.md,
+                borderWidth: 1,
+                marginBottom: spacing.md,
+                padding: spacing.md,
+              }}
+              testID="booking-wizard-error"
+            >
+              <Text style={{ color: colors.error, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+                {errorMessage}
+              </Text>
+            </View>
+          ) : null}
+          <Pressable
+            accessibilityLabel={isSubmitting ? 'Sending booking request' : 'Confirm booking request'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canConfirm, busy: isSubmitting }}
+            disabled={!canConfirm}
+            onPress={handleConfirm}
+            testID="booking-wizard-confirm"
+          >
+            <View
+              style={{
+                ...componentStyles.button.primary,
+                minHeight: layout.minimumControlHeight,
+                backgroundColor: colors.cta,
+                opacity: canConfirm ? 1 : 0.5,
+              }}
+            >
+              <Text style={{ color: colors.onPrimary, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
+                {isSubmitting ? 'Sending request…' : 'Confirm Booking →'}
+              </Text>
+            </View>
+          </Pressable>
+          <Text style={{ marginTop: spacing.sm, textAlign: 'center', color: colors.textMuted, fontSize: typography.fontSize.labelSm }}>
+            By confirming, you agree to our Service Terms
+          </Text>
+        </View>
       </View>
     </View>
   );
