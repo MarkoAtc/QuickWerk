@@ -120,7 +120,7 @@ The executor may choose a narrowly feature-local policy instead of the expected 
 ### Interface contracts
 
 - No backend, API-client, authentication, authorization, payment, persistence, pricing, matching, or data-retention contract changes.
-- `BookingWizard({ category, address, onComplete, onBack, onEdit, isSubmitting })` remains compatible.
+- `BookingWizard({ category, address, onComplete, onBack, onEdit, isSubmitting, errorMessage })` remains compatible.
 - `BookingScreen()` remains session-gated and continues to use `submitBookingRequest`.
 - `CheckoutScreen(...)` retains its current quote/payment methods, callbacks, loading flags, errors, reload, and back interface.
 - Route names and parameters remain unchanged: `category`, `address`, `providerUserId`, and `bookingId` keep their current meanings.

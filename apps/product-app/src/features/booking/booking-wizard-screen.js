@@ -296,22 +296,6 @@ export function BookingWizard({
           <UrgencySection layout={layout} onSelectUrgency={setUrgency} urgency={urgency} />
           <PaymentSection layout={layout} />
           <SummaryCard layout={layout} />
-          {errorMessage ? (
-            <View
-              style={{
-                backgroundColor: 'rgba(186, 26, 26, 0.08)',
-                borderColor: 'rgba(186, 26, 26, 0.2)',
-                borderRadius: radius.md,
-                borderWidth: 1,
-                padding: spacing.md,
-              }}
-              testID="booking-wizard-error"
-            >
-              <Text style={{ color: colors.error, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
-                {errorMessage}
-              </Text>
-            </View>
-          ) : null}
         </View>
       </ScrollView>
 
@@ -326,6 +310,23 @@ export function BookingWizard({
         }}
       >
         <View style={{ width: '100%', maxWidth: layout.contentMaxWidth, alignSelf: 'center' }}>
+          {errorMessage ? (
+            <View
+              style={{
+                backgroundColor: 'rgba(186, 26, 26, 0.08)',
+                borderColor: 'rgba(186, 26, 26, 0.2)',
+                borderRadius: radius.md,
+                borderWidth: 1,
+                marginBottom: spacing.md,
+                padding: spacing.md,
+              }}
+              testID="booking-wizard-error"
+            >
+              <Text style={{ color: colors.error, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
+                {errorMessage}
+              </Text>
+            </View>
+          ) : null}
           <Pressable
             accessibilityLabel={isSubmitting ? 'Sending booking request' : 'Confirm booking request'}
             accessibilityRole="button"

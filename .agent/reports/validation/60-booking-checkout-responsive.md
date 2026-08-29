@@ -2,7 +2,7 @@
 
 ## Outcome
 
-PASS locally. The shared booking-layout policy, preserved booking and simulated-checkout contracts, Expo bundle, complete CI-equivalent command set, and live browser viewport checks all passed. PR CI and CodeRabbit review remain the external handoff gate.
+PASS. The shared booking-layout policy, preserved booking and simulated-checkout contracts, Expo bundle, complete CI-equivalent command set, live browser viewport checks, and GitHub CI all passed.
 
 ## Results
 
@@ -18,6 +18,7 @@ PASS locally. The shared booking-layout policy, preserved booking and simulated-
 | Admin web | 46 passed; production build | PASS |
 | Browser QA | Live wizard and checkout matrix plus focused legacy-booking checks | PASS |
 | Diff hygiene | Generated build drift and disposable QA hook removed; `git diff --check` | PASS |
+| Pull request | PR #61 CI validation and completed CodeRabbit review | PASS |
 
 ## Browser assertions
 
@@ -48,7 +49,7 @@ PASS locally. The shared booking-layout policy, preserved booking and simulated-
 ## Gate Result
 
 - Gate: Verify
-- Status: PASS (local)
-- Evidence: command results, browser metrics/interactions, full-diff hygiene, and behavior-preservation checks above.
-- Remaining gaps: GitHub CI and CodeRabbit review after PR creation.
-- Next action: commit, open the issue #60 PR, and run `.agent/workflows/review-pr.md` to completion.
+- Status: PASS
+- Evidence: command results, browser metrics/interactions, full-diff hygiene, behavior-preservation checks, and green PR #61 CI.
+- Remaining gaps: human review and merge only.
+- Next action: leave PR #61 open for human review.

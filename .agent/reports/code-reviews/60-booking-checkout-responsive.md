@@ -14,8 +14,12 @@
 1. **P3 — Generated admin declaration drift:** the admin production build rewrote `apps/admin-web/next-env.d.ts`. The unrelated generated change was removed before commit.
 2. **P3 — Legacy-route evidence gap:** `/booking` has no current home-screen entry and its in-memory session cannot survive a direct reload. A disposable, invisible development-only navigation hook was used to reach the actual authenticated route, then removed before final tests and commit.
 3. **P3 — Error/footer collision:** the booking-wizard route rendered request errors in a separate absolute overlay near its fixed action area. The error now renders inside the wizard's scrollable bounded content, preserving submission behavior while preventing overlap.
+4. **P2 — Modal accessibility isolation:** CodeRabbit correctly identified that the absolute address editor left background controls in the accessibility tree. The wizard subtree is now hidden from iOS and Android accessibility services while the modal editor is open, and the editor declares modal semantics.
+5. **P2 — Submission-error visibility:** CodeRabbit correctly identified that the scroll-content error could render below the user's current position. It now renders in flow inside the fixed bounded footer, immediately above Confirm.
+6. **P3 — Preserved-interface documentation:** CodeRabbit identified that the plan omitted the existing `errorMessage` prop from the documented `BookingWizard` contract. The contract now lists it explicitly.
+7. **No change — Reconciliation date:** CodeRabbit compared the Vienna-dated roadmap to GitHub's UTC date and suggested `2026-08-29`. The repository session is configured for Europe/Vienna, where the reconciliation occurred on `2026-08-30`, so the existing date is correct.
 
-No remaining actionable correctness, security, accessibility, performance, or scope findings were identified in the local review.
+No remaining actionable correctness, security, accessibility, performance, or scope findings remain. CodeRabbit's generic 0% docstring-coverage warning was reviewed as non-actionable: the touched JavaScript presentation functions follow the repository's existing self-describing component style, and broad docstring churn would not improve issue #60 correctness or maintainability.
 
 ## Review notes
 
@@ -31,7 +35,7 @@ No remaining actionable correctness, security, accessibility, performance, or sc
 ## Gate Result
 
 - Gate: Review
-- Status: PASS (local)
-- Evidence: fresh full-diff review, three resolved findings, focused/full tests, Expo export, live browser checks, and `git diff --check`.
-- Remaining gaps: PR CI, CodeRabbit feedback, and inline-thread review.
-- Next action: open the PR and complete the post-PR review workflow.
+- Status: PASS
+- Evidence: fresh full-diff review, six resolved findings, one verified no-change finding, focused/full tests, Expo export, live browser checks, green PR #61 CI, completed CodeRabbit review, and resolved review threads.
+- Remaining gaps: human review and merge only.
+- Next action: leave PR #61 open for human review.

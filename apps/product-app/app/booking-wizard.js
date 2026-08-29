@@ -78,17 +78,24 @@ export default function BookingWizardRoute() {
 
   return (
     <View style={{ flex: 1 }}>
-      <BookingWizard
-        category={params.category}
-        address={address}
-        onComplete={handleComplete}
-        onBack={() => router.back()}
-        onEdit={openAddressEditor}
-        isSubmitting={loading}
-        errorMessage={error}
-      />
+      <View
+        accessibilityElementsHidden={isEditingAddress}
+        importantForAccessibility={isEditingAddress ? 'no-hide-descendants' : 'auto'}
+        style={{ flex: 1 }}
+      >
+        <BookingWizard
+          category={params.category}
+          address={address}
+          onComplete={handleComplete}
+          onBack={() => router.back()}
+          onEdit={openAddressEditor}
+          isSubmitting={loading}
+          errorMessage={error}
+        />
+      </View>
       {isEditingAddress ? (
         <KeyboardAvoidingView
+          accessibilityViewIsModal
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{
             position: 'absolute',
