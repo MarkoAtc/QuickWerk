@@ -6,6 +6,23 @@ Replace the current QuickWerk MVP-style frontend presentation with the new Stitc
 
 This is a UI migration and component-system refactor, not a product rewrite.
 
+## 1.1 Delivery reconciliation (2026-08-28)
+
+This document remains the umbrella UI roadmap, but the original phase descriptions are no longer an accurate execution queue on their own. Delivery now follows roadmap issue [#55](https://github.com/MarkoAtc/QuickWerk/issues/55) and bounded child issues with explicit viewport evidence.
+
+| Area | Current state | Remaining work |
+|---|---|---|
+| Design tokens/foundation | Token and shared-style foundation shipped | Add and enforce reusable responsive layout rules |
+| Authentication | Customer phone/OTP and provider credential entry are functional | Responsive stabilization active in #56 |
+| Home/categories | Live-map home and category entry shipped | Audit discovery/provider-detail responsiveness under #55 |
+| Booking/payment | Booking wizard and simulated checkout sequence shipped | Audit the complete customer flow at the viewport matrix |
+| Active job/review | Tracking, provider identity/contact, and review design parity shipped | Audit route-level responsive behavior |
+| Provider workspace | Core provider dashboard shipped | Provider onboarding and provider profile migration remain |
+| Admin web | Functional operator cockpit exists | Formal desktop-dashboard design-parity phase remains |
+| Messenger/secondary | Functional/styled surfaces exist | Formal parity and responsive verification remain |
+
+The mobile responsiveness work was not intentionally deferred. Mobile-first was always a design principle, but the original definition of done omitted an enforceable viewport matrix. Phase 5.5 below corrects that workflow gap before more product-app surfaces are migrated.
+
 ---
 
 ## 2. Current project structure
@@ -394,6 +411,33 @@ Make the “job in progress” state feel real, trackable, and premium.
 - `apps/product-app/src/features/booking/active-job-screen.js`
 - `apps/product-app/src/features/booking/review-*`
 
+## Phase 5.5: Mobile-first stabilization and route audit
+
+### Objective
+
+Make the roadmap's mobile-first principle enforceable before adding more product-app design surfaces.
+
+### Viewport contract
+
+- Required phone widths: `320`, `360`, `390`, and `430` pixels.
+- Every affected route must remain vertically scrollable and free of horizontal page overflow.
+- Headings must use bounded responsive values rather than carrying desktop display sizes onto phones.
+- Row/grid compositions must collapse before labels, controls, or actions become unreadable.
+- Text, controls, safe areas, keyboard/error states, and primary actions must not clip or overlap.
+- Each bounded remediation issue must include focused browser evidence at the relevant phone widths and one wider web/tablet viewport.
+
+### Delivery model
+
+1. Establish the shared layout/breakpoint/typography baseline and repair critical auth entry routes (#56).
+2. Audit and repair primary customer-flow route groups as bounded child issues of #55.
+3. Build remaining provider onboarding/profile surfaces against the same contract.
+4. Keep admin desktop parity separate from product-app mobile remediation.
+5. Finish messenger and secondary surfaces after the primary customer/provider flows are coherent.
+
+### Non-goal
+
+Do not turn responsiveness into one whole-app rewrite. Every child issue must have explicit route boundaries, acceptance criteria, and screenshot/interaction evidence.
+
 ---
 
 ## Phase 6: Rebuild provider-side flows
@@ -446,9 +490,10 @@ This is easier than product-app migration because the source design is already H
 3. Home / discovery
 4. Booking flow
 5. Active job
-6. Provider dashboard / onboarding
-7. Admin dashboard
-8. Messenger / secondary surfaces
+6. Mobile-first stabilization and customer-flow route audit
+7. Provider onboarding / profile completion
+8. Admin dashboard
+9. Messenger / secondary surfaces
 
 ### Why this order
 - fastest visible improvement for stakeholders
@@ -511,20 +556,22 @@ The redesign is considered successful when:
 - provider dashboard/onboarding is migrated
 - admin dashboard is migrated to the new desktop shell
 - legacy MVP green/soft design language is removed
+- primary product routes pass the documented phone viewport matrix without horizontal overflow, clipped controls, or unreadable grid/text wrapping
 - the product keeps its current working functionality while presenting a coherent premium UI system
 
 ---
 
 ## 12. Immediate next action recommendation
 
-Start with a narrow but high-leverage first implementation slice:
+The original first slice (tokens, auth, and home) has shipped. Continue through roadmap issue #55 using bounded child issues.
 
-### First slice
-1. update `packages/ui` tokens and primitives
-2. redesign auth screen
-3. redesign home/triage screen
+### Current slice
+1. establish the product-app responsive layout contract
+2. repair customer/provider authentication entry at phone widths (#56)
+3. audit primary customer route groups
+4. resume provider onboarding/profile migration
 
-This gives the fastest visible transformation and establishes the component vocabulary for the rest of the app.
+Admin dashboard parity and messenger/secondary surfaces remain after the primary product-app experience is coherent.
 
 ---
 

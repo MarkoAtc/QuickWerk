@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { colors, componentStyles, radius, spacing, typography } from '@quickwerk/ui';
 
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { PhoneKeypad } from './phone-keypad';
 
 const COUNTRY_CODE = '+1';
@@ -19,6 +20,7 @@ function formatPhoneDigits(digits) {
 }
 
 export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUseProviderSignIn }) {
+  const responsive = useResponsiveLayout();
   const [digits, setDigits] = useState('');
 
   const isSendDisabled = isSending || digits.length !== NANP_PHONE_DIGITS;
@@ -49,11 +51,11 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: spacing.container,
-          paddingTop: spacing.xl,
+          paddingHorizontal: responsive.gutter,
+          paddingTop: responsive.isPhone ? spacing.lg : spacing.xl,
           paddingBottom: spacing.lg,
           width: '100%',
-          maxWidth: 420,
+          maxWidth: 440,
           alignSelf: 'center',
         }}
         style={{ flex: 1 }}
@@ -63,8 +65,8 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
           <Text
             style={{
               color: '#FFFFFF',
-              fontSize: typography.fontSize.displayLg,
-              lineHeight: typography.lineHeight.displayLg,
+              fontSize: responsive.isPhone ? 36 : 40,
+              lineHeight: responsive.isPhone ? 40 : 44,
               fontWeight: typography.fontWeight.bold,
               letterSpacing: -0.8,
             }}
@@ -87,9 +89,9 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: spacing.md,
+              gap: responsive.isPhone ? spacing.sm : spacing.md,
               borderRadius: radius.xl,
-              padding: spacing.md,
+              padding: responsive.isPhone ? 12 : spacing.md,
               backgroundColor: 'rgba(255,255,255,0.03)',
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.08)',
@@ -100,7 +102,7 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: spacing.xs,
-                paddingRight: spacing.md,
+                paddingRight: responsive.isPhone ? 12 : spacing.md,
                 borderRightWidth: 1,
                 borderRightColor: 'rgba(199,198,204,0.2)',
               }}
@@ -114,7 +116,7 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
               style={{
                 flex: 1,
                 color: digits ? '#FFFFFF' : 'rgba(128,131,147,0.6)',
-                fontSize: typography.fontSize.headlineMd,
+                fontSize: responsive.isPhone ? 22 : typography.fontSize.headlineMd,
                 fontWeight: typography.fontWeight.semibold,
               }}
               testID="phone-entry-value"
@@ -154,7 +156,7 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
         </View>
 
         <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: responsive.isPhone ? spacing.sm : spacing.md }}>
             <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(199,198,204,0.15)' }} />
             <Text
               style={{

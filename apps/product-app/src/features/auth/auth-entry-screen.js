@@ -3,9 +3,10 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, componentStyles, layout, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { resolveAuthEntryInitialRole } from './auth-entry-role';
 
-function RoleCard({ role, selected, onPress }) {
+function RoleCard({ role, selected, onPress, stacked }) {
   const isCustomer = role === 'customer';
   const icon = isCustomer ? '⌂' : '⚒';
   const title = isCustomer ? 'I need help' : 'I am a pro';
@@ -17,12 +18,12 @@ function RoleCard({ role, selected, onPress }) {
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={() => onPress(role)}
-      style={{ flex: 1 }}
+      style={stacked ? { width: '100%' } : { flex: 1 }}
       testID={`auth-entry-role-${role}`}
     >
       <View
         style={{
-          minHeight: 124,
+          minHeight: stacked ? 108 : 124,
           borderRadius: radius.xl,
           padding: spacing.md,
           justifyContent: 'space-between',
@@ -125,6 +126,7 @@ function AuthField({ label, ...props }) {
 }
 
 export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false, initialRole }) {
+  const responsive = useResponsiveLayout();
   const [role, setRole] = useState(() => resolveAuthEntryInitialRole(initialRole));
   const [mode, setMode] = useState('sign-in');
   const [fullName, setFullName] = useState('');
@@ -171,17 +173,17 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.container,
-          paddingTop: spacing.xl,
+          paddingHorizontal: responsive.gutter,
+          paddingTop: responsive.isPhone ? spacing.lg : spacing.xl,
           paddingBottom: spacing.xxl,
           width: '100%',
-          maxWidth: 1100,
+          maxWidth: responsive.contentMaxWidth,
           alignSelf: 'center',
         }}
         style={{ flex: 1 }}
         testID="auth-entry-screen"
       >
-        <View style={{ marginBottom: spacing.xl }}>
+        <View style={{ marginBottom: responsive.isPhone ? spacing.lg : spacing.xl }}>
           <Text
             style={{
               color: '#FFFFFF',
@@ -206,35 +208,39 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
           </Text>
         </View>
 
-        <View
-          style={{
-            position: 'absolute',
-            top: 20,
-            right: -40,
-            width: 180,
-            height: 180,
-            borderRadius: 999,
-            backgroundColor: 'rgba(2, 102, 255, 0.10)',
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            top: 260,
-            left: -80,
-            width: 220,
-            height: 220,
-            borderRadius: 999,
-            backgroundColor: 'rgba(2, 102, 255, 0.04)',
-          }}
-        />
+        {!responsive.isPhone ? (
+          <>
+            <View
+              style={{
+                position: 'absolute',
+                top: 20,
+                right: -40,
+                width: 180,
+                height: 180,
+                borderRadius: 999,
+                backgroundColor: 'rgba(2, 102, 255, 0.10)',
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                top: 260,
+                left: -80,
+                width: 220,
+                height: 220,
+                borderRadius: 999,
+                backgroundColor: 'rgba(2, 102, 255, 0.04)',
+              }}
+            />
+          </>
+        ) : null}
 
         <View style={{ marginBottom: spacing.xl, maxWidth: 760 }}>
           <Text
             style={{
               color: '#FFFFFF',
-              fontSize: 56,
-              lineHeight: 60,
+              fontSize: responsive.displayFontSize,
+              lineHeight: responsive.displayLineHeight,
               fontWeight: typography.fontWeight.bold,
               letterSpacing: -1.2,
             }}
@@ -254,17 +260,17 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'stretch' }}>
-          <View style={{ flex: 1.05 }}>
-            <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
-              <RoleCard role="customer" selected={role === 'customer'} onPress={setRole} />
-              <RoleCard role="provider" selected={role === 'provider'} onPress={setRole} />
+        <View style={{ flexDirection: responsive.authDirection, gap: spacing.xl, alignItems: 'stretch' }}>
+          <View style={responsive.isWide ? { flex: 1.05 } : { width: '100%' }}>
+            <View style={{ flexDirection: responsive.roleDirection, gap: spacing.md, marginBottom: spacing.lg }}>
+              <RoleCard role="customer" selected={role === 'customer'} onPress={setRole} stacked={responsive.isPhone} />
+              <RoleCard role="provider" selected={role === 'provider'} onPress={setRole} stacked={responsive.isPhone} />
             </View>
 
             <View
               style={{
-                borderRadius: 32,
-                padding: spacing.xl,
+                borderRadius: responsive.panelRadius,
+                padding: responsive.panelPadding,
                 backgroundColor: 'rgba(255,255,255,0.04)',
                 borderWidth: 1,
                 borderColor: 'rgba(255,255,255,0.10)',
@@ -399,24 +405,25 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
             </View>
           </View>
 
-          <View
-            style={{
-              flex: 0.95,
-              borderRadius: 32,
-              padding: spacing.xl,
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
-              justifyContent: 'space-between',
-              minHeight: 520,
-            }}
-          >
+          {!responsive.isPhone ? (
+            <View
+              style={{
+                ...(responsive.isWide ? { flex: 0.95 } : { width: '100%' }),
+                borderRadius: responsive.panelRadius,
+                padding: responsive.panelPadding,
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+                justifyContent: 'space-between',
+                minHeight: responsive.isWide ? 520 : undefined,
+              }}
+            >
             <View>
               <Text
                 style={{
                   color: '#FFFFFF',
-                  fontSize: 32,
-                  lineHeight: 36,
+                  fontSize: responsive.isWide ? 32 : 28,
+                  lineHeight: responsive.isWide ? 36 : 32,
                   fontWeight: typography.fontWeight.bold,
                   letterSpacing: -0.6,
                 }}
@@ -466,7 +473,8 @@ export function AuthEntryScreen({ onSignIn, onCreateAccount, isSigningIn = false
                 Cleaner booking, stronger trust, sharper provider quality.
               </Text>
             </View>
-          </View>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>
