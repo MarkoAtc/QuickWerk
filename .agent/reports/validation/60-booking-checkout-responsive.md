@@ -50,6 +50,6 @@ PASS. The shared booking-layout policy, preserved booking and simulated-checkout
 
 - Gate: Verify
 - Status: PASS
-- Evidence: command results, browser metrics/interactions, full-diff hygiene, behavior-preservation checks, and green PR #61 CI.
-- Remaining gaps: human review and merge only.
-- Next action: leave PR #61 open for human review.
+- Evidence: command results, browser metrics/interactions, full-diff hygiene, behavior-preservation checks, green PR #61 CI, and merged PR #61.
+- Remaining gaps: none for issue #60.
+- Next action: select the next bounded #55 route-group child issue.

@@ -44,12 +44,12 @@ See `.agent/reports/validation/60-booking-checkout-responsive.md`. Every local g
 ## Follow-ups
 
 - Leave active/post-job, provider-workspace, and secondary/public route groups as future bounded #55 child issues.
-- Do not mark #60 complete in parent roadmap #55 until the PR is merged.
+- Issue #60 is closed through merged PR #61 and is checked in parent roadmap #55.
 
 ## Gate Result
 
 - Gate: Handoff
 - Status: PASS
-- Evidence: implementation commit `eb9576f`, PR #61, green GitHub CI, completed CodeRabbit review with all actionable feedback addressed, resolved review threads, validation report, fresh review, and complete loop artifacts.
-- Remaining gaps: human review and merge only; #60 and parent #55 remain open until merge.
-- Next action: leave PR #61 open for human review, then reconcile #60 in parent roadmap #55 after merge.
+- Evidence: implementation commit `eb9576f`, merged PR #61 (`b206bbd`), closed issue #60, green GitHub CI, completed CodeRabbit review with all actionable feedback addressed, resolved review threads, validation report, fresh review, and complete loop artifacts.
+- Remaining gaps: none for issue #60; parent #55 remains intentionally open for its remaining route groups.
+- Next action: select the active/post-job route group as the next bounded #55 child issue.

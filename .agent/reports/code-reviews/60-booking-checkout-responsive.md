@@ -37,5 +37,5 @@ No remaining actionable correctness, security, accessibility, performance, or sc
 - Gate: Review
 - Status: PASS
 - Evidence: fresh full-diff review, six resolved findings, one verified no-change finding, focused/full tests, Expo export, live browser checks, green PR #61 CI, completed CodeRabbit review, and resolved review threads.
-- Remaining gaps: human review and merge only.
-- Next action: leave PR #61 open for human review.
+- Remaining gaps: none for issue #60; PR #61 is merged.
+- Next action: carry the resolved accessibility and error-visibility checks into the next route-group audit.
