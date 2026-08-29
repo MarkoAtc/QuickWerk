@@ -14,7 +14,7 @@ This document remains the umbrella UI roadmap, but the original phase descriptio
 |---|---|---|
 | Design tokens/foundation | Token and shared-style foundation shipped | Add and enforce reusable responsive layout rules |
 | Authentication | Customer phone/OTP and provider credential entry are functional | Responsive stabilization active in #56 |
-| Home/categories | Live-map home and category entry shipped | Audit discovery/provider-detail responsiveness under #55 |
+| Home/categories | Live-map home and category entry shipped | Customer discovery route-group remediation tracked by #58 |
 | Booking/payment | Booking wizard and simulated checkout sequence shipped | Audit the complete customer flow at the viewport matrix |
 | Active job/review | Tracking, provider identity/contact, and review design parity shipped | Audit route-level responsive behavior |
 | Provider workspace | Core provider dashboard shipped | Provider onboarding and provider profile migration remain |
@@ -429,10 +429,23 @@ Make the roadmap's mobile-first principle enforceable before adding more product
 ### Delivery model
 
 1. Establish the shared layout/breakpoint/typography baseline and repair critical auth entry routes (#56).
-2. Audit and repair primary customer-flow route groups as bounded child issues of #55.
+2. Audit and repair primary customer-flow route groups as bounded child issues of #55; #58 covers home, categories, discovery, and provider detail.
 3. Build remaining provider onboarding/profile surfaces against the same contract.
 4. Keep admin desktop parity separate from product-app mobile remediation.
 5. Finish messenger and secondary surfaces after the primary customer/provider flows are coherent.
+
+### Product-app route-group inventory
+
+| Group | Routes/surfaces | Tracker/status |
+|---|---|---|
+| Shared entry and auth baseline | `/_layout`, `/`, `/auth`, `/auth-provider` | Responsive baseline shipped in #56; shared shell remains reusable |
+| Customer marketplace discovery | `/home-triage`, `/categories`, `/discovery`, `/provider-detail` | Bounded remediation in #58 |
+| Customer booking and payment | `/booking-wizard`, `/booking`, `/checkout` | Future bounded #55 customer-flow child |
+| Customer active/post-job | `/active-job`, `/booking-completion`, `/review` | Future bounded #55 customer-flow child |
+| Provider experience | `/provider`, `/provider-onboarding`, `/provider-profile`, `/payouts` | Future provider-phase #55 child issues |
+| Secondary/public surfaces | `/marketplace-preview`, `/messenger`, `/sign-in` | Future secondary/auth follow-up under #55 |
+
+This inventory assigns every current product-app route file to a shipped or future bounded slice. It does not imply that the deferred groups are responsive or design-complete.
 
 ### Non-goal
 
@@ -568,7 +581,7 @@ The original first slice (tokens, auth, and home) has shipped. Continue through 
 ### Current slice
 1. establish the product-app responsive layout contract
 2. repair customer/provider authentication entry at phone widths (#56)
-3. audit primary customer route groups
+3. audit primary customer route groups (#58 covers home, categories, discovery, and provider detail)
 4. resume provider onboarding/profile migration
 
 Admin dashboard parity and messenger/secondary surfaces remain after the primary product-app experience is coherent.

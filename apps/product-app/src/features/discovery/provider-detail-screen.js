@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveCustomerDiscoveryLayout } from '../../shared/customer-discovery-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { loadProviderDetail } from './provider-detail-actions';
 
 function StatPill({ label, value, accent = colors.secondaryBright }) {
@@ -36,7 +38,7 @@ function ReviewCard({ review, index }) {
         marginBottom: spacing.md,
       }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm }}>
         <Text style={{ color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
           {review.author}
         </Text>
@@ -53,6 +55,7 @@ function ReviewCard({ review, index }) {
 
 export function ProviderDetailScreen() {
   const router = useRouter();
+  const layout = deriveCustomerDiscoveryLayout(useResponsiveLayout());
   const params = useLocalSearchParams();
   const providerUserId = Array.isArray(params.providerUserId) ? params.providerUserId[0] : params.providerUserId;
 
@@ -99,11 +102,11 @@ export function ProviderDetailScreen() {
 
   if (state.status === 'error') {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.container, justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: layout.contentGutter, justifyContent: 'center' }}>
         <View
           style={{
             borderRadius: radius.sheet,
-            padding: spacing.lg,
+            padding: layout.sectionPadding,
             backgroundColor: colors.errorContainer,
             borderWidth: 1,
             borderColor: '#FECACA',
@@ -131,7 +134,7 @@ export function ProviderDetailScreen() {
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
       }}
@@ -140,8 +143,8 @@ export function ProviderDetailScreen() {
     >
       <View
         style={{
-          borderRadius: 32,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.primaryContainer,
           ...shadow.elevated,
         }}
@@ -152,11 +155,11 @@ export function ProviderDetailScreen() {
           </Text>
         </Pressable>
 
-        <View style={{ marginTop: spacing.lg, flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+        <View style={{ marginTop: spacing.lg, flexDirection: layout.providerDetailIdentityDirection, gap: spacing.md, alignItems: layout.isPhone ? 'flex-start' : 'center' }}>
           <View
             style={{
-              width: 72,
-              height: 72,
+              width: layout.providerAvatarSize,
+              height: layout.providerAvatarSize,
               borderRadius: radius.xl,
               backgroundColor: 'rgba(255,255,255,0.10)',
               alignItems: 'center',
@@ -176,8 +179,8 @@ export function ProviderDetailScreen() {
             <Text
               style={{
                 color: '#FFFFFF',
-                fontSize: 42,
-                lineHeight: 46,
+                fontSize: layout.providerDetailTitleFontSize,
+                lineHeight: layout.providerDetailTitleLineHeight,
                 fontWeight: typography.fontWeight.bold,
                 letterSpacing: -0.8,
               }}
@@ -200,15 +203,15 @@ export function ProviderDetailScreen() {
       <View
         style={{
           marginTop: spacing.xl,
-          borderRadius: 28,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.outlineVariant,
           ...shadow.card,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
           About this provider
         </Text>
         <Text style={{ marginTop: spacing.sm, color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
@@ -219,15 +222,15 @@ export function ProviderDetailScreen() {
       <View
         style={{
           marginTop: spacing.xl,
-          borderRadius: 28,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.outlineVariant,
           ...shadow.card,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
           Trades & service coverage
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md }}>

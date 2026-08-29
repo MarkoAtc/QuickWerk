@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveCustomerDiscoveryLayout } from '../../shared/customer-discovery-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { loadPublicProviders } from './provider-discovery-actions';
 
 const FILTER_DEBOUNCE_MS = 400;
@@ -60,13 +62,13 @@ function FilterField({ value, onChangeText, placeholder, testID }) {
   );
 }
 
-function HeroStat({ label, value, accent = colors.secondaryBright }) {
+function HeroStat({ label, layout, value, accent = colors.secondaryBright }) {
   return (
     <View
       style={{
-        flex: 1,
+        flex: layout.isPhone ? undefined : 1,
         borderRadius: 24,
-        padding: spacing.lg,
+        padding: layout.isPhone ? spacing.md : spacing.lg,
         backgroundColor: 'rgba(255,255,255,0.08)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.10)',
@@ -75,7 +77,7 @@ function HeroStat({ label, value, accent = colors.secondaryBright }) {
       <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
         {label}
       </Text>
-      <Text style={{ marginTop: spacing.sm, color: accent, fontSize: 34, lineHeight: 38, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
+      <Text style={{ marginTop: spacing.sm, color: accent, fontSize: layout.isPhone ? 28 : 34, lineHeight: layout.isPhone ? 32 : 38, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }}>
         {value}
       </Text>
     </View>
@@ -97,13 +99,13 @@ function Tag({ label }) {
   );
 }
 
-function ProviderCard({ provider, onPress }) {
+function ProviderCard({ layout, provider, onPress }) {
   return (
     <Pressable accessibilityLabel={`View profile of ${provider.displayName}`} accessibilityRole="button" onPress={() => onPress(provider)} testID={`discovery-provider-row-${provider.providerUserId}`}>
       <View
         style={{
-          borderRadius: 32,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.outlineVariant,
@@ -111,11 +113,11 @@ function ProviderCard({ provider, onPress }) {
           ...shadow.card,
         }}
       >
-        <View style={{ flexDirection: 'row', gap: spacing.lg }}>
+        <View style={{ flexDirection: layout.providerCardDirection, gap: layout.providerCardGap }}>
           <View
             style={{
-              width: 72,
-              height: 72,
+              width: layout.providerAvatarSize,
+              height: layout.providerAvatarSize,
               borderRadius: 22,
               backgroundColor: `${colors.secondaryBright}14`,
               alignItems: 'center',
@@ -132,9 +134,9 @@ function ProviderCard({ provider, onPress }) {
           </View>
 
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md }}>
+            <View style={{ flexDirection: layout.isPhone ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontSize: 30, lineHeight: 34, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }} testID={`discovery-provider-name-${provider.providerUserId}`}>
+                <Text style={{ color: colors.text, fontSize: layout.providerNameFontSize, lineHeight: layout.providerNameLineHeight, fontWeight: typography.fontWeight.bold, letterSpacing: -0.4 }} testID={`discovery-provider-name-${provider.providerUserId}`}>
                   {provider.displayName}
                 </Text>
                 <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }} testID={`discovery-provider-categories-${provider.providerUserId}`}>
@@ -163,7 +165,7 @@ function ProviderCard({ provider, onPress }) {
         </View>
 
         {provider.bio ? (
-          <Text numberOfLines={2} style={{ marginTop: spacing.lg, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }} testID={`discovery-provider-bio-${provider.providerUserId}`}>
+          <Text numberOfLines={layout.isPhone ? undefined : 2} style={{ marginTop: spacing.lg, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }} testID={`discovery-provider-bio-${provider.providerUserId}`}>
             {provider.bio}
           </Text>
         ) : null}
@@ -176,8 +178,8 @@ function ProviderCard({ provider, onPress }) {
           </View>
         ) : null}
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.xl }}>
-          <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>Detailed profile, reviews, and booking flow</Text>
+        <View style={{ flexDirection: layout.providerCardFooterDirection, justifyContent: 'space-between', alignItems: layout.isPhone ? 'flex-start' : 'center', gap: spacing.sm, marginTop: spacing.xl }}>
+          <Text style={{ flex: layout.isPhone ? undefined : 1, color: colors.textMuted, fontSize: typography.fontSize.bodySm }}>Detailed profile, reviews, and booking flow</Text>
           <Text style={{ color: colors.secondaryBright, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.bold }}>View provider →</Text>
         </View>
       </View>
@@ -185,12 +187,12 @@ function ProviderCard({ provider, onPress }) {
   );
 }
 
-function EmptyDiscoveryState({ tradeCategoryInput, locationInput, onClear }) {
+function EmptyDiscoveryState({ layout, tradeCategoryInput, locationInput, onClear }) {
   return (
     <View
       style={{
-        borderRadius: 32,
-        padding: spacing.xl,
+        borderRadius: layout.sectionRadius,
+        padding: layout.sectionPadding,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.outlineVariant,
@@ -198,7 +200,7 @@ function EmptyDiscoveryState({ tradeCategoryInput, locationInput, onClear }) {
       }}
       testID="discovery-empty"
     >
-      <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+      <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
         No live providers matched your current filters.
       </Text>
       <Text style={{ marginTop: spacing.md, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd, maxWidth: 760 }}>
@@ -218,6 +220,7 @@ function EmptyDiscoveryState({ tradeCategoryInput, locationInput, onClear }) {
 
 export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '' }) {
   const router = useRouter();
+  const layout = deriveCustomerDiscoveryLayout(useResponsiveLayout());
 
   const [providers, setProviders] = useState(undefined);
   const [isLoading, setIsLoading] = useState(false);
@@ -312,7 +315,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
       }}
@@ -321,31 +324,31 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
     >
       <View
         style={{
-          borderRadius: 36,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.primaryContainer,
           ...shadow.elevated,
         }}
       >
-        <Text style={{ color: '#FFFFFF', fontSize: 54, lineHeight: 58, fontWeight: typography.fontWeight.bold, letterSpacing: -1, maxWidth: 920 }}>
+        <Text style={{ color: '#FFFFFF', fontSize: layout.heroTitleFontSize, lineHeight: layout.heroTitleLineHeight, fontWeight: typography.fontWeight.bold, letterSpacing: -1, maxWidth: 920 }}>
           Browse verified providers with real signal, not clutter.
         </Text>
         <Text style={{ marginTop: spacing.md, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodyLg, lineHeight: typography.lineHeight.bodyLg, maxWidth: 760 }}>
           Filter by trade and location, compare the strongest local options, and move into booking without the marketplace feeling thin or unfinished.
         </Text>
 
-        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
-          <HeroStat label="Status" value={isLoading ? 'Loading' : 'Live'} accent={isLoading ? colors.cta : colors.success} />
-          <HeroStat label="Visible" value={String(showcaseVisibleCount)} />
-          <HeroStat label="Featured" value="4 curated" accent={colors.warning} />
+        <View style={{ flexDirection: layout.heroStatsDirection, gap: spacing.md, marginTop: spacing.xl }}>
+          <HeroStat label="Status" layout={layout} value={isLoading ? 'Loading' : 'Live'} accent={isLoading ? colors.cta : colors.success} />
+          <HeroStat label="Visible" layout={layout} value={String(showcaseVisibleCount)} />
+          <HeroStat label="Featured" layout={layout} value="4 curated" accent={colors.warning} />
         </View>
       </View>
 
       <View
         style={{
           marginTop: spacing.xl,
-          borderRadius: 32,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.outlineVariant,
@@ -353,7 +356,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
         }}
         testID="discovery-filter-container"
       >
-        <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
           Refine the shortlist
         </Text>
         <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
@@ -368,7 +371,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
       </View>
 
       <View style={{ marginTop: spacing.xl }}>
-        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
           Marketplace results
         </Text>
         <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
@@ -388,7 +391,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
           <View
             style={{
               borderRadius: 28,
-              padding: spacing.lg,
+              padding: layout.isPhone ? spacing.md : spacing.lg,
               backgroundColor: colors.errorContainer,
               borderWidth: 1,
               borderColor: '#FECACA',
@@ -403,10 +406,11 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
           </View>
         ) : null}
 
-        {providers && providers.length > 0 ? providers.map((provider) => <ProviderCard key={provider.providerUserId} onPress={handleProviderPress} provider={provider} />) : null}
+        {providers && providers.length > 0 ? providers.map((provider) => <ProviderCard key={provider.providerUserId} layout={layout} onPress={handleProviderPress} provider={provider} />) : null}
 
         {!isLoading && (!providers || providers.length === 0) ? (
           <EmptyDiscoveryState
+            layout={layout}
             tradeCategoryInput={tradeCategoryInput}
             locationInput={locationInput}
             onClear={() => {
@@ -419,7 +423,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
       </View>
 
       <View style={{ marginTop: spacing.xxl }}>
-        <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+        <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
           Curated provider showcase
         </Text>
         <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
@@ -429,7 +433,7 @@ export function DiscoveryScreen({ initialTradeCategory = '', initialLocation = '
 
       <View style={{ marginTop: spacing.xl }}>
         {fallbackProviders.map((provider) => (
-          <ProviderCard key={provider.providerUserId} onPress={handleProviderPress} provider={provider} />
+          <ProviderCard key={provider.providerUserId} layout={layout} onPress={handleProviderPress} provider={provider} />
         ))}
       </View>
     </ScrollView>
