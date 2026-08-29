@@ -5,6 +5,7 @@ coverage/
 .expo/
 .next/
 next-env.d.ts
+.vscode/
 .env
 .env.*
 !.env.example

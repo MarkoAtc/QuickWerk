@@ -1,7 +1,7 @@
 ---
 id: ados-core-delivery-loop
 name: Core Delivery Loop
-version: 0.1.0
+version: 0.2.0
 status: experimental
 category: orchestration
 scope: issue-delivery
@@ -13,8 +13,9 @@ required_workflows:
   - plan-feature
   - execute
   - validate-simple
-  - code-review
-  - close
+  - review-pr
+  - create-pr
+  - session-wrap-up
 ---
 
 # Core Delivery Loop
@@ -54,17 +55,20 @@ Required before starting:
    - Implement the plan in bounded slices.
 4. `validate-simple` or `validate`
    - Run repo-native validation appropriate to the risk level.
-5. `code-review`
+5. Review gate
    - Review the diff against acceptance criteria, plan contract, and repo conventions.
-6. `revise <report>` when verify/review fails
+   - Use a self-review for small `low-risk/docs` changes or a fresh review pass for risky/larger work, then persist findings under `.agent/reports/code-reviews/` when useful.
+6. Revise when verify/review fails
    - Fix blockers and rerun the failed gate, bounded by the retry budget.
-7. `close <issue-id>` when acceptance is proven
+7. Close gate when acceptance is proven
    - Prepare close evidence or mark the issue blocked/in-review when appropriate.
 8. `create-pr`
    - Open or update the PR with summary, test evidence, and issue linkage.
-9. `retro` / `system-review` when triggered
-   - Capture process improvements for medium/high-risk or failed-loop work.
-10. `wrap-up` / `session-wrap-up`
+9. `review-pr <PR number-or-url>`
+   - Monitor CI and CodeRabbit after the PR opens, address actionable feedback, and repeat until the review gate is clean or explicitly blocked.
+10. Retrospective / system review when triggered
+   - Capture process improvements for medium/high-risk or failed-loop work under `.agent/reports/system-reviews/`; a standalone workflow file is optional.
+11. `wrap-up` / `session-wrap-up`
    - Clean resources and leave a structured handoff if work continues.
 
 ## Gate rules
@@ -77,6 +81,8 @@ Required before starting:
 | Close | Create/update PR and final issue evidence. | Produce follow-up issue or re-plan. | Mark issue blocked/in-review with named owner and unblock condition. |
 
 Gate outputs must use the `## Gate Result` block defined in `.agent/rules/00-core.md` for phase-boundary workflows.
+
+Review, revise, close, and retrospective are loop phases, not required standalone workflow files in this repository. The executable workflow dependencies are the files listed in `required_workflows`; phase evidence is persisted using the artifact map below.
 
 ## Retry/revision budget
 

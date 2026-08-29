@@ -1,7 +1,7 @@
 ---
 id: ados-loops-readme
 name: ADOS Loops
-version: 0.1.0
+version: 0.2.0
 status: experimental
 category: orchestration
 ---
@@ -60,8 +60,9 @@ required_workflows:
   - plan-feature
   - execute
   - validate-simple
-  - code-review
-  - close
+  - review-pr
+  - create-pr
+  - session-wrap-up
 ---
 ```
 

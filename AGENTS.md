@@ -37,7 +37,7 @@ Agents must **not** go idle while CI is failing or CodeRabbit has unresolved act
 
 - **Runtime:** Node.js / TypeScript (pnpm workspaces + Turborepo)
 - **Frontend:** React (product-app + admin-web)
-- **Backend:** Express (platform-api service)
+- **Backend:** NestJS (platform-api service)
 - **Database:** PostgreSQL, raw SQL repositories (no ORM — no Drizzle schema layer exists in this repo)
 - **Auth:** JWT-based sessions
 
@@ -49,13 +49,19 @@ Key entry points:
 
 ## 5. Validation Commands
 
-Run before any commit or PR:
+Run the CI-equivalent checks before any commit or PR:
 
 ```sh
-pnpm -r typecheck
-pnpm test:run
-pnpm build
+pnpm check
+pnpm --filter @quickwerk/background-workers build
+pnpm --filter @quickwerk/platform-api test
+pnpm --filter @quickwerk/admin-web test
+pnpm --filter @quickwerk/product-app test
+pnpm --filter @quickwerk/admin-web build
+pnpm --filter @quickwerk/platform-api build
 ```
+
+For product-app route or UI changes, also run an Expo web export and focused browser QA when the acceptance criteria depend on an interactive flow.
 
 ## 6. Commit Convention
 
