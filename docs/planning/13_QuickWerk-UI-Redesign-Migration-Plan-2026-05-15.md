@@ -6,16 +6,16 @@ Replace the current QuickWerk MVP-style frontend presentation with the new Stitc
 
 This is a UI migration and component-system refactor, not a product rewrite.
 
-## 1.1 Delivery reconciliation (2026-08-28)
+## 1.1 Delivery reconciliation (2026-08-30)
 
 This document remains the umbrella UI roadmap, but the original phase descriptions are no longer an accurate execution queue on their own. Delivery now follows roadmap issue [#55](https://github.com/MarkoAtc/QuickWerk/issues/55) and bounded child issues with explicit viewport evidence.
 
 | Area | Current state | Remaining work |
 |---|---|---|
-| Design tokens/foundation | Token and shared-style foundation shipped | Add and enforce reusable responsive layout rules |
-| Authentication | Customer phone/OTP and provider credential entry are functional | Responsive stabilization active in #56 |
-| Home/categories | Live-map home and category entry shipped | Customer discovery route-group remediation tracked by #58 |
-| Booking/payment | Booking wizard and simulated checkout sequence shipped | Audit the complete customer flow at the viewport matrix |
+| Design tokens/foundation | Token, shared-style, and responsive-layout foundation shipped in #56 | Extend the shared contract only through bounded route-group policies |
+| Authentication | Customer phone/OTP and provider credential entry are responsive at the viewport matrix | Shipped in #56 |
+| Home/categories | Live-map home and customer discovery routes are responsive at the viewport matrix | Shipped in #58 via #59 |
+| Booking/payment | Booking wizard and simulated checkout sequence shipped | Bounded responsive remediation tracked by #60 |
 | Active job/review | Tracking, provider identity/contact, and review design parity shipped | Audit route-level responsive behavior |
 | Provider workspace | Core provider dashboard shipped | Provider onboarding and provider profile migration remain |
 | Admin web | Functional operator cockpit exists | Formal desktop-dashboard design-parity phase remains |
@@ -429,7 +429,7 @@ Make the roadmap's mobile-first principle enforceable before adding more product
 ### Delivery model
 
 1. Establish the shared layout/breakpoint/typography baseline and repair critical auth entry routes (#56).
-2. Audit and repair primary customer-flow route groups as bounded child issues of #55; #58 covers home, categories, discovery, and provider detail.
+2. Audit and repair primary customer-flow route groups as bounded child issues of #55; #58 covers home, categories, discovery, and provider detail, while #60 covers booking and payment.
 3. Build remaining provider onboarding/profile surfaces against the same contract.
 4. Keep admin desktop parity separate from product-app mobile remediation.
 5. Finish messenger and secondary surfaces after the primary customer/provider flows are coherent.
@@ -439,8 +439,8 @@ Make the roadmap's mobile-first principle enforceable before adding more product
 | Group | Routes/surfaces | Tracker/status |
 |---|---|---|
 | Shared entry and auth baseline | `/_layout`, `/`, `/auth`, `/auth-provider` | Responsive baseline shipped in #56; shared shell remains reusable |
-| Customer marketplace discovery | `/home-triage`, `/categories`, `/discovery`, `/provider-detail` | Bounded remediation in #58 |
-| Customer booking and payment | `/booking-wizard`, `/booking`, `/checkout` | Future bounded #55 customer-flow child |
+| Customer marketplace discovery | `/home-triage`, `/categories`, `/discovery`, `/provider-detail` | Shipped in #58 via #59 |
+| Customer booking and payment | `/booking-wizard`, `/booking`, `/checkout` | Bounded remediation in #60 |
 | Customer active/post-job | `/active-job`, `/booking-completion`, `/review` | Future bounded #55 customer-flow child |
 | Provider experience | `/provider`, `/provider-onboarding`, `/provider-profile`, `/payouts` | Future provider-phase #55 child issues |
 | Secondary/public surfaces | `/marketplace-preview`, `/messenger`, `/sign-in` | Future secondary/auth follow-up under #55 |
@@ -581,8 +581,9 @@ The original first slice (tokens, auth, and home) has shipped. Continue through 
 ### Current slice
 1. establish the product-app responsive layout contract
 2. repair customer/provider authentication entry at phone widths (#56)
-3. audit primary customer route groups (#58 covers home, categories, discovery, and provider detail)
-4. resume provider onboarding/profile migration
+3. audit primary customer discovery routes (#58, merged via #59)
+4. audit customer booking and payment routes (#60)
+5. resume provider onboarding/profile migration
 
 Admin dashboard parity and messenger/secondary surfaces remain after the primary product-app experience is coherent.
 
