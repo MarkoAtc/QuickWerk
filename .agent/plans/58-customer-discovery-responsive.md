@@ -186,8 +186,8 @@ The repository has no lint command. Focused browser QA is required in addition t
 
 ## Gate Result
 
-- Gate: Review
+- Gate: Handoff
 - Status: PASS
-- Evidence: every acceptance and validation assertion above is backed by focused RED/GREEN evidence, full local validation, a 32-check browser/interaction contract, and a fresh diff review.
-- Remaining gaps: remote PR CI and CodeRabbit review.
-- Next action: commit atomically, open the issue-linked PR, and run `.agent/workflows/review-pr.md` until the remote gate is green.
+- Evidence: every acceptance and validation assertion above is backed by focused RED/GREEN evidence, full local validation, a 32-check browser/interaction contract, a fresh diff review, green PR #59 CI, and a completed CodeRabbit review with no actionable comments or inline threads.
+- Remaining gaps: human review and merge only; parent roadmap #55 intentionally remains open.
+- Next action: leave PR #59 open for human review/merge, then mark #58 complete in the parent roadmap after merge.
