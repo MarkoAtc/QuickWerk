@@ -45,8 +45,8 @@ See `.agent/reports/validation/56-mobile-auth-responsive.md`. All local gates pa
 
 ## Gate Result
 
-- Gate: Review
+- Gate: Close
 - Status: PASS
-- Evidence: plan, validation report, review report, and browser metrics.
-- Remaining gaps: remote PR CI and CodeRabbit review.
-- Next action: create the PR and monitor the review loop.
+- Evidence: plan, validation report, review report, browser metrics, green PR #57 CI/CodeRabbit checks, and merged PR state.
+- Remaining gaps: none for issue #56; parent roadmap #55 remains open.
+- Next action: create the next bounded primary customer-route audit/remediation issue under #55.
