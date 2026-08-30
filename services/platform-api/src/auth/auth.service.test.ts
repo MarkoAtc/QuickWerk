@@ -181,6 +181,7 @@ describe('AuthService', () => {
     afterEach(() => {
       vi.useRealTimers();
       delete process.env.PERSISTENCE_MODE;
+      delete process.env.QUICKWERK_LOCAL_E2E_AUTH;
     });
 
     it('never exposes devOtpCode outside in-memory persistence mode', async () => {
@@ -283,6 +284,21 @@ describe('AuthService', () => {
       await expect(
         service.verifyOtp({ phone: '+15550001234', code: requested.devOtpCode }),
       ).rejects.toThrow('Invalid or expired verification code.');
+    });
+
+    it('only creates a browser test session with explicit local in-memory configuration', async () => {
+      const service = new AuthService(new InMemoryAuthSessionRepository());
+
+      await expect(service.createLocalBrowserTestSession()).rejects.toThrow('Local browser auth fixture is disabled.');
+
+      process.env.QUICKWERK_LOCAL_E2E_AUTH = 'true';
+      process.env.PERSISTENCE_MODE = 'postgres';
+      await expect(service.createLocalBrowserTestSession()).rejects.toThrow('Local browser auth fixture is disabled.');
+
+      process.env.PERSISTENCE_MODE = 'in-memory';
+      const session = await service.createLocalBrowserTestSession();
+      expect(session.sessionState).toBe('authenticated');
+      if (session.sessionState === 'authenticated') expect(session.session.role).toBe('customer');
     });
   });
 });

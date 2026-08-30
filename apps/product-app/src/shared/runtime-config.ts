@@ -2,6 +2,7 @@ type ProductAppRuntimeEnv = {
   EXPO_PUBLIC_PLATFORM_API_BASE_URL?: string;
   EXPO_PUBLIC_PLATFORM_API_BASE_URL_NATIVE?: string;
   EXPO_PUBLIC_PLATFORM_API_BASE_URL_WEB?: string;
+  EXPO_PUBLIC_LOCAL_E2E_AUTH?: string;
 };
 
 const defaultPlatformApiBaseUrl = 'http://127.0.0.1:3101';
@@ -22,4 +23,5 @@ const resolvePlatformApiBaseUrl = () => {
 
 export const runtimeConfig = {
   platformApiBaseUrl: resolvePlatformApiBaseUrl(),
+  localE2eAuthEnabled: runtimeEnv?.EXPO_PUBLIC_LOCAL_E2E_AUTH === 'true',
 } as const;

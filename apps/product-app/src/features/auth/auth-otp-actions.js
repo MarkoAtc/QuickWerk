@@ -21,6 +21,20 @@ export async function verifyOtp({ phone, code }, sessionApiBase) {
   }, sessionApiBase);
 }
 
+export async function createLocalBrowserTestSession(sessionApiBase) {
+  const baseUrl = sessionApiBase ?? runtimeConfig.platformApiBaseUrl;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/auth/local-browser-test-session`, { method: 'POST' });
+    if (!response.ok) return { ok: false, error: await extractErrorMessage(response, 'Local browser authentication') };
+    const payload = await response.json();
+    if (!payload.token || payload.session?.role !== 'customer') return { ok: false, error: 'Local browser fixture returned an invalid session.' };
+    return { ok: true, sessionToken: payload.token, role: 'customer' };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Local browser authentication failed.' };
+  }
+}
+
 async function runOtpRequest(request, failurePrefix, onSuccess, sessionApiBase) {
   const baseUrl = sessionApiBase ?? runtimeConfig.platformApiBaseUrl;
 

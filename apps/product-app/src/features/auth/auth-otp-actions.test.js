@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { requestOtp, verifyOtp } from './auth-otp-actions';
+import { createLocalBrowserTestSession, requestOtp, verifyOtp } from './auth-otp-actions';
 
 describe('auth-otp-actions', () => {
   it('returns expiry and dev code on successful otp request', async () => {
@@ -106,6 +106,41 @@ describe('auth-otp-actions', () => {
         ok: false,
         error: 'Verification response did not include a session token.',
       });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('accepts only a customer session from the local browser fixture', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ token: 'tok-local-browser', session: { role: 'customer' } }),
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    try {
+      const result = await createLocalBrowserTestSession('http://localhost:3100');
+      expect(result).toEqual({ ok: true, sessionToken: 'tok-local-browser', role: 'customer' });
+      expect(fetchMock).toHaveBeenCalledWith('http://localhost:3100/api/v1/auth/local-browser-test-session', { method: 'POST' });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('rejects a non-customer local browser fixture response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ token: 'tok-local-browser', session: { role: 'provider' } }),
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    try {
+      const result = await createLocalBrowserTestSession('http://localhost:3100');
+      expect(result).toEqual({ ok: false, error: 'Local browser fixture returned an invalid session.' });
     } finally {
       globalThis.fetch = originalFetch;
     }
