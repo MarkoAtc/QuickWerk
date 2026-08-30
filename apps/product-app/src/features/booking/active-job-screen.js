@@ -2,6 +2,9 @@ import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveActivePostJobLayout } from '../../shared/active-post-job-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
 function StatusPill({ label, tone }) {
   return (
     <View
@@ -53,13 +56,13 @@ function formatTrackingHeadline(tracking) {
   return `Arriving in ${minutes} min${minutes === 1 ? '' : 's'}`;
 }
 
-function MapStage({ statusLabel, tracking }) {
+function MapStage({ layout, statusLabel, tracking }) {
   return (
     <View
       style={{
         borderRadius: radius.sheet,
         overflow: 'hidden',
-        minHeight: 250,
+        minHeight: layout.mapMinHeight,
         backgroundColor: '#EEF3F8',
         borderWidth: 1,
         borderColor: '#DCE4EE',
@@ -164,7 +167,7 @@ function MapStage({ statusLabel, tracking }) {
         }}
       >
         {tracking ? (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }} testID="active-job-tracking">
+          <View style={{ alignItems: layout.trackingDirection === 'row' ? 'flex-end' : 'flex-start', flexDirection: layout.trackingDirection, gap: spacing.xs, justifyContent: 'space-between' }} testID="active-job-tracking">
             <Text
               style={{
                 color: colors.text,
@@ -274,13 +277,13 @@ function initialsFromName(name) {
     .join('');
 }
 
-function ProviderIdentityCard({ identity }) {
+function ProviderIdentityCard({ identity, layout }) {
   return (
     <View
       style={{
         marginTop: spacing.xl,
         borderRadius: 28,
-        padding: spacing.xl,
+        padding: layout.cardPadding,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.outlineVariant,
@@ -288,7 +291,7 @@ function ProviderIdentityCard({ identity }) {
       }}
       testID="active-job-provider-identity"
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+      <View style={{ alignItems: layout.summaryDirection === 'row' ? 'center' : 'flex-start', flexDirection: layout.summaryDirection, gap: spacing.md }}>
         <View
           style={{
             width: 56,
@@ -409,13 +412,17 @@ function InfoCard({ title, value, accent }) {
 
 export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMessageCounterpart, onPayNow }) {
   const tone = resolveStatusTone(model.status);
+  const layout = deriveActivePostJobLayout(useResponsiveLayout());
 
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        alignSelf: 'center',
+        maxWidth: layout.contentMaxWidth,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
+        width: '100%',
       }}
       style={{ flex: 1, backgroundColor: colors.background }}
       testID="active-job-screen"
@@ -434,8 +441,8 @@ export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMess
           style={{
             marginTop: spacing.lg,
             color: '#FFFFFF',
-            fontSize: 42,
-            lineHeight: 46,
+            fontSize: layout.heroFontSize,
+            lineHeight: layout.heroLineHeight,
             fontWeight: typography.fontWeight.bold,
             letterSpacing: -0.8,
           }}
@@ -455,15 +462,15 @@ export function ActiveJobScreen({ model, isRefreshing = false, onRefresh, onMess
       </View>
 
       <View style={{ marginTop: spacing.xl }}>
-        <MapStage statusLabel={model.statusLabel} tracking={model.tracking} />
+        <MapStage layout={layout} statusLabel={model.statusLabel} tracking={model.tracking} />
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+      <View style={{ flexDirection: layout.summaryDirection, gap: spacing.md, marginTop: spacing.xl }}>
         <InfoCard title="Service" value={model.requestedService} />
         <InfoCard title={model.counterpartLabel} value={model.counterpartValue} accent={colors.secondaryBright} />
       </View>
 
-      {model.providerIdentity ? <ProviderIdentityCard identity={model.providerIdentity} /> : null}
+      {model.providerIdentity ? <ProviderIdentityCard identity={model.providerIdentity} layout={layout} /> : null}
 
       <View
         style={{
