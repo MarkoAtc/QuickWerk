@@ -1,4 +1,4 @@
-# Execution Report — 2026-08-31 — Issue #63 local browser auth fixture
+# Execution Report — 2026-08-30 — Issue #63 local browser auth fixture
 
 ## Delivered
 
@@ -21,6 +21,8 @@
 | browser sign-in and 15 route/viewport checks | pass |
 
 Browser verification authenticated through the local fixture and retained the customer session across direct route navigation. The #62 route matrix covered `/active-job`, `/booking-completion`, and `/review` at 320x640, 360x800, 390x844, 430x932, and 1024x900. Each route loaded its expected missing-booking error state without horizontal overflow or a framework error overlay. The expected `404` for the synthetic `e2e` booking was the only browser error.
+
+The Expo web build with `EXPO_PUBLIC_LOCAL_E2E_AUTH=true` rendered the local sign-in control and routed a fixture customer to `/home-triage`; the same web build without that flag did not render the control.
 
 ## Follow-up
 
