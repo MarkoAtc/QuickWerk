@@ -249,6 +249,19 @@ export class AuthService {
     }
   }
 
+  /**
+   * Local browser-QA fixture. This is deliberately not an OTP shortcut for
+   * normal clients: it is available only when an operator explicitly enables
+   * it and the API is using disposable in-memory persistence.
+   */
+  async createLocalBrowserTestSession() {
+    if (process.env.QUICKWERK_LOCAL_E2E_AUTH !== 'true' || resolvePersistenceMode() !== 'in-memory') {
+      throw new UnauthorizedException('Local browser auth fixture is disabled.');
+    }
+
+    return this.signIn({ email: 'browser.qa.customer@quickwerk.local', role: 'customer' });
+  }
+
   private normalizePhone(phone: string | undefined): string {
     const digitsAndPlus = phone?.trim().replace(/[^\d+]/g, '') ?? '';
 

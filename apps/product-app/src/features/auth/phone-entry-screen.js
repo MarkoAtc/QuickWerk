@@ -19,7 +19,7 @@ function formatPhoneDigits(digits) {
   return [area, prefix, line].filter(Boolean).join(' ');
 }
 
-export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUseProviderSignIn }) {
+export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUseProviderSignIn, onLocalBrowserSignIn }) {
   const responsive = useResponsiveLayout();
   const [digits, setDigits] = useState('');
 
@@ -193,6 +193,14 @@ export function PhoneEntryScreen({ onSendCode, isSending = false, error, onUsePr
               Continue as a provider
             </Text>
           </Pressable>
+
+          {onLocalBrowserSignIn ? (
+            <Pressable accessibilityRole="button" onPress={onLocalBrowserSignIn} testID="phone-entry-local-browser-sign-in">
+              <Text style={{ color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodySm, textAlign: 'center' }}>
+                Local browser test sign-in
+              </Text>
+            </Pressable>
+          ) : null}
 
           <Text
             style={{

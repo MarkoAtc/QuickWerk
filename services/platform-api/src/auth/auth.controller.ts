@@ -144,4 +144,9 @@ export class AuthController {
       correlationId,
     });
   }
+
+  @Post('local-browser-test-session')
+  async createLocalBrowserTestSession() {
+    return this.authService.createLocalBrowserTestSession();
+  }
 }
