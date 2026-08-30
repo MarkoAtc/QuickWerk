@@ -2,6 +2,9 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveActivePostJobLayout } from '../../shared/active-post-job-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
 const disputeCategories = ['quality', 'billing', 'safety', 'no-show', 'other'];
 
 function SectionCard({ children }) {
@@ -158,13 +161,18 @@ export function BookingCompletionScreen({
   isReviewSubmitting,
   isDisputeSubmitting,
 }) {
+  const layout = deriveActivePostJobLayout(useResponsiveLayout());
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        alignSelf: 'center',
+        maxWidth: layout.contentMaxWidth,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
+        width: '100%',
         gap: spacing.xl,
       }}
       testID="booking-completion-screen"
@@ -182,8 +190,8 @@ export function BookingCompletionScreen({
           style={{
             marginTop: spacing.lg,
             color: '#FFFFFF',
-            fontSize: 42,
-            lineHeight: 46,
+            fontSize: layout.heroFontSize,
+            lineHeight: layout.heroLineHeight,
             fontWeight: typography.fontWeight.bold,
             letterSpacing: -0.8,
           }}
@@ -213,7 +221,7 @@ export function BookingCompletionScreen({
         </Text>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
+      <View style={{ flexDirection: layout.summaryDirection, gap: spacing.md }}>
         <SummaryMetric label="Service" value={viewModel.requestedService} />
         <SummaryMetric label="Payment" value={viewModel.paymentSummary} accent={colors.secondaryBright} />
       </View>
@@ -250,7 +258,7 @@ export function BookingCompletionScreen({
         <Text style={{ marginTop: spacing.lg, color: colors.text, fontSize: typography.fontSize.bodyMd, fontWeight: typography.fontWeight.semibold }}>
           Rating: {reviewRating}/5
         </Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md }}>
           {[1, 2, 3, 4, 5].map((value) => {
             const active = value <= reviewRating;
             return (
@@ -294,7 +302,7 @@ export function BookingCompletionScreen({
           />
         </View>
 
-        <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg }}>
+        <View style={{ flexDirection: layout.summaryDirection, gap: spacing.md, marginTop: spacing.lg }}>
           <Pressable
             onPress={onSubmitReview}
             accessibilityRole="button"
