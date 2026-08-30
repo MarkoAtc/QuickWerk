@@ -2,6 +2,8 @@ import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 
 import { colors, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveActivePostJobLayout } from '../../shared/active-post-job-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { reviewHighlightOptions } from './review-screen-presenter';
 
 const orange = colors.cta;
@@ -177,6 +179,7 @@ export function ReviewScreen({
   onTogglePhoto,
   onSubmit,
 }) {
+  const layout = deriveActivePostJobLayout(useResponsiveLayout());
   const submitted = submitState.status === 'submitted';
   const submitting = submitState.status === 'submitting';
   const providerName = provider?.displayName || 'your provider';
@@ -188,7 +191,7 @@ export function ReviewScreen({
           backgroundColor: colors.glassStrong,
           borderBottomColor: 'rgba(199, 198, 204, 0.28)',
           borderBottomWidth: 1,
-          paddingHorizontal: spacing.container,
+          paddingHorizontal: layout.contentGutter,
           paddingVertical: spacing.md,
           ...shadow.card,
         }}
@@ -216,7 +219,7 @@ export function ReviewScreen({
           alignSelf: 'center',
           maxWidth: 560,
           paddingBottom: 56,
-          paddingHorizontal: spacing.container,
+          paddingHorizontal: layout.contentGutter,
           paddingTop: 72,
           width: '100%',
         }}
