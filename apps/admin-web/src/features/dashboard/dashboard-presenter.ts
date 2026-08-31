@@ -8,6 +8,30 @@ export type QueueStatusSummary = {
   detail: string;
 };
 
+export type DashboardMetric = {
+  label: string;
+  value: string;
+  tone: 'primary' | 'success' | 'warning';
+};
+
+export type DashboardOverview = {
+  metrics: DashboardMetric[];
+};
+
+export function createDashboardOverview(
+  verificationState: VerificationQueueState,
+  disputeState: DisputeQueueState,
+  financeExceptionState: FinanceExceptionState,
+): DashboardOverview {
+  return {
+    metrics: [
+      { label: 'Verification queue', value: describeVerificationQueue(verificationState).badge, tone: 'primary' },
+      { label: 'Dispute queue', value: describeDisputeQueue(disputeState).badge, tone: 'warning' },
+      { label: 'Finance exceptions', value: describeFinanceExceptionQueue(financeExceptionState).badge, tone: 'success' },
+    ],
+  };
+}
+
 export function describeVerificationQueue(state: VerificationQueueState): QueueStatusSummary {
   switch (state.status) {
     case 'loading':
