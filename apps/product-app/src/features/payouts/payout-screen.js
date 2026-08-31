@@ -7,7 +7,9 @@ import { colors, componentStyles, radius, spacing, typography } from '@quickwerk
 
 import { loadMyPayouts } from './payout-screen-actions';
 import { initialPayoutLoadState } from './payout-state';
+import { deriveProviderLayout } from '../../shared/provider-layout';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 
 const STATUS_TONE = {
   settled: { backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#047857' },
@@ -53,7 +55,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function PayoutCard({ payout }) {
+function PayoutCard({ layout, payout }) {
   return (
     <View
       style={{
@@ -63,7 +65,7 @@ function PayoutCard({ payout }) {
       }}
       testID={`payout-card-${payout.payoutId}`}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={{ alignItems: 'flex-start', flexDirection: layout.payoutSummaryDirection, gap: spacing.sm, justifyContent: 'space-between' }}>
         <Text
           style={{
             color: colors.text,
@@ -89,6 +91,7 @@ function PayoutCard({ payout }) {
 export function PayoutScreen() {
   const router = useRouter();
   const { session, signOut } = useSession();
+  const layout = deriveProviderLayout(useResponsiveLayout());
   const [loadState, setLoadState] = useState(initialPayoutLoadState);
 
   const load = () => {
@@ -112,7 +115,7 @@ export function PayoutScreen() {
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
         gap: spacing.md,
@@ -172,7 +175,7 @@ export function PayoutScreen() {
       ) : null}
 
       {loadState.status === 'loaded'
-        ? loadState.payouts.map((payout) => <PayoutCard key={payout.payoutId} payout={payout} />)
+        ? loadState.payouts.map((payout) => <PayoutCard key={payout.payoutId} layout={layout} payout={payout} />)
         : null}
     </ScrollView>
   );

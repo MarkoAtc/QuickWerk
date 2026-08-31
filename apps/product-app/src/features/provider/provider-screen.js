@@ -16,7 +16,9 @@ import {
   declineProviderBookingRequest,
   loadProviderDashboardData,
 } from './provider-screen-actions';
+import { deriveProviderLayout } from '../../shared/provider-layout';
 import { resolveSessionToken, useSession } from '../../shared/session-provider';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 
 const initialDashboardState = { status: 'loading', profile: null };
 const initialActionState = { status: 'idle' };
@@ -59,7 +61,7 @@ function ProviderAvatar({ profile }) {
   );
 }
 
-function DashboardHeader({ profile, onOpenProfile, topInset }) {
+function DashboardHeader({ layout, profile, onOpenProfile, topInset }) {
   return (
     <View
       style={{
@@ -69,7 +71,7 @@ function DashboardHeader({ profile, onOpenProfile, topInset }) {
         borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingBottom: spacing.md,
         paddingTop: topInset + spacing.md,
         ...shadow.card,
@@ -224,7 +226,7 @@ function StatusNotice({ notice, onOpenActiveJob }) {
   );
 }
 
-function RequestCard({ booking, actionState, onAccept, onDecline }) {
+function RequestCard({ booking, actionState, layout, onAccept, onDecline }) {
   const busy = actionState.status === 'submitting' && actionState.bookingId === booking.bookingId;
   const actionError = actionState.status === 'error' && actionState.bookingId === booking.bookingId
     ? actionState.message
@@ -289,7 +291,7 @@ function RequestCard({ booking, actionState, onAccept, onDecline }) {
         </Text>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+      <View style={{ flexDirection: layout.requestActionDirection, gap: spacing.sm, marginTop: spacing.md }}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
@@ -425,6 +427,7 @@ function ProviderNavigation({ bottomInset, homeDisabled, onHome, onPayouts, onPr
 export function ProviderScreen() {
   const router = useRouter();
   const safeAreaInsets = useSafeAreaInsets();
+  const layout = deriveProviderLayout(useResponsiveLayout());
   const { session, signOut } = useSession();
   const bookingActionInFlight = useRef(false);
   const [dashboardState, setDashboardState] = useState(initialDashboardState);
@@ -541,6 +544,7 @@ export function ProviderScreen() {
   return (
     <View style={{ backgroundColor: colors.surfaceBright, flex: 1 }} testID="provider-screen">
       <DashboardHeader
+        layout={layout}
         onOpenProfile={() => router.push('/provider-onboarding')}
         profile={profile}
         topInset={safeAreaInsets.top}
@@ -552,7 +556,7 @@ export function ProviderScreen() {
           gap: spacing.lg,
           maxWidth: 560,
           paddingBottom: 40,
-          paddingHorizontal: spacing.container,
+          paddingHorizontal: layout.contentGutter,
           paddingTop: spacing.lg,
           width: '100%',
         }}
@@ -646,6 +650,7 @@ export function ProviderScreen() {
                     actionState={actionState}
                     booking={booking}
                     key={booking.bookingId}
+                    layout={layout}
                     onAccept={(selected) => handleBookingAction('accept', selected)}
                     onDecline={(selected) => handleBookingAction('decline', selected)}
                   />
