@@ -25,10 +25,10 @@
 | platform API build | PASS |
 | Expo web export | PASS |
 | authenticated browser QA, `/provider` and `/payouts`, 320px | PASS — no overflow or console errors |
-
-## Browser QA Note
-
-The repeated local Playwright launches intended for 360–1024px timed out in the wrapper without producing browser output. The responsive policy tests explicitly cover those widths; the successful authenticated 320px browser pass exercises both routes and their API-backed session behavior.
+| authenticated browser QA, `/provider` and `/payouts`, 360px | PASS — `360/360`, no horizontal overflow |
+| authenticated browser QA, `/provider` and `/payouts`, 390px | PASS — `390/390`, no horizontal overflow |
+| authenticated browser QA, `/provider` and `/payouts`, 430px | PASS — `430/430`, no horizontal overflow or console errors |
+| authenticated browser QA, `/provider` and `/payouts`, 1024px | PASS — `1024/1024`, no horizontal overflow |
 
 ## Review
 
