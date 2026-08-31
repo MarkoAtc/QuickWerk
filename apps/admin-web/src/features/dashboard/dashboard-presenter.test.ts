@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { DisputeRecord } from '@quickwerk/domain';
 
-import { describeDisputeQueue, describeFinanceExceptionQueue, describeVerificationQueue } from './dashboard-presenter';
+import {
+  createDashboardOverview,
+  describeDisputeQueue,
+  describeFinanceExceptionQueue,
+  describeVerificationQueue,
+} from './dashboard-presenter';
 import { createErrorState, createLoadedState, createLoadingState } from '../disputes/dispute-queue-state';
 import {
   createFinanceErrorState,
@@ -52,6 +57,22 @@ const financeException = {
 };
 
 describe('dashboard-presenter', () => {
+  it('builds dashboard metrics only from existing queue summaries', () => {
+    expect(
+      createDashboardOverview(
+        createLoadedQueueState([verification]),
+        createLoadedState([dispute]),
+        createFinanceLoadedState([financeException]),
+      ),
+    ).toEqual({
+      metrics: [
+        { label: 'Verification queue', value: '1 pending', tone: 'primary' },
+        { label: 'Dispute queue', value: '1 pending', tone: 'warning' },
+        { label: 'Finance exceptions', value: '1 pending', tone: 'success' },
+      ],
+    });
+  });
+
   it('describes verification loading state', () => {
     expect(describeVerificationQueue(createLoadingQueueState())).toEqual({
       badge: 'loading',

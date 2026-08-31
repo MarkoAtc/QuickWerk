@@ -41,10 +41,10 @@ Recompose the admin operator cockpit into the approved desktop dashboard directi
 
 ## Implementation Slices
 
-1. **Inventory and RED proof.** Map existing `page.js` sections and the desktop design reference; add a failing pure dashboard-composition test for sourced metric/queue presentation.
-2. **Shell and overview.** Introduce focused dashboard shell/header/metric components using only current presenter summaries and explicit unavailable states—no fabricated operational metrics.
-3. **Queue composition.** Extract provider verification, dispute, and finance sections into focused components. Keep server actions in the route and pass the existing state/action contracts through unchanged.
-4. **Desktop QA.** Verify 1024px and 1440px layouts, queue reachability, errors, and action controls. Run the repository validation and review gates; record evidence.
+1. [x] **Inventory and RED proof.** Map existing `page.js` sections and the desktop design reference; add a failing pure dashboard-composition test for sourced metric/queue presentation.
+2. [x] **Shell and overview.** Introduce focused dashboard shell/header/metric components using only current presenter summaries and explicit unavailable states—no fabricated operational metrics.
+3. [x] **Queue composition.** Retain the existing focused provider verification, dispute, and finance sections in the route, with server actions and form contracts unchanged.
+4. [x] **Desktop QA.** Verify 1024px and 1440px layouts, queue reachability, errors, and action controls. Run the repository validation and review gates; record evidence.
 
 ## Likely Touch Points
 
@@ -66,6 +66,6 @@ Revert the issue commits. No API, schema, session-policy, or persistence changes
 
 - Gate: Plan
 - Status: PASS
-- Evidence: #71 acceptance criteria, desktop design reference, and validation contract
-- Remaining gaps: implementation, validation, review, and PR
-- Next action: begin the RED presentation-contract test in the #71 worktree
+- Evidence: RED/GREEN dashboard-presenter test, admin browser QA, and CI-equivalent validation
+- Remaining gaps: post-PR CI and CodeRabbit review
+- Next action: commit and open the PR

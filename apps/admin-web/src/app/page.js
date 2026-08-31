@@ -2,10 +2,12 @@ import { revalidatePath } from 'next/cache';
 
 import { adminShell } from '../admin-shell';
 import {
+  createDashboardOverview,
   describeDisputeQueue,
   describeFinanceExceptionQueue,
   describeVerificationQueue,
 } from '../features/dashboard/dashboard-presenter';
+import { DashboardOverview } from '../features/dashboard/dashboard-overview';
 import { loadDisputeQueueState, submitDisputeTransition } from '../features/disputes/dispute-queue-actions';
 import { createErrorState as createDisputeErrorState } from '../features/disputes/dispute-queue-state';
 import {
@@ -189,22 +191,6 @@ function badge(text, styles = {}) {
     >
       {text}
     </span>
-  );
-}
-
-function metricCard(label, value, accent) {
-  return (
-    <div
-      style={{
-        ...contentCard(),
-        padding: 20,
-      }}
-    >
-      <div style={{ color: shell.textDarkMuted, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-        {label}
-      </div>
-      <div style={{ marginTop: 10, color: accent, fontSize: 28, fontWeight: 800 }}>{value}</div>
-    </div>
   );
 }
 
@@ -507,6 +493,10 @@ export default async function AdminHomePage() {
   const verificationSummary = describeVerificationQueue(verificationState);
   const disputeSummary = describeDisputeQueue(disputeState);
   const financeSummary = describeFinanceExceptionQueue(financeExceptionState);
+  const overview = createDashboardOverview(verificationState, disputeState, financeExceptionState);
+  const sessionLabel = sessionResult.ok
+    ? `${sessionResult.operatorEmail} via ${sessionResult.source}`
+    : 'missing operator bootstrap configuration';
 
   return (
     <main
@@ -531,34 +521,7 @@ export default async function AdminHomePage() {
         <Sidebar />
 
         <div style={{ display: 'grid', gap: 28 }}>
-          <section style={{ ...shellCard(), padding: 36 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ color: shell.textMuted, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Operator dashboard
-                </div>
-                <h1 style={{ margin: '10px 0 0', fontSize: 52, lineHeight: 1.02, letterSpacing: '-0.04em', color: shell.text, maxWidth: 760 }}>
-                  Control the marketplace with clarity.
-                </h1>
-                <p style={{ margin: '14px 0 0', color: shell.textMuted, maxWidth: 720, lineHeight: 1.7 }}>
-                  Live provider verification, dispute operations, and finance/support exception handling in one premium operations cockpit.
-                </p>
-                <p style={{ margin: '14px 0 0', color: shell.textMuted }}>
-                  Session bootstrap:{' '}
-                  {sessionResult.ok
-                    ? `${sessionResult.operatorEmail} via ${sessionResult.source}`
-                    : 'missing operator bootstrap configuration'}
-                </p>
-              </div>
-              {badge('Live control', { background: 'rgba(16,185,129,0.14)', color: '#6EE7B7' })}
-            </div>
-          </section>
-
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20 }}>
-            {metricCard('Verification queue', verificationSummary.badge, shell.accent)}
-            {metricCard('Dispute queue', disputeSummary.badge, shell.cta)}
-            {metricCard('Finance exceptions', financeSummary.badge, shell.success)}
-          </section>
+          <DashboardOverview metrics={overview.metrics} sessionLabel={sessionLabel} />
 
           <div style={{ display: 'grid', gap: 24 }}>
             <VerificationQueueSection state={verificationState} />
