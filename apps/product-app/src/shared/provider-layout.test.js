@@ -11,6 +11,8 @@ describe('resolveProviderLayout', () => {
       heroTitleFontSize: 36,
       contentDirection: 'column',
       actionDirection: 'column',
+      requestActionDirection: 'column',
+      payoutSummaryDirection: 'column',
       profileIdentityDirection: 'column',
     });
   });
@@ -22,6 +24,8 @@ describe('resolveProviderLayout', () => {
       sectionPadding: 32,
       contentDirection: 'row',
       actionDirection: 'row',
+      requestActionDirection: 'row',
+      payoutSummaryDirection: 'row',
       profileIdentityDirection: 'row',
     });
   });
