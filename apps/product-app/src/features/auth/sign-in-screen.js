@@ -6,6 +6,8 @@ import { createSignInFormState } from './sign-in-screen-actions';
 import { productAppShell } from '../../shared/app-shell';
 import { useSession } from '../../shared/session-provider';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
+import { resolveSignInLayout } from '../../shared/sign-in-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 
 const roles = ['customer', 'provider'];
 
@@ -16,6 +18,7 @@ export function SignInScreen() {
   const [role, setRole] = useState('customer');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(undefined);
+  const layout = resolveSignInLayout(useResponsiveLayout().width);
 
   const handleSignIn = () => {
     if (isSubmitting || !email.trim()) {
@@ -57,8 +60,8 @@ export function SignInScreen() {
       <View
         testID="sign-in-form"
         style={{
-          marginTop: 16,
-          padding: 16,
+          marginTop: layout.gutter,
+          padding: layout.cardPadding,
           borderRadius: 16,
           borderWidth: 1,
           borderColor: '#D7DFEA',
@@ -79,7 +82,9 @@ export function SignInScreen() {
             borderWidth: 1,
             borderColor: '#CBD5E1',
             borderRadius: 8,
-            padding: 10,
+            minHeight: layout.controlHeight,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
             fontSize: 16,
             color: '#0F172A',
             backgroundColor: '#F8FAFC',
@@ -87,7 +92,7 @@ export function SignInScreen() {
         />
 
         <Text style={{ color: '#334155', fontWeight: '600', marginTop: 16, marginBottom: 8 }}>Role</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: layout.roleDirection, gap: 8 }}>
           {roles.map((r) => {
             const selected = role === r;
             return (
@@ -100,6 +105,7 @@ export function SignInScreen() {
                 testID={`sign-in-role-${r}`}
                 style={{
                   flex: 1,
+                  minHeight: layout.controlHeight,
                   paddingVertical: 10,
                   borderRadius: 8,
                   borderWidth: 1,
@@ -137,6 +143,7 @@ export function SignInScreen() {
           testID="sign-in-submit"
           style={{
             marginTop: 16,
+            minHeight: layout.controlHeight,
             paddingVertical: 12,
             borderRadius: 10,
             backgroundColor:
