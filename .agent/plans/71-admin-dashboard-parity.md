@@ -14,21 +14,21 @@ Recompose the admin operator cockpit into the approved desktop dashboard directi
 
 ## Acceptance Criteria
 
-- [ ] The root admin route has a desktop sidebar, overview header, metric cards, and queue sections aligned with `design/admin_dashboard_desktop`.
-- [ ] Provider verification, disputes, finance exceptions, and operator session behavior retain their current APIs, action inputs, errors, and revalidation behavior.
-- [ ] Presentation is decomposed into focused dashboard components without duplicating existing queue state/action logic.
-- [ ] The dashboard has no horizontal page overflow at 1024px and 1440px.
-- [ ] Admin tests, type-check, production build, and focused browser QA pass.
+- [x] The root admin route has a desktop sidebar, overview header, metric cards, and queue sections aligned with `design/admin_dashboard_desktop`.
+- [x] Provider verification, disputes, finance exceptions, and operator session behavior retain their current APIs, action inputs, errors, and revalidation behavior.
+- [x] Presentation is decomposed into focused dashboard components without duplicating existing queue state/action logic.
+- [x] The dashboard has no horizontal page overflow at 1024px and 1440px.
+- [x] Admin tests, type-check, production build, and focused browser QA pass.
 
 ## Validation Contract
 
 ### Assertions (written before implementation)
 
-- [ ] The dashboard presenter exposes only derived display data; it does not create metrics or queue data that lack an existing source.
-- [ ] Existing verification decision, dispute transition, and finance-exception triage action tests remain green unchanged.
-- [ ] The server actions preserve their current accepted form fields and call `revalidatePath('/')` after a successful mutation.
-- [ ] The admin page has no horizontal overflow at 1024px and 1440px, and all queue sections remain reachable.
-- [ ] `pnpm check`, the admin test suite, and the admin production build pass.
+- [x] The dashboard presenter exposes only derived display data; it does not create metrics or queue data that lack an existing source.
+- [x] Existing verification decision, dispute transition, and finance-exception triage action tests remain green unchanged.
+- [x] The server actions preserve their current accepted form fields and call `revalidatePath('/')` after a successful mutation.
+- [x] The admin page has no horizontal overflow at 1024px and 1440px, and all queue sections remain reachable.
+- [x] `pnpm check`, the admin test suite, and the admin production build pass.
 
 ### Performance bounds
 
