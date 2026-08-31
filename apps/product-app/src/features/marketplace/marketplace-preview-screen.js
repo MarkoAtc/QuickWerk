@@ -4,6 +4,7 @@ import { Text, View, Pressable } from 'react-native';
 import { ProductRouteLink } from '../../shared/product-route-link';
 import { ProductScreenShell } from '../../shared/product-screen-shell';
 import { productAppShell } from '../../shared/app-shell';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
 import { defaultMarketplacePreviewResult, loadMarketplacePreview } from './marketplace-preview-data';
 
 const healthLevelStyles = {
@@ -67,13 +68,14 @@ function MetaPill({ text, tone = 'default', testID }) {
 }
 
 function PreviewSectionCard({ section }) {
+  const layout = useResponsiveLayout();
   return (
     <View
       testID={`marketplace-preview-section-${section.id}`}
       style={{
         marginTop: 14,
         borderRadius: 16,
-        padding: 16,
+        padding: layout.isPhone ? 16 : 20,
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#D7DFEA',
@@ -115,6 +117,7 @@ function PreviewSectionCard({ section }) {
           marginTop: 14,
           borderRadius: 12,
           paddingHorizontal: 14,
+          minHeight: 44,
           paddingVertical: 12,
           backgroundColor: productAppShell.theme.color.primary,
           opacity: 0.95,
@@ -127,6 +130,7 @@ function PreviewSectionCard({ section }) {
 }
 
 export function MarketplacePreviewScreen() {
+  const layout = useResponsiveLayout();
   const [previewResult, setPreviewResult] = useState(defaultMarketplacePreviewResult);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -166,7 +170,7 @@ export function MarketplacePreviewScreen() {
           borderWidth: 1,
           borderColor: '#D7DFEA',
           backgroundColor: '#FFFFFF',
-          padding: 16,
+          padding: layout.isPhone ? 16 : 20,
         }}
       >
         <Text style={{ color: productAppShell.theme.color.accent }}>
@@ -185,7 +189,7 @@ export function MarketplacePreviewScreen() {
             borderWidth: 1,
             borderColor: levelStyle.borderColor,
             borderRadius: 12,
-            padding: 12,
+            padding: layout.isPhone ? 12 : 16,
             backgroundColor: '#FFFFFF',
           }}
         >
@@ -229,7 +233,7 @@ export function MarketplacePreviewScreen() {
         style={{
           marginTop: 14,
           borderRadius: 16,
-          padding: 16,
+          padding: layout.isPhone ? 16 : 20,
           backgroundColor: productAppShell.theme.color.primary,
         }}
       >
