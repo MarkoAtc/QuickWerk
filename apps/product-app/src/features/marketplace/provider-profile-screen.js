@@ -2,21 +2,24 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
-function ProfileHero({ provider }) {
+import { deriveProviderLayout } from '../../shared/provider-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
+function ProfileHero({ layout, provider }) {
   return (
     <View
       style={{
-        borderRadius: 32,
-        padding: spacing.xl,
+        borderRadius: layout.sectionRadius,
+        padding: layout.sectionPadding,
         backgroundColor: colors.primaryContainer,
         ...shadow.elevated,
       }}
     >
-      <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+      <View style={{ flexDirection: layout.profileIdentityDirection, gap: spacing.md, alignItems: layout.isPhone ? 'flex-start' : 'center' }}>
         <View
           style={{
-            width: 76,
-            height: 76,
+            width: layout.profileAvatarSize,
+            height: layout.profileAvatarSize,
             borderRadius: radius.xl,
             backgroundColor: 'rgba(255,255,255,0.10)',
             alignItems: 'center',
@@ -29,7 +32,7 @@ function ProfileHero({ provider }) {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 42, lineHeight: 46, fontWeight: typography.fontWeight.bold, letterSpacing: -0.8 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: layout.heroTitleFontSize, lineHeight: layout.heroTitleLineHeight, fontWeight: typography.fontWeight.bold, letterSpacing: -0.8 }}>
             {provider.name}
           </Text>
           <Text style={{ marginTop: spacing.xs, color: colors.onPrimaryContainer, fontSize: typography.fontSize.bodyMd }}>
@@ -57,19 +60,19 @@ function ProfileHero({ provider }) {
   );
 }
 
-function DetailCard({ title, children }) {
+function DetailCard({ title, children, layout }) {
   return (
     <View
       style={{
-        borderRadius: 28,
-        padding: spacing.xl,
+        borderRadius: layout.sectionRadius,
+        padding: layout.sectionPadding,
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.outlineVariant,
         ...shadow.card,
       }}
     >
-      <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+      <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
         {title}
       </Text>
       <View style={{ marginTop: spacing.md }}>{children}</View>
@@ -103,22 +106,26 @@ function ReviewCard({ review }) {
 }
 
 export function ProviderProfileScreen({ provider, onStartBooking }) {
+  const layout = deriveProviderLayout(useResponsiveLayout());
+  const services = provider.services ?? [];
+  const reviews = provider.reviews ?? [];
+
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
       }}
       style={{ flex: 1, backgroundColor: colors.background }}
       testID="provider-profile-screen"
     >
-      <ProfileHero provider={provider} />
+      <ProfileHero layout={layout} provider={provider} />
 
       <View style={{ marginTop: spacing.xl, gap: spacing.xl }}>
-        <DetailCard title="Services">
+        <DetailCard layout={layout} title="Services">
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {provider.services.map((service) => (
+            {services.map((service) => (
               <View
                 key={service}
                 style={{
@@ -136,14 +143,14 @@ export function ProviderProfileScreen({ provider, onStartBooking }) {
           </View>
         </DetailCard>
 
-        <DetailCard title="About">
+        <DetailCard layout={layout} title="About">
           <Text style={{ color: colors.textMuted, fontSize: typography.fontSize.bodySm, lineHeight: typography.lineHeight.bodySm }}>
             {provider.description}
           </Text>
         </DetailCard>
 
-        <DetailCard title="Recent reviews">
-          {provider.reviews.map((review) => (
+        <DetailCard layout={layout} title="Recent reviews">
+          {reviews.map((review) => (
             <ReviewCard key={`${review.author}-${review.comment}`} review={review} />
           ))}
         </DetailCard>
