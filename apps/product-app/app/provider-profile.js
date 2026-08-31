@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { loadProviderDetail } from '../src/features/discovery/provider-detail-actions';
-import { ProviderProfile } from '../src/features/marketplace/provider-profile-screen';
+import { ProviderProfileScreen } from '../src/features/marketplace/provider-profile-screen';
 import { productAppShell } from '../src/shared/app-shell';
 
 export default function ProviderProfileRoute() {
@@ -38,13 +38,23 @@ export default function ProviderProfileRoute() {
           return;
         }
 
+        const displayName = result.provider.displayName;
         setProvider({
-          name: result.provider.displayName,
+          name: displayName,
+          initials: displayName
+            .split(' ')
+            .map((part) => part[0])
+            .slice(0, 2)
+            .join(''),
           title:
             result.provider.tradeCategories.length > 0
               ? result.provider.tradeCategories.join(' / ')
               : 'Verified provider',
-          bio: result.provider.bio,
+          rating: result.provider.averageRating ?? '—',
+          summary: result.provider.bio || 'This provider has not added a public introduction yet.',
+          services: result.provider.tradeCategories,
+          description: result.provider.bio || 'No provider bio available yet.',
+          reviews: result.provider.reviews ?? [],
         });
       })
       .catch((error) => {
@@ -81,10 +91,9 @@ export default function ProviderProfileRoute() {
   }
 
   return (
-    <ProviderProfile
+    <ProviderProfileScreen
       provider={provider}
-      onClose={() => router.replace('/discovery')}
-      onRequest={() =>
+      onStartBooking={() =>
         router.push({
           pathname: '/booking-wizard',
           params: {

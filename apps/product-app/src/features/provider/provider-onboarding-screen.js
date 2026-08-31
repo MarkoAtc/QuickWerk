@@ -3,6 +3,9 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { colors, componentStyles, radius, shadow, spacing, typography } from '@quickwerk/ui';
 
+import { deriveProviderLayout } from '../../shared/provider-layout';
+import { useResponsiveLayout } from '../../shared/use-responsive-layout';
+
 function StepPill({ index, label, active }) {
   return (
     <View
@@ -78,19 +81,19 @@ function ShowcaseField({ label, value, onChangeText, placeholder, multiline = fa
   );
 }
 
-function ChecklistCard({ checklist, verificationState }) {
+function ChecklistCard({ checklist, layout, verificationState }) {
   return (
     <View
       style={{
-        borderRadius: 32,
-        padding: spacing.xl,
+        borderRadius: layout.sectionRadius,
+        padding: layout.sectionPadding,
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#E2E8F0',
         ...shadow.card,
       }}
     >
-      <Text style={{ color: colors.text, fontSize: 28, lineHeight: 32, fontWeight: typography.fontWeight.bold }}>
+      <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
         Verification readiness
       </Text>
       <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
@@ -157,6 +160,7 @@ export function ProviderOnboardingScreen({
   isSaving = false,
   isSubmitting = false,
 }) {
+  const layout = deriveProviderLayout(useResponsiveLayout());
   const [businessName, setBusinessName] = useState(initialProfile.businessName ?? '');
   const [serviceArea, setServiceArea] = useState(initialProfile.serviceArea ?? '');
   const [tradeCategories, setTradeCategories] = useState((initialProfile.tradeCategories ?? []).join(', '));
@@ -194,7 +198,7 @@ export function ProviderOnboardingScreen({
   return (
     <ScrollView
       contentContainerStyle={{
-        paddingHorizontal: spacing.container,
+        paddingHorizontal: layout.contentGutter,
         paddingTop: spacing.xl,
         paddingBottom: spacing.xl,
         gap: spacing.xl,
@@ -204,8 +208,8 @@ export function ProviderOnboardingScreen({
     >
       <View
         style={{
-          borderRadius: 36,
-          padding: spacing.xl,
+          borderRadius: layout.sectionRadius,
+          padding: layout.sectionPadding,
           backgroundColor: colors.primaryContainer,
           ...shadow.elevated,
         }}
@@ -217,8 +221,8 @@ export function ProviderOnboardingScreen({
           style={{
             marginTop: spacing.md,
             color: '#FFFFFF',
-            fontSize: 48,
-            lineHeight: 52,
+            fontSize: layout.heroTitleFontSize,
+            lineHeight: layout.heroTitleLineHeight,
             fontWeight: typography.fontWeight.bold,
             letterSpacing: -1,
             maxWidth: 760,
@@ -265,19 +269,19 @@ export function ProviderOnboardingScreen({
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1.2 }}>
+      <View style={{ flexDirection: layout.contentDirection, gap: spacing.xl, alignItems: 'stretch' }}>
+        <View style={{ flex: layout.isWide ? 1.2 : undefined }}>
           <View
             style={{
-              borderRadius: 32,
-              padding: spacing.xl,
+              borderRadius: layout.sectionRadius,
+              padding: layout.sectionPadding,
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.outlineVariant,
               ...shadow.card,
             }}
           >
-            <Text style={{ color: colors.text, fontSize: 32, lineHeight: 36, fontWeight: typography.fontWeight.bold }}>
+            <Text style={{ color: colors.text, fontSize: layout.sectionTitleFontSize, lineHeight: layout.sectionTitleLineHeight, fontWeight: typography.fontWeight.bold }}>
               Company profile
             </Text>
             <Text style={{ marginTop: spacing.sm, color: colors.textSoft, fontSize: typography.fontSize.bodyMd, lineHeight: typography.lineHeight.bodyMd }}>
@@ -318,13 +322,13 @@ export function ProviderOnboardingScreen({
           </View>
         </View>
 
-        <View style={{ flex: 0.85 }}>
-          <ChecklistCard checklist={checklist} verificationState={verificationState} />
+        <View style={{ flex: layout.isWide ? 0.85 : undefined }}>
+          <ChecklistCard checklist={checklist} layout={layout} verificationState={verificationState} />
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <Pressable accessibilityRole="button" disabled={isSaving} onPress={handleSave} testID="provider-onboarding-save-profile" style={{ flex: 1 }}>
+      <View style={{ flexDirection: layout.actionDirection, gap: spacing.md }}>
+        <Pressable accessibilityRole="button" disabled={isSaving} onPress={handleSave} testID="provider-onboarding-save-profile" style={{ flex: layout.isPhone ? undefined : 1 }}>
           <View style={{ ...componentStyles.button.dark, minHeight: 60, opacity: isSaving ? 0.7 : 1 }}>
             <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
               {isSaving ? 'Saving…' : 'Save profile draft'}
@@ -332,7 +336,7 @@ export function ProviderOnboardingScreen({
           </View>
         </Pressable>
 
-        <Pressable accessibilityRole="button" disabled={isSubmitting} onPress={handleSubmit} testID="provider-onboarding-submit-verification" style={{ flex: 1 }}>
+        <Pressable accessibilityRole="button" disabled={isSubmitting} onPress={handleSubmit} testID="provider-onboarding-submit-verification" style={{ flex: layout.isPhone ? undefined : 1 }}>
           <View style={{ ...componentStyles.button.primary, minHeight: 60, opacity: isSubmitting ? 0.7 : 1 }}>
             <Text style={{ color: '#FFFFFF', fontSize: typography.fontSize.labelMd, fontWeight: typography.fontWeight.bold }}>
               {isSubmitting ? 'Submitting…' : 'Submit for verification'}
